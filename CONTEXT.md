@@ -16,6 +16,10 @@ _Avoid_: Plugin, injected script
 Everything known about one ROM: how to identify it, its memory addresses, and its struct layouts.
 _Avoid_: Game entry, game data, games DB row
 
+**Viewer**:
+The web page the program serves that shows the current game state in a readable form, for people who don't use the API. It also shows connection status and settings.
+_Avoid_: GUI, dashboard, frontend
+
 **Decoder**:
 Turns raw bytes into domain data, such as a party Pokemon or a bag, for one data format like Gen 3 or CFRU.
 _Avoid_: Reader, parser

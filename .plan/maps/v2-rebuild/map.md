@@ -21,6 +21,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 
 - [Emulator memory access APIs](./tickets/001-emulator-memory-access.md): RetroArch network commands need no bridge, mGBA and BizHawk need Lua bridges, and raw process memory is too fragile to support.
 - [What decomp symbol data provides](./tickets/002-decomp-symbol-data.md): prebuilt pret symbols give addresses for every revision but no struct layouts, and CFRU hacks need their own profiles.
+- [App form factor](./tickets/003-app-form-factor.md): one windowless background program that attaches to a running emulator, auto-probes adapters, serves the API and the viewer on localhost, and uses the viewer as its only GUI.
 
 ## Not yet specified
 
@@ -29,7 +30,8 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - PC box reading for each generation, and whether boxes belong in the first release.
 - Decoder test fixtures: the dump format, which game states to capture, and whether RAM dumps can be committed.
 - Packaging, installers, auto-update, and how emulator bridges get installed.
-- Moving the viewer onto the v2 API, and whether it becomes the app's GUI (follows from the form factor ticket).
+- How the viewer is built and shipped with the app, which settings it owns, and moving it onto the v2 API (it is the app's only GUI; the language ticket decides how it is served).
+- The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open).
 
 ## Out of scope
 
