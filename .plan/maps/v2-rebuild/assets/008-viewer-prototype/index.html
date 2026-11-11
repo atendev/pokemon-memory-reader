@@ -114,23 +114,31 @@ const partyCard = (p, slot, c=false) => !p ? `<div class="rounded-2xl border bor
 const partyScreen = (d, c=false) => `<div class="grid ${c?'grid-cols-3 gap-3':'md:grid-cols-2 2xl:grid-cols-3 gap-4'}">${Array.from({length:6},(_,i)=>partyCard(d.party[i],i,c)).join('')}</div>`;
 
 // ───────────── the battle screen ─────────────
-const oppRow = (o, active) => `<li class="flex items-center gap-3 rounded-xl px-3 py-2 ${active?'bg-rose-950/40 border border-rose-800':'bg-slate-950 border border-slate-800'} ${o.hp.cur===0?'opacity-50':''}">
-  ${monIcon(o.species.dex, o.species.name, 'w-12 h-12')}<div class="flex-1 min-w-0"><div class="flex items-center gap-2 text-sm"><b>${esc(o.species.name)}</b><span class="text-slate-400">Lv ${o.level}</span>${statusBadge(o.status)}<span class="flex gap-1 ml-auto">${o.types.map(typeIcon).join('')}</span></div>
-  <div class="mt-1">${hpBar(o.hp)}</div>
-  <div class="flex items-center justify-between mt-1.5 text-xs text-slate-400"><span class="font-mono">${o.hp.cur}/${o.hp.max}</span><span class="flex items-center gap-1">${o.heldItem?heldItem(o.heldItem):'<span class="text-slate-600">no item</span>'}</span></div>
-  <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">${o.moves.filter(Boolean).map(m=>`<span class="inline-flex items-center gap-1 text-xs">${typeDot(m.type)}${esc(m.name)}</span>`).join('')}</div></div></li>`;
+const oppCard = (o) => `
+  <article class="${card} p-4 h-full">
+    <header class="flex items-start gap-3">${monIcon(o.species.dex, o.species.name, 'w-16 h-16')}
+      <div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><b class="truncate">${esc(o.species.name)}</b>${statusBadge(o.status)}</div>
+        <div class="text-xs text-slate-400">Lv ${o.level} · #${val(o.species.dex)}</div>
+        <div class="flex gap-1 mt-1">${o.types.map(typeIcon).join('')}</div></div></header>
+    <div class="mt-3">${hpBar(o.hp,'h-2')}<div class="text-[11px] font-mono text-slate-400 mt-1">${o.hp.cur}/${o.hp.max} HP</div></div>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 text-sm mt-3"><dt class="text-slate-500">Item</dt><dd>${heldItem(o.heldItem)}</dd></dl>
+    <div class="mt-3 pt-3 border-t border-slate-800">${moveList(o.moves, false)}</div>
+  </article>`;
+const oppTile = (o, active) => `<li class="rounded-xl p-2.5 ${active?'bg-rose-950/40 border border-rose-800':'bg-slate-950 border border-slate-800'} ${o.hp.cur===0?'opacity-50':''}">
+  <div class="flex items-center gap-2">${monIcon(o.species.dex, o.species.name, 'w-10 h-10')}<div class="min-w-0 flex-1"><div class="flex items-center gap-1.5 text-sm"><b class="truncate">${esc(o.species.name)}</b><span class="text-xs text-slate-400">Lv ${o.level}</span>${statusBadge(o.status)}</div><div class="flex gap-1 mt-0.5">${o.types.map(typeIcon).join('')}</div></div>${o.heldItem?`<span title="${esc(o.heldItem.name)}">${itemIcon(o.heldItem.name,'w-6 h-6')}</span>`:''}</div>
+  <div class="mt-2">${hpBar(o.hp)}</div></li>`;
 function battleScreen(d) {
   const b = d.battle;
   if (!b.active) return `<div class="${card} p-10 text-center max-w-xl mx-auto"><div class="text-4xl mb-2">⚔</div><h2 class="font-semibold">Not in battle</h2><p class="text-sm text-slate-400 mt-1">This screen fills in when a battle starts.</p></div>`;
-  const mine = d.party[b.playerActive];
-  return `<div class="grid xl:grid-cols-[1fr_1.2fr] gap-4">
-    <section><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Your active Pokémon</div>${partyCard(mine, b.playerActive)}</section>
-    <section class="space-y-4"><div class="${card} p-4 flex items-center gap-4"><div class="w-14 h-14 rounded-xl bg-slate-800 grid place-items-center text-2xl">🧑</div>
-        <div class="flex-1"><div class="text-xs uppercase tracking-wide text-slate-500">${b.kind==='trainer'?'Trainer battle':'Wild battle'} · turn ${b.turn}</div><div class="font-semibold">${esc(b.trainer.class)} ${esc(b.trainer.name)}</div>
-        <div class="text-xs text-slate-400 mt-0.5">Prize ₽${b.trainer.prizeMoney.toLocaleString()} · ${b.opponents.length} Pokémon${b.trainer.itemsUsable.length?` · items: ${b.trainer.itemsUsable.map(i=>`<span class="inline-flex items-center gap-1">${itemIcon(i.name,'w-4 h-4')}${esc(i.name)} ×${i.qty}</span>`).join(' ')}`:''}</div></div>
-        <div class="flex gap-1">${b.opponents.map((o,i)=>monIcon(o.species.dex,o.species.name,'w-7 h-7')).join('')}</div></div>
-      <div><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Opponent's party</div><ul class="space-y-2">${b.opponents.map((o,i)=>oppRow(o, i===b.opponentActive)).join('')}</ul></div>
-      <p class="text-xs text-slate-600">What battle state is readable, and when, is still an open map question. This shows the fullest case.</p></section></div>`;
+  const mine = d.party[b.playerActive], theirs = b.opponents[b.opponentActive], t = b.trainer;
+  const slots = Array.from({length:6},(_,i)=>b.opponents[i]);
+  return `<div class="space-y-4">
+    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4"><div class="self-stretch">${partyCard(mine, b.playerActive)}</div><div class="text-2xl font-black tracking-widest text-slate-600">VS</div><div class="self-stretch">${oppCard(theirs)}</div></div>
+    <div class="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4">
+      <section class="${card} p-4"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl bg-slate-800 grid place-items-center text-2xl">🧑</div><div><div class="text-xs uppercase tracking-wide text-slate-500">${b.kind==='trainer'?'Trainer battle':'Wild battle'} · turn ${b.turn}</div><div class="font-semibold">${esc(t.class)} ${esc(t.name)}</div></div></div>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm mt-4"><dt class="text-slate-500">Prize money</dt><dd>₽${t.prizeMoney.toLocaleString()}</dd><dt class="text-slate-500">Pokémon</dt><dd>${b.opponents.length}, ${b.opponents.filter(o=>o.hp.cur>0).length} left</dd><dt class="text-slate-500">Items</dt><dd>${t.itemsUsable.length?t.itemsUsable.map(i=>`<span class="inline-flex items-center gap-1.5">${itemIcon(i.name)}${esc(i.name)} ×${i.qty}</span>`).join(' '):nul}</dd></dl></section>
+      <section class="${card} p-4"><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">${esc(t.name)}'s party</div><ul class="grid grid-cols-2 xl:grid-cols-3 gap-2">${slots.map((o,i)=>o?oppTile(o,i===b.opponentActive):`<li class="rounded-xl border border-dashed border-slate-800 grid place-items-center text-xs text-slate-700 min-h-[72px]">empty</li>`).join('')}</ul></section></div>
+    <p class="text-xs text-slate-600">What battle state is readable, and when, is still an open map question. This shows the fullest case.</p></div>`;
 }
 
 // ───────────── player + bag, empty states, settings ─────────────
