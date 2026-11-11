@@ -26,16 +26,17 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [Game profile source and format](./tickets/005-game-profile-source.md): one JSON profile per ROM revision checked by Zod, addresses generated from pret symbols at dev time, struct layouts in decoder code per data format, and built-in profiles embedded with user profiles loaded from a folder.
 - [API v2 contract](./tickets/006-api-contract.md): `/api/v2` REST snapshots plus a topic-filtered SSE stream of whole resources, a `status` resource exposing profile ID and generation, one shape per resource across generations with DVs in `ivs` and null for missing fields, and `503` with a status-carrying error when no game is loaded.
 - [License](./tickets/007-license.md): GPL-3.0-or-later for the app, MIT for any package outside code imports, pret and CFRU addresses embedded as facts with provenance, no Nintendo art bundled, and only trimmed RAM slices committed as fixtures.
+- [Viewer design](./tickets/008-viewer-design.md): a collapsible-sidebar app with Party (six detail cards, 3x2 when collapsed), Battle (both active mons with VS, trainer card, opponent party), Trainer & bag and Settings screens, using runtime-loaded icons with name fallbacks.
 
 ## Not yet specified
 
 - How the app identifies a game, especially ROM hacks whose hash is unknown and whose game code copies the base game. Profiles reserve an `identify` block (`sha1` list, `gameCode`) for this to fill in.
 - Reference data for hacks that add species, moves or items (Radical Red and others): how a hack profile supplies extended name tables.
-- The battle tracker's data model: which battle state is readable (opponent party, active moves, PP, field effects) and when it's valid.
+- The battle tracker's data model: which battle state is readable (opponent party, active moves, PP, field effects) and when it's valid. The viewer's Battle screen assumes the opponent's full party (level, HP, status, held items, moves) and the trainer's class, name, prize money and usable items.
 - PC box reading for each generation, and whether boxes belong in the first release.
 - Decoder test fixtures: the format of committed RAM slices, which game states to capture, and the tool that cuts slices from a local dump.
 - Whether v2 publishes an importable package for overlay developers (API types, Zod schemas, an SSE client), and how it's versioned against `/api/v2`.
-- Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed.
+- Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed. Also whether runtime-loaded icons from a community source (PokeAPI sprites) are acceptable under the license decision, and which source is the default.
 - The read loop: how often the program reads each resource from the adapter, how it detects changes to push, and the latency budget from a game change to an SSE event.
 - The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open), plus where the user profiles folder lives.
 
