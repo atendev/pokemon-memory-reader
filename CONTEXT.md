@@ -13,8 +13,16 @@ A small script that runs inside an emulator so an adapter can reach its memory. 
 _Avoid_: Plugin, injected script
 
 **Game profile**:
-Everything known about one ROM: how to identify it, its memory addresses, and its struct layouts.
+Everything known about one ROM revision: how to identify it, its memory addresses, its language, and which data format it uses. Struct layouts belong to the data format, not the profile.
 _Avoid_: Game entry, game data, games DB row
+
+**Data format**:
+The layout of game structs in memory that a family of games shares, such as Gen 1, Gen 2, Gen 3 or CFRU. Each data format has one decoder.
+_Avoid_: Engine, game type
+
+**Reference data**:
+Names and lookup tables that don't change at runtime: species, moves, items and character maps, keyed by generation and language.
+_Avoid_: Constants, static data
 
 **Viewer**:
 The web page the program serves that shows the current game state in a readable form, for people who don't use the API. It also shows connection status and settings.

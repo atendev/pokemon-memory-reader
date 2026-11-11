@@ -23,15 +23,17 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [What decomp symbol data provides](./tickets/002-decomp-symbol-data.md): prebuilt pret symbols give addresses for every revision but no struct layouts, and CFRU hacks need their own profiles.
 - [App form factor](./tickets/003-app-form-factor.md): one windowless background program that attaches to a running emulator, auto-probes adapters, serves the API and the viewer on localhost, and uses the viewer as its only GUI.
 - [Language and HTTP stack](./tickets/004-language-and-toolkit.md): TypeScript on Bun compiled to one executable, Hono and Zod for the API, and a new React viewer built by Bun and embedded, all in one Bun workspace repo.
+- [Game profile source and format](./tickets/005-game-profile-source.md): one JSON profile per ROM revision checked by Zod, addresses generated from pret symbols at dev time, struct layouts in decoder code per data format, and built-in profiles embedded with user profiles loaded from a folder.
 
 ## Not yet specified
 
-- How the app identifies a game, especially ROM hacks whose hash is unknown and whose game code copies the base game.
+- How the app identifies a game, especially ROM hacks whose hash is unknown and whose game code copies the base game. Profiles reserve an `identify` block (`sha1` list, `gameCode`) for this to fill in.
+- Reference data for hacks that add species, moves or items (Radical Red and others): how a hack profile supplies extended name tables.
 - The battle tracker's data model: which battle state is readable (opponent party, active moves, PP, field effects) and when it's valid.
 - PC box reading for each generation, and whether boxes belong in the first release.
 - Decoder test fixtures: the dump format, which game states to capture, and whether RAM dumps can be committed.
 - Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed.
-- The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open).
+- The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open), plus where the user profiles folder lives.
 
 ## Out of scope
 
