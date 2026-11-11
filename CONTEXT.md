@@ -28,6 +28,10 @@ _Avoid_: Constants, static data
 The web page the program serves that shows the current game state in a readable form, for people who don't use the API. It also shows connection status and settings.
 _Avoid_: GUI, dashboard, frontend
 
+**Resource**:
+A named piece of game state the API serves as one unit, such as the status, player, party, bag or battle. Clients read a resource whole and receive it whole when it changes.
+_Avoid_: Endpoint, topic, feed
+
 **Decoder**:
 Turns raw bytes into domain data, such as a party Pokemon or a bag, for one data format like Gen 3 or CFRU.
 _Avoid_: Reader, parser

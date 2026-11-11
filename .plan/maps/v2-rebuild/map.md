@@ -24,6 +24,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [App form factor](./tickets/003-app-form-factor.md): one windowless background program that attaches to a running emulator, auto-probes adapters, serves the API and the viewer on localhost, and uses the viewer as its only GUI.
 - [Language and HTTP stack](./tickets/004-language-and-toolkit.md): TypeScript on Bun compiled to one executable, Hono and Zod for the API, and a new React viewer built by Bun and embedded, all in one Bun workspace repo.
 - [Game profile source and format](./tickets/005-game-profile-source.md): one JSON profile per ROM revision checked by Zod, addresses generated from pret symbols at dev time, struct layouts in decoder code per data format, and built-in profiles embedded with user profiles loaded from a folder.
+- [API v2 contract](./tickets/006-api-contract.md): `/api/v2` REST snapshots plus a topic-filtered SSE stream of whole resources, a `status` resource exposing profile ID and generation, one shape per resource across generations with DVs in `ivs` and null for missing fields, and `503` with a status-carrying error when no game is loaded.
 
 ## Not yet specified
 
@@ -33,6 +34,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - PC box reading for each generation, and whether boxes belong in the first release.
 - Decoder test fixtures: the dump format, which game states to capture, and whether RAM dumps can be committed.
 - Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed.
+- The read loop: how often the program reads each resource from the adapter, how it detects changes to push, and the latency budget from a game change to an SSE event.
 - The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open), plus where the user profiles folder lives.
 
 ## Out of scope
