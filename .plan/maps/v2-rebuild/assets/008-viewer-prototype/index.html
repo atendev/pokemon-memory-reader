@@ -1,10 +1,15 @@
 <!doctype html>
 <!--
-PROTOTYPE, THROWAWAY. Ticket 008 "Viewer design".
+PROTOTYPE, THROWAWAY. Ticket 008 "Viewer design". Revision 2.
 Question: what screens and states does the v2 viewer show, which settings does it own, and what is its visual system?
-Three structurally different layouts of the same viewer, mock data shaped like the API v2 contract (ticket 006).
-Switch layout with the arrows at the bottom (or ?variant=A|B|C). Switch app state with ?state=game3|game1|nogame|off.
-Open this file directly in a browser. Needs network once for the Tailwind CDN script.
+Fixed by the owner after revision 1:
+  - Party screen = six cards, one per party slot, each holding the full detail (no list + detail pane).
+  - Battle screen = your active mon, the opponent's whole party, the trainer, and held items.
+  - Icons (type, item, ball, status, Pokemon) wherever the games have one, with the name beside them.
+The three variants now differ in how the screens are reached: A sidebar pages, B top tabs, C one scrolling page.
+Switch with the arrows at the bottom (or ?variant=A|B|C). App state: ?state=game3|game1|nogame|off.
+Icons load from the PokeAPI sprites repo as a stand-in (needs network). Failed loads fall back to a glyph/chip.
+Whether that source is acceptable under the license decision is an open question the ticket answer must settle.
 -->
 <html lang="en" class="dark">
 <head>
@@ -12,38 +17,41 @@ Open this file directly in a browser. Needs network once for the Tailwind CDN sc
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PROTOTYPE · Viewer design</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono: ['ui-monospace','SFMono-Regular','monospace'] } } } }
-</script>
 <style>
-  body { background:#0b0e14; color:#d7dce5; }
+  body { background:#0b0e14; color:#d7dce5; font-family: Inter, system-ui, sans-serif; }
   .hp-bar { transition: width .3s; }
+  img.px { image-rendering: pixelated; }
   ::-webkit-scrollbar { width:8px; height:8px } ::-webkit-scrollbar-thumb { background:#2a3140; border-radius:4px }
 </style>
 </head>
-<body class="font-sans antialiased min-h-screen pb-20">
+<body class="antialiased min-h-screen pb-20">
 <div id="app"></div>
 <div id="switcher" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-full bg-white text-slate-900 px-4 py-2 shadow-2xl text-sm font-medium"></div>
 
 <script>
 // ───────────── mock data shaped like API v2 ─────────────
-const TYPE_COLOR = { fire:'#f0803c', water:'#6890f0', grass:'#78c850', electric:'#f8d030', normal:'#a8a878', flying:'#a890f0', psychic:'#f85888', poison:'#a040a0', ground:'#e0c068', rock:'#b8a038', ghost:'#705898', dragon:'#7038f8', ice:'#98d8d8', fighting:'#c03028', bug:'#a8b820', steel:'#b8b8d0' };
-const mk = (o) => o;
+const TYPE_ID = { normal:1, fighting:2, flying:3, poison:4, ground:5, rock:6, bug:7, ghost:8, steel:9, fire:10, water:11, grass:12, electric:13, psychic:14, ice:15, dragon:16, dark:17, fairy:18 };
+const TYPE_COLOR = { fire:'#f0803c', water:'#6890f0', grass:'#78c850', electric:'#f8d030', normal:'#a8a878', flying:'#a890f0', psychic:'#f85888', poison:'#a040a0', ground:'#e0c068', rock:'#b8a038', ghost:'#705898', dragon:'#7038f8', ice:'#98d8d8', fighting:'#c03028', bug:'#a8b820', steel:'#b8b8d0', dark:'#705848', fairy:'#ee99ac' };
+const mv = (name, type, pp, maxPp) => ({ name, type, pp, maxPp });
 const PARTY3 = [
-  mk({ species:{id:7,dex:7,name:'Squirtle'}, nickname:'TORTUGA', level:22, hp:{cur:58,max:58}, types:['water'], stats:{hp:58,atk:34,def:42,spa:33,spd:39,spe:30}, ivs:{hp:21,atk:12,def:30,spa:7,spd:19,spe:25}, evs:{hp:12,atk:0,def:30,spa:0,spd:4,spe:20}, ability:'Torrent', nature:'Bold', heldItem:{id:139,name:'Oran Berry'}, moves:[{name:'Water Gun',pp:20,maxPp:25},{name:'Bite',pp:22,maxPp:25},{name:'Withdraw',pp:40,maxPp:40},{name:'Bubble',pp:30,maxPp:30}], shiny:false, gender:'male', hiddenPower:{type:'fire',power:52}, ot:{name:'RED',id:12345}, exp:5423 }),
-  mk({ species:{id:16,dex:16,name:'Pidgey'}, nickname:'PIDGEY', level:18, hp:{cur:9,max:49}, types:['normal','flying'], stats:{hp:49,atk:27,def:24,spa:21,spd:22,spe:29}, ivs:{hp:3,atk:20,def:9,spa:31,spd:14,spe:17}, evs:{hp:0,atk:8,def:0,spa:0,spd:0,spe:22}, ability:'Keen Eye', nature:'Jolly', heldItem:null, moves:[{name:'Gust',pp:35,maxPp:35},{name:'Sand-Attack',pp:15,maxPp:15},{name:'Quick Attack',pp:30,maxPp:30},null], shiny:true, gender:'female', hiddenPower:{type:'ground',power:41}, ot:{name:'RED',id:12345}, exp:3011 }),
-  mk({ species:{id:25,dex:25,name:'Pikachu'}, nickname:'ZAP', level:24, hp:{cur:0,max:60}, types:['electric'], stats:{hp:60,atk:38,def:28,spa:36,spd:30,spe:55}, ivs:{hp:11,atk:25,def:14,spa:20,spd:8,spe:30}, evs:{hp:6,atk:0,def:0,spa:12,spd:0,spe:34}, ability:'Static', nature:'Timid', heldItem:null, moves:[{name:'Thunder Shock',pp:30,maxPp:30},{name:'Quick Attack',pp:30,maxPp:30},{name:'Thunder Wave',pp:20,maxPp:20},{name:'Double Team',pp:15,maxPp:15}], shiny:false, gender:'male', hiddenPower:{type:'ice',power:60}, ot:{name:'RED',id:12345}, exp:7120 }),
-  mk({ species:{id:19,dex:19,name:'Rattata'}, nickname:'RATTATA', level:15, hp:{cur:33,max:33}, types:['normal'], stats:{hp:33,atk:22,def:16,spa:14,spd:17,spe:26}, ivs:{hp:9,atk:17,def:4,spa:11,spd:23,spe:28}, evs:{hp:0,atk:4,def:0,spa:0,spd:0,spe:10}, ability:'Run Away', nature:'Naive', heldItem:null, moves:[{name:'Tackle',pp:35,maxPp:35},{name:'Tail Whip',pp:30,maxPp:30},{name:'Quick Attack',pp:30,maxPp:30},{name:'Hyper Fang',pp:15,maxPp:15}], shiny:false, gender:'female', hiddenPower:{type:'dark',power:35}, ot:{name:'RED',id:12345}, exp:2200 }),
+  { species:{id:7,dex:7,name:'Squirtle'}, nickname:'TORTUGA', level:22, hp:{cur:58,max:58}, status:null, types:['water'], stats:{hp:58,atk:34,def:42,spa:33,spd:39,spe:30}, ivs:{hp:21,atk:12,def:30,spa:7,spd:19,spe:25}, evs:{hp:12,atk:0,def:30,spa:0,spd:4,spe:20}, ability:'Torrent', nature:'Bold', heldItem:{id:139,name:'Oran Berry'}, moves:[mv('Water Gun','water',20,25),mv('Bite','dark',22,25),mv('Withdraw','water',40,40),mv('Bubble','water',30,30)], shiny:false, gender:'male', hiddenPower:{type:'fire',power:52}, ball:'Poké Ball', ot:{name:'RED',id:12345} },
+  { species:{id:16,dex:16,name:'Pidgey'}, nickname:'PIDGEY', level:18, hp:{cur:9,max:49}, status:'poison', types:['normal','flying'], stats:{hp:49,atk:27,def:24,spa:21,spd:22,spe:29}, ivs:{hp:3,atk:20,def:9,spa:31,spd:14,spe:17}, evs:{hp:0,atk:8,def:0,spa:0,spd:0,spe:22}, ability:'Keen Eye', nature:'Jolly', heldItem:null, moves:[mv('Gust','flying',35,35),mv('Sand-Attack','ground',15,15),mv('Quick Attack','normal',30,30),null], shiny:true, gender:'female', hiddenPower:{type:'ground',power:41}, ball:'Great Ball', ot:{name:'RED',id:12345} },
+  { species:{id:25,dex:25,name:'Pikachu'}, nickname:'ZAP', level:24, hp:{cur:0,max:60}, status:'fainted', types:['electric'], stats:{hp:60,atk:38,def:28,spa:36,spd:30,spe:55}, ivs:{hp:11,atk:25,def:14,spa:20,spd:8,spe:30}, evs:{hp:6,atk:0,def:0,spa:12,spd:0,spe:34}, ability:'Static', nature:'Timid', heldItem:{id:200,name:'Light Ball'}, moves:[mv('Thunder Shock','electric',30,30),mv('Quick Attack','normal',30,30),mv('Thunder Wave','electric',20,20),mv('Double Team','normal',15,15)], shiny:false, gender:'male', hiddenPower:{type:'ice',power:60}, ball:'Poké Ball', ot:{name:'RED',id:12345} },
+  { species:{id:19,dex:19,name:'Rattata'}, nickname:'RATTATA', level:15, hp:{cur:33,max:33}, status:null, types:['normal'], stats:{hp:33,atk:22,def:16,spa:14,spd:17,spe:26}, ivs:{hp:9,atk:17,def:4,spa:11,spd:23,spe:28}, evs:{hp:0,atk:4,def:0,spa:0,spd:0,spe:10}, ability:'Run Away', nature:'Naive', heldItem:null, moves:[mv('Tackle','normal',35,35),mv('Tail Whip','normal',30,30),mv('Quick Attack','normal',30,30),mv('Hyper Fang','normal',15,15)], shiny:false, gender:'female', hiddenPower:{type:'dark',power:35}, ball:'Poké Ball', ot:{name:'RED',id:12345} },
 ];
 const PARTY1 = [
-  mk({ species:{id:4,dex:4,name:'Charmander'}, nickname:'CHARMANDER', level:14, hp:{cur:40,max:41}, types:['fire'], stats:{hp:41,atk:26,def:23,spa:24,spd:24,spe:29}, ivs:{hp:8,atk:12,def:9,spa:7,spd:7,spe:15}, evs:{hp:3200,atk:1800,def:900,spa:1500,spd:1500,spe:4000}, ability:null, nature:null, heldItem:null, moves:[{name:'Scratch',pp:35,maxPp:35},{name:'Growl',pp:40,maxPp:40},{name:'Ember',pp:22,maxPp:25},null], shiny:false, gender:null, hiddenPower:null, ot:{name:'RED',id:30001}, exp:2744 }),
-  mk({ species:{id:21,dex:21,name:'Spearow'}, nickname:'SPEAROW', level:10, hp:{cur:12,max:30}, types:['normal','flying'], stats:{hp:30,atk:21,def:14,spa:13,spd:13,spe:25}, ivs:{hp:5,atk:10,def:6,spa:9,spd:9,spe:14}, evs:{hp:0,atk:600,def:0,spa:0,spd:0,spe:1200}, ability:null, nature:null, heldItem:null, moves:[{name:'Peck',pp:35,maxPp:35},{name:'Growl',pp:40,maxPp:40},null,null], shiny:false, gender:null, hiddenPower:null, ot:{name:'RED',id:30001}, exp:1000 }),
+  { species:{id:4,dex:4,name:'Charmander'}, nickname:'CHARMANDER', level:14, hp:{cur:40,max:41}, status:null, types:['fire'], stats:{hp:41,atk:26,def:23,spa:24,spd:24,spe:29}, ivs:{hp:8,atk:12,def:9,spa:7,spd:7,spe:15}, evs:{hp:3200,atk:1800,def:900,spa:1500,spd:1500,spe:4000}, ability:null, nature:null, heldItem:null, moves:[mv('Scratch','normal',35,35),mv('Growl','normal',40,40),mv('Ember','fire',22,25),null], shiny:false, gender:null, hiddenPower:null, ball:null, ot:{name:'RED',id:30001} },
+  { species:{id:21,dex:21,name:'Spearow'}, nickname:'SPEAROW', level:10, hp:{cur:12,max:30}, status:'burn', types:['normal','flying'], stats:{hp:30,atk:21,def:14,spa:13,spd:13,spe:25}, ivs:{hp:5,atk:10,def:6,spa:9,spd:9,spe:14}, evs:{hp:0,atk:600,def:0,spa:0,spd:0,spe:1200}, ability:null, nature:null, heldItem:null, moves:[mv('Peck','flying',35,35),mv('Growl','normal',40,40),null,null], shiny:false, gender:null, hiddenPower:null, ball:null, ot:{name:'RED',id:30001} },
 ];
+const opp = (name, dex, level, cur, max, types, heldItem, moves, status=null) => ({ species:{dex,name}, level, hp:{cur,max}, types, heldItem, moves, status });
 const MOCK = {
   game3: { status:{ state:'game', adapter:{id:'mgba',name:'mGBA',endpoint:'localhost:7778'}, game:{profileId:'firered-us-1.0',name:'Pokémon FireRed (US) 1.0',generation:3,dataFormat:'gen3',language:'en'} }, party:PARTY3,
     player:{name:'RED',trainerId:12345,secretId:54321,money:4210,badges:2,location:'Route 4',playTime:'05:21:08'},
-    bag:{items:[{id:13,name:'Potion',qty:6},{id:4,name:'Poké Ball',qty:12}],keyItems:[{id:259,name:'Bicycle',qty:1}],balls:[{id:4,name:'Poké Ball',qty:12}],tms:[{id:290,name:'TM28 Dig',qty:1}],berries:[{id:139,name:'Oran Berry',qty:3}]},
-    battle:{active:true,opponent:{species:'Pidgey',level:5,hp:{cur:12,max:18}},turn:3} },
+    bag:{items:[{id:13,name:'Potion',qty:6},{id:23,name:'Antidote',qty:2}],keyItems:[{id:259,name:'Bicycle',qty:1}],balls:[{id:4,name:'Poké Ball',qty:12},{id:3,name:'Great Ball',qty:3}],tms:[{id:290,name:'TM28 Dig',qty:1}],berries:[{id:139,name:'Oran Berry',qty:3}]},
+    battle:{active:true,kind:'trainer',turn:3,playerActive:1,
+      trainer:{class:'Rival',name:'BLUE',prizeMoney:1200,itemsUsable:[{name:'Potion',qty:1}]},
+      opponents:[ opp('Pidgey',16,9,12,30,['normal','flying'],null,[mv('Gust','flying',34,35),mv('Sand-Attack','ground',15,15),null,null],'paralysis'), opp('Rattata',19,9,26,26,['normal'],{name:'Oran Berry'},[mv('Tackle','normal',35,35),mv('Tail Whip','normal',30,30),null,null]), opp('Abra',63,10,22,22,['psychic'],{name:'Light Ball'},[mv('Teleport','psychic',20,20),null,null,null]) ],
+      opponentActive:0 } },
   game1: { status:{ state:'game', adapter:{id:'retroarch',name:'RetroArch',endpoint:'localhost:55355'}, game:{profileId:'red-us',name:'Pokémon Red (US)',generation:1,dataFormat:'gen1',language:'en'} }, party:PARTY1,
     player:{name:'RED',trainerId:30001,secretId:null,money:1830,badges:1,location:'Pewter City',playTime:null},
     bag:{items:[{id:20,name:'Potion',qty:3}],keyItems:[],balls:[{id:4,name:'Poké Ball',qty:5}],tms:[],berries:[]},
@@ -51,119 +59,154 @@ const MOCK = {
   nogame: { status:{ state:'no_game', adapter:{id:'mgba',name:'mGBA',endpoint:'localhost:7778'}, game:null }, party:null },
   off: { status:{ state:'disconnected', adapter:null, game:null }, party:null },
 };
-const ADAPTERS = [ {id:'mgba',name:'mGBA',endpoint:'localhost:7778',up:true}, {id:'retroarch',name:'RetroArch',endpoint:'localhost:55355',up:false}, {id:'bizhawk',name:'BizHawk',endpoint:'localhost:7779',up:false} ];
+const ADAPTERS = [ {id:'mgba',name:'mGBA',endpoint:'localhost:7778'}, {id:'retroarch',name:'RetroArch',endpoint:'localhost:55355'}, {id:'bizhawk',name:'BizHawk',endpoint:'localhost:7779'} ];
 
 // ───────────── prototype state ─────────────
 const qs = new URLSearchParams(location.search);
-const ui = { variant: qs.get('variant') || 'A', state: qs.get('state') || 'game3', sel: 0, page: 'party', settings: { pin:'auto', port:7777, bind:'127.0.0.1', browser:true, sprites:'' }, drawer:false };
+const ui = { variant: qs.get('variant') || 'A', state: qs.get('state') || 'game3', page: 'party', drawer:false,
+  settings: { pin:'auto', port:7777, bind:'127.0.0.1', browser:true, icons:'pokeapi', sprites:'' } };
 const data = () => MOCK[ui.state];
 
+// ───────────── icons ─────────────
+const PA = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites';
+const slug = (n) => n.toLowerCase().replace(/é/g,'e').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function iconFail(el) { const t = document.createElement('span'); t.className = el.dataset.fbClass || 'text-slate-500 text-xs'; if (el.dataset.fbStyle) t.style.cssText = el.dataset.fbStyle; t.textContent = el.dataset.fb || ''; el.replaceWith(t); }
+const img = (src, cls, fb, fbClass, fbStyle='') => ui.settings.icons === 'none' ? `<span class="${fbClass||'text-slate-500 text-xs'}">${esc(fb)}</span>` : `<img class="${cls}" src="${src}" data-fb="${esc(fb)}" data-fb-class="${fbClass||''}" data-fb-style="${fbStyle}" onerror="iconFail(this)" alt="${esc(fb)}">`;
+const monIcon = (dex, name, size='w-14 h-14') => {
+  const src = ui.settings.sprites ? ui.settings.sprites.replace('{dex}', dex) : `${PA}/pokemon/${dex}.png`;
+  return img(src, `${size} px object-contain shrink-0`, name[0], `${size} shrink-0 rounded-lg grid place-items-center font-bold bg-slate-700 text-slate-200`);
+};
+const typeIcon = (t) => { const id = TYPE_ID[t]; return img(`${PA}/types/generation-viii/sword-shield/${id}.png`, 'h-4 w-auto', t, 'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase text-slate-900', 'background:'+(TYPE_COLOR[t]||'#888')); };
+const typeDot = (t) => `<span class="inline-block w-2.5 h-2.5 rounded-full shrink-0" style="background:${TYPE_COLOR[t]||'#888'}" title="${t}"></span>`;
+const itemIcon = (name, size='w-5 h-5') => img(`${PA}/items/${slug(name)}.png`, `${size} px shrink-0`, '◆', 'text-slate-500');
+const STATUS = { poison:['PSN','bg-purple-500'], burn:['BRN','bg-orange-500'], paralysis:['PAR','bg-yellow-400 !text-slate-900'], sleep:['SLP','bg-slate-500'], freeze:['FRZ','bg-cyan-400 !text-slate-900'], fainted:['FNT','bg-red-600'] };
+const statusBadge = (s) => s ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white ${STATUS[s][1]}">${STATUS[s][0]}</span>` : '';
+
 // ───────────── helpers ─────────────
-const esc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nul = '<span class="text-slate-600">—</span>';
 const val = (v) => v === null || v === undefined ? nul : esc(v);
 const hpPct = (h) => Math.round(100 * h.cur / h.max);
 const hpColor = (h) => h.cur === 0 ? 'bg-slate-600' : hpPct(h) > 50 ? 'bg-emerald-500' : hpPct(h) > 20 ? 'bg-amber-400' : 'bg-red-500';
 const hpBar = (h, cls='h-1.5') => `<div class="w-full ${cls} rounded-full bg-slate-800 overflow-hidden"><div class="hp-bar ${cls} ${hpColor(h)}" style="width:${hpPct(h)}%"></div></div>`;
-const typeChip = (t) => `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide text-slate-900" style="background:${TYPE_COLOR[t]||'#888'}">${t}</span>`;
-const sprite = (p, size='w-12 h-12') => {
-  const t = TYPE_COLOR[p.types[0]] || '#888';
-  if (ui.settings.sprites) return `<img class="${size} object-contain [image-rendering:pixelated]" src="${esc(ui.settings.sprites.replace('{dex}', p.species.dex))}" onerror="this.outerHTML='<div class=\\'${size} rounded-lg grid place-items-center font-bold text-slate-900\\' style=\\'background:${t}\\'>${p.species.name[0]}</div>'">`;
-  return `<div class="${size} shrink-0 rounded-lg grid place-items-center font-bold text-slate-900 relative" style="background:${t}">${p.species.name[0]}${p.shiny ? '<span class="absolute -top-1 -right-1 text-[10px]">✦</span>' : ''}</div>`;
-};
-const gender = (g) => g === 'male' ? '<span class="text-sky-400">♂</span>' : g === 'female' ? '<span class="text-pink-400">♀</span>' : g === 'genderless' ? '<span class="text-slate-400">⚲</span>' : nul;
+const gender = (g) => g === 'male' ? '<span class="text-sky-400">♂</span>' : g === 'female' ? '<span class="text-pink-400">♀</span>' : g === 'genderless' ? '<span class="text-slate-400">⚲</span>' : '';
 const STATS = ['hp','atk','def','spa','spd','spe'];
-const statTable = (p) => `<table class="w-full text-xs font-mono"><thead class="text-slate-500"><tr><th class="text-left font-normal"></th>${STATS.map(s=>`<th class="font-normal text-right">${s.toUpperCase()}</th>`).join('')}</tr></thead><tbody>
-  ${['stats','ivs','evs'].map(k=>`<tr class="border-t border-slate-800"><td class="text-slate-500 py-1">${k}</td>${STATS.map(s=>`<td class="text-right">${val(p[k][s])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-const moves = (p) => `<ul class="space-y-1">${p.moves.map(m => m ? `<li class="flex justify-between text-sm"><span>${esc(m.name)}</span><span class="font-mono text-xs text-slate-400">${m.pp}/${m.maxPp}</span></li>` : `<li class="text-sm text-slate-600">—</li>`).join('')}</ul>`;
-const detail = (p) => `
-  <div class="flex items-center gap-3">${sprite(p,'w-16 h-16')}<div class="min-w-0"><div class="text-lg font-semibold truncate">${esc(p.nickname)} ${gender(p.gender)} ${p.shiny?'<span class="text-amber-300 text-sm">✦ shiny</span>':''}</div><div class="text-sm text-slate-400">${esc(p.species.name)} · Lv ${p.level} · #${val(p.species.dex)}</div><div class="flex gap-1 mt-1">${p.types.map(typeChip).join('')}</div></div></div>
-  <div class="mt-3">${hpBar(p.hp,'h-2')}<div class="text-xs font-mono text-slate-400 mt-1">${p.hp.cur}/${p.hp.max} HP</div></div>
-  <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mt-3"><dt class="text-slate-500">Ability</dt><dd>${val(p.ability)}</dd><dt class="text-slate-500">Nature</dt><dd>${val(p.nature)}</dd><dt class="text-slate-500">Held item</dt><dd>${val(p.heldItem?.name)}</dd><dt class="text-slate-500">Hidden Power</dt><dd>${p.hiddenPower ? `${p.hiddenPower.type} ${p.hiddenPower.power}` : nul}</dd><dt class="text-slate-500">OT</dt><dd>${esc(p.ot.name)} (${p.ot.id})</dd></dl>
-  <div class="mt-3">${statTable(p)}</div><div class="mt-3 text-xs uppercase tracking-wide text-slate-500 mb-1">Moves</div>${moves(p)}`;
+const card = 'rounded-2xl border border-slate-800 bg-slate-900';
+
+const statTable = (p) => `<table class="w-full text-[11px] font-mono"><thead class="text-slate-500"><tr><th></th>${STATS.map(s=>`<th class="font-normal text-right">${s.toUpperCase()}</th>`).join('')}</tr></thead><tbody>
+  ${['stats','ivs','evs'].map(k=>`<tr class="border-t border-slate-800"><td class="text-slate-500 py-0.5 pr-2">${k}</td>${STATS.map(s=>`<td class="text-right">${val(p[k][s])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+const moveList = (ms, showPp=true) => `<ul class="space-y-1">${ms.map(m => m ? `<li class="flex items-center gap-2 text-sm">${typeIcon(m.type)}<span class="flex-1 truncate">${esc(m.name)}</span>${showPp?`<span class="font-mono text-xs text-slate-400">${m.pp}/${m.maxPp}</span>`:''}</li>` : `<li class="text-sm text-slate-700">—</li>`).join('')}</ul>`;
+const heldItem = (it) => it ? `<span class="inline-flex items-center gap-1.5">${itemIcon(it.name)}<span>${esc(it.name)}</span></span>` : nul;
+
+// ───────────── the party card: everything about one party member ─────────────
+const partyCard = (p, slot) => !p ? `<div class="rounded-2xl border border-dashed border-slate-800 min-h-[200px] grid place-items-center text-slate-700 text-sm">Slot ${slot+1} empty</div>` : `
+  <article class="${card} p-4 ${p.status==='fainted'?'opacity-60':''}">
+    <header class="flex items-start gap-3">${monIcon(p.species.dex, p.species.name, 'w-16 h-16')}
+      <div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><b class="truncate">${esc(p.nickname)}</b>${gender(p.gender)}${p.shiny?'<span class="text-amber-300 text-xs">✦</span>':''}${statusBadge(p.status)}</div>
+        <div class="text-xs text-slate-400">${esc(p.species.name)} · Lv ${p.level} · #${val(p.species.dex)}</div>
+        <div class="flex gap-1 mt-1">${p.types.map(typeIcon).join('')}</div></div>
+      ${p.ball ? `<span title="${esc(p.ball)}">${itemIcon(p.ball,'w-6 h-6')}</span>` : ''}</header>
+    <div class="mt-3">${hpBar(p.hp,'h-2')}<div class="text-[11px] font-mono text-slate-400 mt-1">${p.hp.cur}/${p.hp.max} HP</div></div>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm mt-3"><dt class="text-slate-500">Item</dt><dd>${heldItem(p.heldItem)}</dd><dt class="text-slate-500">Ability</dt><dd>${val(p.ability)}</dd><dt class="text-slate-500">Nature</dt><dd>${val(p.nature)}</dd><dt class="text-slate-500">Hidden Power</dt><dd>${p.hiddenPower?`<span class="inline-flex items-center gap-1.5">${typeIcon(p.hiddenPower.type)} ${p.hiddenPower.power}</span>`:nul}</dd></dl>
+    <div class="mt-3">${statTable(p)}</div>
+    <div class="mt-3 pt-3 border-t border-slate-800">${moveList(p.moves)}</div>
+  </article>`;
+const partyScreen = (d) => `<div class="grid md:grid-cols-2 2xl:grid-cols-3 gap-4">${Array.from({length:6},(_,i)=>partyCard(d.party[i],i)).join('')}</div>`;
+
+// ───────────── the battle screen ─────────────
+const oppRow = (o, active) => `<li class="flex items-center gap-3 rounded-xl px-3 py-2 ${active?'bg-rose-950/40 border border-rose-800':'bg-slate-950 border border-slate-800'} ${o.hp.cur===0?'opacity-50':''}">
+  ${monIcon(o.species.dex, o.species.name, 'w-12 h-12')}<div class="flex-1 min-w-0"><div class="flex items-center gap-2 text-sm"><b>${esc(o.species.name)}</b><span class="text-slate-400">Lv ${o.level}</span>${statusBadge(o.status)}<span class="flex gap-1 ml-auto">${o.types.map(typeIcon).join('')}</span></div>
+  <div class="mt-1">${hpBar(o.hp)}</div>
+  <div class="flex items-center justify-between mt-1.5 text-xs text-slate-400"><span class="font-mono">${o.hp.cur}/${o.hp.max}</span><span class="flex items-center gap-1">${o.heldItem?heldItem(o.heldItem):'<span class="text-slate-600">no item</span>'}</span></div>
+  <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">${o.moves.filter(Boolean).map(m=>`<span class="inline-flex items-center gap-1 text-xs">${typeDot(m.type)}${esc(m.name)}</span>`).join('')}</div></div></li>`;
+function battleScreen(d) {
+  const b = d.battle;
+  if (!b.active) return `<div class="${card} p-10 text-center max-w-xl mx-auto"><div class="text-4xl mb-2">⚔</div><h2 class="font-semibold">Not in battle</h2><p class="text-sm text-slate-400 mt-1">This screen fills in when a battle starts.</p></div>`;
+  const mine = d.party[b.playerActive];
+  return `<div class="grid xl:grid-cols-[1fr_1.2fr] gap-4">
+    <section><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Your active Pokémon</div>${partyCard(mine, b.playerActive)}</section>
+    <section class="space-y-4"><div class="${card} p-4 flex items-center gap-4"><div class="w-14 h-14 rounded-xl bg-slate-800 grid place-items-center text-2xl">🧑</div>
+        <div class="flex-1"><div class="text-xs uppercase tracking-wide text-slate-500">${b.kind==='trainer'?'Trainer battle':'Wild battle'} · turn ${b.turn}</div><div class="font-semibold">${esc(b.trainer.class)} ${esc(b.trainer.name)}</div>
+        <div class="text-xs text-slate-400 mt-0.5">Prize ₽${b.trainer.prizeMoney.toLocaleString()} · ${b.opponents.length} Pokémon${b.trainer.itemsUsable.length?` · items: ${b.trainer.itemsUsable.map(i=>`<span class="inline-flex items-center gap-1">${itemIcon(i.name,'w-4 h-4')}${esc(i.name)} ×${i.qty}</span>`).join(' ')}`:''}</div></div>
+        <div class="flex gap-1">${b.opponents.map((o,i)=>monIcon(o.species.dex,o.species.name,'w-7 h-7')).join('')}</div></div>
+      <div><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Opponent's party</div><ul class="space-y-2">${b.opponents.map((o,i)=>oppRow(o, i===b.opponentActive)).join('')}</ul></div>
+      <p class="text-xs text-slate-600">What battle state is readable, and when, is still an open map question. This shows the fullest case.</p></section></div>`;
+}
+
+// ───────────── player + bag, empty states, settings ─────────────
+const playerView = (p) => `<dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">${[['Name',p.name],['Trainer ID',p.trainerId],['Secret ID',p.secretId],['Money','₽'+p.money.toLocaleString()],['Location',p.location],['Play time',p.playTime]].map(([k,v])=>`<dt class="text-slate-500">${k}</dt><dd>${val(v)}</dd>`).join('')}<dt class="text-slate-500">Badges</dt><dd class="flex gap-1">${Array.from({length:8},(_,i)=>`<span class="w-4 h-4 rounded-full ${i<p.badges?'bg-amber-400':'bg-slate-800'}"></span>`).join('')}</dd></dl>`;
+const bagView = (b) => `<div class="grid sm:grid-cols-2 gap-x-8">${Object.entries(b).map(([pocket, items]) => items.length ? `<div class="mb-3"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">${pocket}</div>${items.map(i=>`<div class="flex items-center gap-2 text-sm py-0.5">${itemIcon(i.name)}<span class="flex-1">${esc(i.name)}</span><span class="font-mono text-slate-400">×${i.qty}</span></div>`).join('')}</div>` : '').join('')}</div>`;
+const trainerScreen = (d) => `<div class="grid lg:grid-cols-2 gap-4"><section class="${card} p-5"><h2 class="font-semibold mb-3">Player</h2>${playerView(d.player)}</section><section class="${card} p-5"><h2 class="font-semibold mb-3">Bag</h2>${bagView(d.bag)}</section></div>`;
 
 const statusDot = (s) => ({game:'bg-emerald-400',no_game:'bg-amber-400',disconnected:'bg-red-500'}[s.state]);
-const statusText = (s) => s.state === 'game' ? `${s.game.name}` : s.state === 'no_game' ? 'Connected · no game loaded' : 'No emulator found';
-const genNote = (s) => s.state === 'game' && s.game.generation < 3 ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">Gen ${s.game.generation}: ability, nature, gender show —</span>` : '';
-
-// shared empty/disconnected view (appears in every variant)
+const statusText = (s) => s.state === 'game' ? s.game.name : s.state === 'no_game' ? 'Connected · no game loaded' : 'No emulator found';
+const genNote = (s) => s.state === 'game' && s.game.generation < 3 ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">Gen ${s.game.generation}: no ability, nature or gender</span>` : '';
 const emptyState = (s) => s.state === 'disconnected' ? `
   <div class="max-w-xl mx-auto mt-16 text-center"><div class="text-5xl mb-3">🔌</div><h2 class="text-xl font-semibold">Waiting for an emulator</h2>
   <p class="text-slate-400 mt-2 text-sm">Start mGBA, RetroArch or BizHawk, then enable its bridge or network commands. This page connects by itself.</p>
   <ul class="mt-5 text-left space-y-2">${ADAPTERS.map(a=>`<li class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-800 px-3 py-2"><span><b>${a.name}</b> <span class="font-mono text-xs text-slate-500">${a.endpoint}</span></span><span class="text-xs text-slate-500 animate-pulse">probing…</span></li>`).join('')}</ul></div>`
   : `<div class="max-w-xl mx-auto mt-16 text-center"><div class="text-5xl mb-3">🎮</div><h2 class="text-xl font-semibold">Connected to ${esc(s.adapter.name)}</h2><p class="text-slate-400 mt-2 text-sm">Load a game in the emulator. The game is detected automatically.</p></div>`;
-
-const settingsPanel = () => `
-  <div class="space-y-4 text-sm">
-    <div><label class="block text-slate-400 mb-1">Adapter</label><select class="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1.5" onchange="ui.settings.pin=this.value;render()"><option value="auto" ${ui.settings.pin==='auto'?'selected':''}>Auto-detect (mGBA → RetroArch → BizHawk)</option>${ADAPTERS.map(a=>`<option value="${a.id}" ${ui.settings.pin===a.id?'selected':''}>Pin to ${a.name}</option>`).join('')}</select></div>
-    <div class="grid grid-cols-2 gap-3"><div><label class="block text-slate-400 mb-1">Port</label><input class="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1.5 font-mono" value="${ui.settings.port}" onchange="ui.settings.port=this.value"></div>
-    <div><label class="block text-slate-400 mb-1">Bind address</label><select class="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1.5 font-mono" onchange="ui.settings.bind=this.value;render()"><option>127.0.0.1</option><option ${ui.settings.bind==='0.0.0.0'?'selected':''}>0.0.0.0</option></select></div></div>
+const adapterList = (s) => `<ul class="space-y-1.5">${ADAPTERS.map(a => { const cur = s.adapter?.id === a.id; return `<li class="flex items-center justify-between rounded-lg px-3 py-2 ${cur?'bg-emerald-950/50 border border-emerald-800':'bg-slate-900 border border-slate-800'}"><span class="text-sm"><b>${a.name}</b> <span class="font-mono text-xs text-slate-500">${a.endpoint}</span></span>${cur?'<span class="text-xs text-emerald-400">connected</span>':`<button class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700" onclick="ui.settings.pin='${a.id}';render()">Use</button>`}</li>`; }).join('')}</ul>`;
+const inp = 'w-full rounded bg-slate-900 border border-slate-700 px-2 py-1.5';
+const settingsPanel = (s) => `<div class="space-y-4 text-sm">
+    <div><label class="block text-slate-400 mb-1">Adapter</label><select class="${inp}" onchange="ui.settings.pin=this.value;render()"><option value="auto">Auto-detect (mGBA → RetroArch → BizHawk)</option>${ADAPTERS.map(a=>`<option value="${a.id}" ${ui.settings.pin===a.id?'selected':''}>Pin to ${a.name}</option>`).join('')}</select></div>
+    ${adapterList(s)}
+    <div class="grid grid-cols-2 gap-3"><div><label class="block text-slate-400 mb-1">Port</label><input class="${inp} font-mono" value="${ui.settings.port}" onchange="ui.settings.port=this.value"></div>
+    <div><label class="block text-slate-400 mb-1">Bind address</label><select class="${inp} font-mono" onchange="ui.settings.bind=this.value;render()"><option>127.0.0.1</option><option ${ui.settings.bind==='0.0.0.0'?'selected':''}>0.0.0.0</option></select></div></div>
     ${ui.settings.bind==='0.0.0.0'?'<p class="text-amber-300 text-xs">Anyone on your network can read this API. It has no password.</p>':''}
     <label class="flex items-center gap-2"><input type="checkbox" ${ui.settings.browser?'checked':''} onchange="ui.settings.browser=this.checked"> Open browser on start</label>
-    <div><label class="block text-slate-400 mb-1">Sprite URL <span class="text-slate-600">(optional)</span></label><input class="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1.5 font-mono text-xs" placeholder="https://…/{dex}.png" value="${esc(ui.settings.sprites)}" onchange="ui.settings.sprites=this.value;render()"><p class="text-xs text-slate-500 mt-1">No art ships with the app. Blank shows a type-coloured tile. <code>{dex}</code> becomes the National Dex number.</p></div>
-    <div class="pt-2 border-t border-slate-800 text-xs text-slate-500">API: <span class="font-mono">http://${ui.settings.bind}:${ui.settings.port}/api/v2</span> · <a class="underline" href="#">OpenAPI</a></div>
-  </div>`;
+    <div><label class="block text-slate-400 mb-1">Icons and sprites</label><select class="${inp}" onchange="ui.settings.icons=this.value;render()"><option value="pokeapi" ${ui.settings.icons==='pokeapi'?'selected':''}>PokeAPI sprites (online)</option><option value="none" ${ui.settings.icons==='none'?'selected':''}>None (names and colour dots)</option></select>
+      <input class="${inp} font-mono text-xs mt-2" placeholder="Custom Pokémon sprite URL, e.g. https://…/{dex}.png" value="${esc(ui.settings.sprites)}" onchange="ui.settings.sprites=this.value;render()"><p class="text-xs text-slate-500 mt-1">Nothing is bundled with the app. Icons load from the source you pick; if one fails, its name shows instead.</p></div>
+    <div class="pt-2 border-t border-slate-800 text-xs text-slate-500">API: <span class="font-mono">http://${ui.settings.bind}:${ui.settings.port}/api/v2</span> · <a class="underline" href="#">OpenAPI</a></div></div>`;
 
-const adapterList = (s) => `<ul class="space-y-1.5">${ADAPTERS.map(a => { const cur = s.adapter?.id === a.id; return `<li class="flex items-center justify-between rounded-lg px-3 py-2 ${cur?'bg-emerald-950/50 border border-emerald-800':'bg-slate-900 border border-slate-800'}"><span class="text-sm"><b>${a.name}</b> <span class="font-mono text-xs text-slate-500">${a.endpoint}</span></span>${cur?'<span class="text-xs text-emerald-400">connected</span>':`<button class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700" onclick="ui.settings.pin='${a.id}';render()">Use</button>`}</li>`; }).join('')}</ul>`;
+const SCREENS = [['party','Party'],['battle','Battle'],['trainer','Trainer & bag'],['settings','Settings']];
+const screenBody = (key, d) => key === 'party' ? partyScreen(d) : key === 'battle' ? battleScreen(d) : trainerScreen(d);
+const gate = (fn) => { const d = data(); return d.status.state !== 'game' ? emptyState(d.status) : fn(d); };
 
-const bagView = (b) => Object.entries(b).map(([pocket, items]) => items.length ? `<div class="mb-3"><div class="text-xs uppercase tracking-wide text-slate-500 mb-1">${pocket}</div>${items.map(i=>`<div class="flex justify-between text-sm"><span>${esc(i.name)}</span><span class="font-mono text-slate-400">×${i.qty}</span></div>`).join('')}</div>` : '').join('');
-const playerView = (p) => `<dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">${[['Name',p.name],['Trainer ID',p.trainerId],['Secret ID',p.secretId],['Money','₽'+p.money],['Badges',p.badges+'/8'],['Location',p.location],['Play time',p.playTime]].map(([k,v])=>`<dt class="text-slate-500">${k}</dt><dd>${val(v)}</dd>`).join('')}</dl>`;
-const battleView = (b) => !b.active ? '<p class="text-sm text-slate-500">Not in battle.</p>' : `<div class="text-sm"><div class="text-slate-400">vs <b class="text-slate-200">${esc(b.opponent.species)}</b> Lv ${b.opponent.level} · turn ${b.turn}</div><div class="mt-2">${hpBar(b.opponent.hp,'h-2')}</div><p class="text-xs text-slate-600 mt-2">Battle contents are a later decision; this is a placeholder.</p></div>`;
-
-// ───────────── Variant A: sidebar + pages ─────────────
+// ───────────── Variant A: sidebar pages ─────────────
 function VariantA() {
-  const d = data(), s = d.status, pages = [['party','Party'],['player','Player'],['bag','Bag'],['battle','Battle'],['settings','Settings']];
-  const body = () => {
-    if (ui.page === 'settings') return `<div class="max-w-lg"><h2 class="text-lg font-semibold mb-4">Settings</h2>${settingsPanel()}<h3 class="text-sm font-semibold mt-6 mb-2">Adapters</h3>${adapterList(s)}</div>`;
-    if (s.state !== 'game') return emptyState(s);
-    if (ui.page === 'party') { const p = d.party[ui.sel] || d.party[0]; return `<div class="grid lg:grid-cols-[320px_1fr] gap-6"><ul class="space-y-2">${d.party.map((m,i)=>`<li><button onclick="ui.sel=${i};render()" class="w-full text-left rounded-xl border px-3 py-2 flex items-center gap-3 ${i===ui.sel?'border-sky-500 bg-sky-950/30':'border-slate-800 bg-slate-900 hover:border-slate-700'}">${sprite(m,'w-10 h-10')}<span class="flex-1 min-w-0"><span class="flex justify-between text-sm"><b class="truncate">${esc(m.nickname)}</b><span class="text-slate-400">Lv ${m.level}</span></span>${hpBar(m.hp)}</span></button></li>`).join('')}</ul><div class="rounded-xl border border-slate-800 bg-slate-900 p-5">${detail(p)}</div></div>`; }
-    if (ui.page === 'player') return `<div class="max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 class="font-semibold mb-3">Player</h2>${playerView(d.player)}</div>`;
-    if (ui.page === 'bag') return `<div class="max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 class="font-semibold mb-3">Bag</h2>${bagView(d.bag)}</div>`;
-    return `<div class="max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 class="font-semibold mb-3">Battle</h2>${battleView(d.battle)}</div>`;
-  };
-  return `<div class="flex min-h-screen"><aside class="w-56 shrink-0 border-r border-slate-800 bg-slate-950 p-4 flex flex-col">
+  const d = data(), s = d.status;
+  const body = ui.page === 'settings' ? `<div class="max-w-lg"><h2 class="text-lg font-semibold mb-4">Settings</h2>${settingsPanel(s)}</div>` : gate(dd => screenBody(ui.page, dd));
+  return `<div class="flex min-h-screen"><aside class="w-56 shrink-0 border-r border-slate-800 bg-slate-950 p-4 flex flex-col sticky top-0 h-screen">
     <div class="font-bold tracking-tight mb-6">Memory Reader</div>
-    <nav class="space-y-1 flex-1">${pages.map(([k,l])=>`<button onclick="ui.page='${k}';render()" class="w-full text-left px-3 py-1.5 rounded-lg text-sm ${ui.page===k?'bg-slate-800 text-white':'text-slate-400 hover:text-slate-200'}">${l}</button>`).join('')}</nav>
+    <nav class="space-y-1 flex-1">${SCREENS.map(([k,l])=>`<button onclick="ui.page='${k}';render()" class="w-full text-left px-3 py-1.5 rounded-lg text-sm flex justify-between ${ui.page===k?'bg-slate-800 text-white':'text-slate-400 hover:text-slate-200'}">${l}${k==='battle'&&d.battle?.active?'<span class="w-2 h-2 rounded-full bg-rose-500 self-center animate-pulse"></span>':''}</button>`).join('')}</nav>
     <div class="text-xs rounded-lg bg-slate-900 border border-slate-800 p-3"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ${statusDot(s)}"></span><span class="font-medium">${s.adapter?s.adapter.name:'Disconnected'}</span></div><div class="text-slate-400 mt-1">${esc(statusText(s))}</div><div class="mt-1">${genNote(s)}</div></div></aside>
-    <main class="flex-1 p-8">${body()}</main></div>`;
+    <main class="flex-1 p-8 min-w-0">${body}</main></div>`;
 }
 
-// ───────────── Variant B: single screen, party strip on top, drawer for settings ─────────────
+// ───────────── Variant B: status header + top tabs, settings drawer ─────────────
 function VariantB() {
   const d = data(), s = d.status;
-  const top = `<header class="flex items-center gap-4 px-6 py-3 border-b border-slate-800 bg-slate-950"><span class="w-2.5 h-2.5 rounded-full ${statusDot(s)}"></span><div class="text-sm"><b>${esc(statusText(s))}</b>${s.adapter?` <span class="text-slate-500">via ${s.adapter.name}</span>`:''}</div>${s.state==='game'?`<span class="font-mono text-xs text-slate-500">${s.game.profileId} · gen ${s.game.generation} · ${s.game.dataFormat}</span>`:''}<span class="flex-1"></span>${genNote(s)}<button onclick="ui.drawer=true;render()" class="text-sm px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700">⚙ Settings</button></header>`;
-  let main;
-  if (s.state !== 'game') main = emptyState(s);
-  else { const p = d.party[ui.sel] || d.party[0];
-    main = `<div class="p-6 space-y-6"><div class="grid grid-cols-3 lg:grid-cols-6 gap-3">${Array.from({length:6},(_,i)=>{const m=d.party[i]; return m?`<button onclick="ui.sel=${i};render()" class="rounded-xl border p-3 text-left ${i===ui.sel?'border-sky-500 bg-sky-950/30':'border-slate-800 bg-slate-900 hover:border-slate-700'}"><div class="flex items-center gap-2">${sprite(m,'w-9 h-9')}<div class="min-w-0"><div class="text-sm font-semibold truncate">${esc(m.nickname)}</div><div class="text-xs text-slate-400">Lv ${m.level}</div></div></div><div class="mt-2">${hpBar(m.hp)}</div></button>`:`<div class="rounded-xl border border-dashed border-slate-800 p-3 text-slate-700 text-sm grid place-items-center">empty</div>`}).join('')}</div>
-    <div class="grid lg:grid-cols-3 gap-6"><section class="rounded-xl border border-slate-800 bg-slate-900 p-5 lg:col-span-1">${detail(p)}</section>
-    <section class="rounded-xl border border-slate-800 bg-slate-900 p-5"><h3 class="font-semibold mb-3">Player</h3>${playerView(d.player)}<h3 class="font-semibold mt-5 mb-2">Battle</h3>${battleView(d.battle)}</section>
-    <section class="rounded-xl border border-slate-800 bg-slate-900 p-5"><h3 class="font-semibold mb-3">Bag</h3>${bagView(d.bag)}</section></div></div>`; }
-  const drawer = ui.drawer ? `<div class="fixed inset-0 z-40 bg-black/50" onclick="ui.drawer=false;render()"></div><aside class="fixed right-0 top-0 bottom-0 z-40 w-96 bg-slate-950 border-l border-slate-800 p-6 overflow-y-auto"><div class="flex justify-between mb-4"><h2 class="font-semibold">Settings</h2><button onclick="ui.drawer=false;render()">✕</button></div>${settingsPanel()}<h3 class="text-sm font-semibold mt-6 mb-2">Adapters</h3>${adapterList(s)}</aside>` : '';
-  return top + main + drawer;
+  const tabs = SCREENS.filter(([k])=>k!=='settings');
+  if (!tabs.some(([k])=>k===ui.page)) ui.page = 'party';
+  const header = `<header class="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-slate-800"><div class="flex items-center gap-4 px-6 py-3"><span class="w-2.5 h-2.5 rounded-full ${statusDot(s)}"></span><div class="text-sm"><b>${esc(statusText(s))}</b>${s.adapter?` <span class="text-slate-500">via ${s.adapter.name}</span>`:''}</div>${s.state==='game'?`<span class="font-mono text-xs text-slate-500">${s.game.profileId} · gen ${s.game.generation}</span>`:''}<span class="flex-1"></span>${genNote(s)}<button onclick="ui.drawer=true;render()" class="text-sm px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700">⚙ Settings</button></div>
+    <nav class="flex gap-6 px-6">${tabs.map(([k,l])=>`<button onclick="ui.page='${k}';render()" class="py-2 text-sm border-b-2 ${ui.page===k?'border-sky-500 text-white':'border-transparent text-slate-400 hover:text-slate-200'}">${l}${k==='battle'&&d.battle?.active?' <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 align-middle"></span>':''}</button>`).join('')}</nav></header>`;
+  const drawer = ui.drawer ? `<div class="fixed inset-0 z-40 bg-black/50" onclick="ui.drawer=false;render()"></div><aside class="fixed right-0 top-0 bottom-0 z-40 w-96 bg-slate-950 border-l border-slate-800 p-6 overflow-y-auto"><div class="flex justify-between mb-4"><h2 class="font-semibold">Settings</h2><button onclick="ui.drawer=false;render()">✕</button></div>${settingsPanel(s)}</aside>` : '';
+  return header + `<main class="p-6">${gate(dd => screenBody(ui.page, dd))}</main>` + drawer;
 }
 
-// ───────────── Variant C: dense table + inspector rail, status footer ─────────────
+// ───────────── Variant C: one scrolling page, battle surfaces on top when live ─────────────
 function VariantC() {
-  const d = data(), s = d.status;
+  const d = data(), s = d.status, live = d.battle?.active;
+  const sec = (id, title, html) => `<section id="${id}" class="mb-10 scroll-mt-14"><h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-3">${title}</h2>${html}</section>`;
   let body;
   if (s.state !== 'game') body = emptyState(s);
-  else { const p = d.party[ui.sel] || d.party[0];
-    body = `<div class="grid lg:grid-cols-[1fr_340px] min-h-[calc(100vh-7rem)]"><div class="p-4 overflow-x-auto"><table class="w-full text-sm"><thead class="text-slate-500 text-xs uppercase"><tr><th class="text-left py-2 px-2">Pokémon</th><th class="text-right px-2">Lv</th><th class="px-2 w-32 text-left">HP</th>${STATS.slice(1).map(x=>`<th class="text-right px-2 font-mono">${x}</th>`).join('')}<th class="text-left px-2">Ability</th><th class="text-left px-2">Nature</th><th class="text-left px-2">Item</th></tr></thead><tbody>${d.party.map((m,i)=>`<tr onclick="ui.sel=${i};render()" class="cursor-pointer border-t border-slate-800 ${i===ui.sel?'bg-sky-950/40':'hover:bg-slate-900'}"><td class="py-2 px-2"><div class="flex items-center gap-2">${sprite(m,'w-7 h-7')}<span><b>${esc(m.nickname)}</b> ${gender(m.gender)}<span class="block text-xs text-slate-500">${esc(m.species.name)}</span></span></div></td><td class="text-right px-2 font-mono">${m.level}</td><td class="px-2">${hpBar(m.hp)}<span class="text-[11px] font-mono text-slate-500">${m.hp.cur}/${m.hp.max}</span></td>${STATS.slice(1).map(x=>`<td class="text-right px-2 font-mono">${m.stats[x]}</td>`).join('')}<td class="px-2">${val(m.ability)}</td><td class="px-2">${val(m.nature)}</td><td class="px-2">${val(m.heldItem?.name)}</td></tr>`).join('')}</tbody></table>
-      <div class="grid md:grid-cols-3 gap-4 mt-6">${[['Player',playerView(d.player)],['Bag',bagView(d.bag)],['Battle',battleView(d.battle)]].map(([t,h])=>`<div class="rounded-lg border border-slate-800 p-4"><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">${t}</div>${h}</div>`).join('')}</div></div>
-      <aside class="border-l border-slate-800 bg-slate-950 p-4 overflow-y-auto"><div class="text-xs uppercase tracking-wide text-slate-500 mb-2">Inspector</div>${detail(p)}</aside></div>`; }
-  const tabs = ui.drawer ? `<div class="fixed inset-x-0 bottom-12 z-30 mx-auto max-w-2xl rounded-t-xl border border-slate-700 bg-slate-950 p-5 shadow-2xl"><div class="flex justify-between mb-3"><h2 class="font-semibold">Settings & adapters</h2><button onclick="ui.drawer=false;render()">✕</button></div><div class="grid md:grid-cols-2 gap-6"><div>${settingsPanel()}</div><div>${adapterList(s)}</div></div></div>` : '';
-  return `<div class="px-4 py-2 border-b border-slate-800 text-sm font-semibold tracking-tight">Memory Reader</div>${body}${tabs}
+  else body = (live ? sec('battle','Battle · live',battleScreen(d)) : '') + sec('party','Party',partyScreen(d)) + sec('trainer','Trainer & bag',trainerScreen(d)) + (live ? '' : sec('battle','Battle',battleScreen(d)));
+  const panel = ui.drawer ? `<div class="fixed inset-x-0 bottom-12 z-30 mx-auto max-w-lg max-h-[70vh] overflow-y-auto rounded-t-xl border border-slate-700 bg-slate-950 p-5 shadow-2xl"><div class="flex justify-between mb-3"><h2 class="font-semibold">Settings</h2><button onclick="ui.drawer=false;render()">✕</button></div>${settingsPanel(s)}</div>` : '';
+  return `<header class="sticky top-0 z-20 bg-slate-950/95 border-b border-slate-800 flex items-center gap-4 px-4 h-11 text-sm"><b class="tracking-tight">Memory Reader</b><nav class="flex gap-3 text-slate-400">${s.state==='game'?['party','battle','trainer'].map(k=>`<a class="hover:text-white" href="#${k}">${k}</a>`).join(''):''}</nav></header>
+    <main class="p-6 max-w-[1500px] mx-auto">${body}</main>${panel}
     <footer class="fixed bottom-0 inset-x-0 h-12 bg-slate-950 border-t border-slate-800 flex items-center gap-3 px-4 text-xs z-20"><span class="w-2 h-2 rounded-full ${statusDot(s)}"></span><span>${esc(statusText(s))}</span>${s.adapter?`<span class="text-slate-500">· ${s.adapter.name} ${s.adapter.endpoint}</span>`:''}${s.state==='game'?`<span class="text-slate-500 font-mono">· ${s.game.profileId}</span>`:''}${genNote(s)}<span class="flex-1"></span><button onclick="ui.drawer=!ui.drawer;render()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700">⚙ Settings</button></footer>`;
 }
 
 // ───────────── switcher + render ─────────────
-const VARIANTS = { A:['Sidebar + pages',VariantA], B:['Single screen + drawer',VariantB], C:['Dense table + inspector',VariantC] };
+const VARIANTS = { A:['Sidebar pages',VariantA], B:['Top tabs + drawer',VariantB], C:['One scrolling page',VariantC] };
 const STATES = ['game3','game1','nogame','off'];
 function setVariant(v){ ui.variant=v; ui.drawer=false; const u=new URL(location); u.searchParams.set('variant',v); history.replaceState(null,'',u); render(); }
-function setState(st){ ui.state=st; ui.sel=0; const u=new URL(location); u.searchParams.set('state',st); history.replaceState(null,'',u); render(); }
+function setState(st){ ui.state=st; const u=new URL(location); u.searchParams.set('state',st); history.replaceState(null,'',u); render(); }
 function render() {
+  const y = scrollY;
   document.getElementById('app').innerHTML = VARIANTS[ui.variant][1]();
+  scrollTo(0, y);
   const keys = Object.keys(VARIANTS), i = keys.indexOf(ui.variant);
   document.getElementById('switcher').innerHTML = `<button onclick="setVariant('${keys[(i+keys.length-1)%keys.length]}')" class="px-2">←</button><span>${ui.variant} · ${VARIANTS[ui.variant][0]}</span><button onclick="setVariant('${keys[(i+1)%keys.length]}')" class="px-2">→</button><span class="w-px h-5 bg-slate-300"></span><select class="bg-transparent" onchange="setState(this.value)">${STATES.map(x=>`<option value="${x}" ${x===ui.state?'selected':''}>${x}</option>`).join('')}</select>`;
 }
