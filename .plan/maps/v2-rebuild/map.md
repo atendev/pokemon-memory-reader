@@ -25,6 +25,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [Language and HTTP stack](./tickets/004-language-and-toolkit.md): TypeScript on Bun compiled to one executable, Hono and Zod for the API, and a new React viewer built by Bun and embedded, all in one Bun workspace repo.
 - [Game profile source and format](./tickets/005-game-profile-source.md): one JSON profile per ROM revision checked by Zod, addresses generated from pret symbols at dev time, struct layouts in decoder code per data format, and built-in profiles embedded with user profiles loaded from a folder.
 - [API v2 contract](./tickets/006-api-contract.md): `/api/v2` REST snapshots plus a topic-filtered SSE stream of whole resources, a `status` resource exposing profile ID and generation, one shape per resource across generations with DVs in `ivs` and null for missing fields, and `503` with a status-carrying error when no game is loaded.
+- [License](./tickets/007-license.md): GPL-3.0-or-later for the app, MIT for any package outside code imports, pret and CFRU addresses embedded as facts with provenance, no Nintendo art bundled, and only trimmed RAM slices committed as fixtures.
 
 ## Not yet specified
 
@@ -32,7 +33,8 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - Reference data for hacks that add species, moves or items (Radical Red and others): how a hack profile supplies extended name tables.
 - The battle tracker's data model: which battle state is readable (opponent party, active moves, PP, field effects) and when it's valid.
 - PC box reading for each generation, and whether boxes belong in the first release.
-- Decoder test fixtures: the dump format, which game states to capture, and whether RAM dumps can be committed.
+- Decoder test fixtures: the format of committed RAM slices, which game states to capture, and the tool that cuts slices from a local dump.
+- Whether v2 publishes an importable package for overlay developers (API types, Zod schemas, an SSE client), and how it's versioned against `/api/v2`.
 - Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed.
 - The read loop: how often the program reads each resource from the adapter, how it detects changes to push, and the latency budget from a game change to an SSE event.
 - The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open), plus where the user profiles folder lives.
