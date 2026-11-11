@@ -19,6 +19,9 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 
 ## Decisions so far
 
+- [Emulator memory access APIs](./tickets/001-emulator-memory-access.md): RetroArch network commands need no bridge, mGBA and BizHawk need Lua bridges, and raw process memory is too fragile to support.
+- [What decomp symbol data provides](./tickets/002-decomp-symbol-data.md): prebuilt pret symbols give addresses for every revision but no struct layouts, and CFRU hacks need their own profiles.
+
 ## Not yet specified
 
 - How the app identifies a game, especially ROM hacks whose hash is unknown and whose game code copies the base game.
