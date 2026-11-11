@@ -27,6 +27,8 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [API v2 contract](./tickets/006-api-contract.md): `/api/v2` REST snapshots plus a topic-filtered SSE stream of whole resources, a `status` resource exposing profile ID and generation, one shape per resource across generations with DVs in `ivs` and null for missing fields, and `503` with a status-carrying error when no game is loaded.
 - [License](./tickets/007-license.md): GPL-3.0-or-later for the app, MIT for any package outside code imports, pret and CFRU addresses embedded as facts with provenance, no Nintendo art bundled, and only trimmed RAM slices committed as fixtures.
 - [Viewer design](./tickets/008-viewer-design.md): a collapsible-sidebar app with Party (six detail cards, 3x2 when collapsed), Battle (both active mons with VS, trainer card, opponent party), Trainer & bag and Settings screens, using runtime-loaded icons with name fallbacks.
+- [How ROM hacks extend reference data](./tickets/010-hack-reference-data.md): hacks keep Gen 3-charmap name tables at hack-specific addresses, CFRU repoints some ROM header pointers but not move names, and expansion hacks need a per-build layout.
+- [Icon and sprite source](./tickets/016-icon-source.md): PokeAPI/sprites is the best default (tolerated, not licensed, no hotlink terms), and nothing covers Gen 1-2 box icons or hack species.
 
 ## Not yet specified
 
