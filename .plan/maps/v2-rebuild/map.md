@@ -30,15 +30,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 
 ## Not yet specified
 
-- How the app identifies a game, especially ROM hacks whose hash is unknown and whose game code copies the base game. Profiles reserve an `identify` block (`sha1` list, `gameCode`) for this to fill in.
-- Reference data for hacks that add species, moves or items (Radical Red and others): how a hack profile supplies extended name tables.
-- The battle tracker's data model: which battle state is readable (opponent party, active moves, PP, field effects) and when it's valid. The viewer's Battle screen assumes the opponent's full party (level, HP, status, held items, moves) and the trainer's class, name, prize money and usable items.
-- PC box reading for each generation, and whether boxes belong in the first release.
-- Decoder test fixtures: the format of committed RAM slices, which game states to capture, and the tool that cuts slices from a local dump.
-- Whether v2 publishes an importable package for overlay developers (API types, Zod schemas, an SSE client), and how it's versioned against `/api/v2`.
-- Release pipeline for the per-OS executables (CI cross-compile, code signing, Windows SmartScreen), auto-update, and how emulator bridges get installed. Also whether runtime-loaded icons from a community source (PokeAPI sprites) are acceptable under the license decision, and which source is the default.
-- The read loop: how often the program reads each resource from the adapter, how it detects changes to push, and the latency budget from a game change to an SSE event.
-- The config file: location, format, and the list of settings (adapter pin, ports, bind address, browser auto-open), plus where the user profiles folder lives.
+<!-- all earlier fog graduated into tickets 009-019 -->
 
 ## Out of scope
 
