@@ -169,7 +169,7 @@ function VariantA() {
   const body = ui.page === 'settings' ? `<div class="max-w-lg"><h2 class="text-lg font-semibold mb-4">Settings</h2>${settingsPanel(s)}</div>` : gate(dd => screenBody(ui.page, dd));
   return `<div class="flex min-h-screen"><aside class="w-56 shrink-0 border-r border-slate-800 bg-slate-950 p-4 flex flex-col sticky top-0 h-screen">
     <div class="font-bold tracking-tight mb-6">Memory Reader</div>
-    <nav class="space-y-1 flex-1">${SCREENS.map(([k,l])=>`<button onclick="ui.page='${k}';render()" class="w-full text-left px-3 py-1.5 rounded-lg text-sm flex justify-between ${ui.page===k?'bg-slate-800 text-white':'text-slate-400 hover:text-slate-200'}">${l}${k==='battle'&&d.battle?.active?'<span class="w-2 h-2 rounded-full bg-rose-500 self-center animate-pulse"></span>':''}</button>`).join('')}</nav>
+    <nav class="space-y-1 flex-1">${SCREENS.map(([k,l])=>`<button onclick="ui.page='${k}';render()" class="w-full text-left px-3 py-1.5 rounded-lg text-sm flex justify-between ${ui.page===k?'bg-slate-800 text-white':'text-slate-400 hover:text-slate-200'}">${l}${k==='battle'&&d.battle?.active?'<span class="w-2 h-2 rounded-full bg-rose-500 self-center"></span>':''}</button>`).join('')}</nav>
     <div class="text-xs rounded-lg bg-slate-900 border border-slate-800 p-3"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full ${statusDot(s)}"></span><span class="font-medium">${s.adapter?s.adapter.name:'Disconnected'}</span></div><div class="text-slate-400 mt-1">${esc(statusText(s))}</div><div class="mt-1">${genNote(s)}</div></div></aside>
     <main class="flex-1 p-8 min-w-0">${body}</main></div>`;
 }
