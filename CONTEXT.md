@@ -56,6 +56,14 @@ _Avoid_: Battle history, previous battle
 Turns raw bytes into domain data, such as a party Pokemon or a bag, for one data format like Gen 3 or CFRU.
 _Avoid_: Reader, parser
 
+**Fixture**:
+A set of slices captured from one real game state, stored with the decoded result expected from them. The expected result names which values the owner confirmed on the game's own screens. A fixture never holds ROM data.
+_Avoid_: Savestate, dump, snapshot
+
+**Slice**:
+One memory range inside a fixture, covering only what a decoder reads.
+_Avoid_: Chunk, region dump
+
 **Box**:
 One PC storage box holding a fixed number of Pokemon slots in game order. Gen 1-2 keep only the current box in live memory and the rest in save RAM.
 _Avoid_: Bank, storage page
