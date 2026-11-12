@@ -16,6 +16,10 @@ _Avoid_: Plugin, injected script
 Everything known about one ROM revision: how to identify it, its memory addresses, its language, and which data format it uses. Struct layouts belong to the data format, not the profile.
 _Avoid_: Game entry, game data, games DB row
 
+**Identification**:
+Matching the running ROM to a game profile. A match is exact (ROM hash), header-only (unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
+_Avoid_: Detection, game lookup
+
 **Data format**:
 The layout of game structs in memory that a family of games shares, such as Gen 1, Gen 2, Gen 3 or CFRU. Each data format has one decoder.
 _Avoid_: Engine, game type
