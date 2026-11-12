@@ -26,3 +26,5 @@ v2 is TypeScript on Bun, shipped as one self-contained executable per OS with th
 A single language across the program and the viewer outweighed binary size, which is about 60–100 MB, and Bun's younger Windows support. Bridges stay in Lua because mGBA and BizHawk only run Lua.
 
 Excluded: Go (it would need a second language for the viewer and hand-synced types), Rust (agents iterate on it slowly), Deno (UDP sits behind an unstable flag), Elysia (it locks the program to Bun), Vite as the default bundler, and requiring users to install a runtime.
+
+Amended by [Importable package for overlay developers](./015-importable-package.md): `shared/` becomes the MIT package `api/` (`@pokemon-memory-reader/api`), which holds only public API schemas, types and the client. The config file and bridge reply schemas move into `server/`. The viewer drops `hc` and uses the package client.

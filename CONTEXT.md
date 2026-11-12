@@ -28,6 +28,10 @@ _Avoid_: Engine, game type
 Names and lookup tables that don't change at runtime: species, moves, items and character maps, keyed by generation and language.
 _Avoid_: Constants, static data
 
+**API package**:
+The published library holding the API's schemas, types and client. The program, the viewer and outside overlays all import it, so it is the single definition of the API.
+_Avoid_: SDK, shared package, client library
+
 **Viewer**:
 The web page the program serves that shows the current game state in a readable form, for people who don't use the API. It also shows connection status and settings.
 _Avoid_: GUI, dashboard, frontend

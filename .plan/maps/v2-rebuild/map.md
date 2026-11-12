@@ -34,6 +34,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [Icon and sprite source](./tickets/016-icon-source.md): PokeAPI/sprites is the best default (tolerated, not licensed, no hotlink terms), and nothing covers Gen 1-2 box icons or hack species.
 - [PC box reading](./tickets/013-pc-boxes.md): boxes ship in v2.0 for Gen 1-3 as one whole-resource `boxes` topic plus a per-box snapshot route, read only on demand, with Gen 1-2 non-current boxes from SRAM (stale until saved), box Pokémon reusing the party schema with unstored fields null, a `features.boxes` status flag, and a fifth Boxes viewer screen.
 - [Decoder test fixtures](./tickets/014-decoder-fixtures.md): live capture through the real adapter into one base64 JSON fixture per game state (declared reads only, served by a strict `SliceAdapter`), owner-promoted golden files with a `verified` list, no ROM bytes, a tiered coverage matrix whose verified tier 1 states gate each data format's committed `supported` flag, and tier 2 verification fixtures for the battle facts left open.
+- [Importable package for overlay developers](./tickets/015-importable-package.md): one MIT npm package `@pokemon-memory-reader/api` in `api/` (replacing `shared/`) with `/types`, `/schemas` and `/client` subpaths, zod as an optional peer, major version equal to the API path version, loose schemas with listed open enums, the viewer using its client instead of `hc`, and no fixtures package.
 
 ## Not yet specified
 
