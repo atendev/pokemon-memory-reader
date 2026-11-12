@@ -39,3 +39,5 @@ The v2 API is read-only JSON over HTTP on localhost. `GET` endpoints return snap
 A single shape per resource keeps overlay code free of per-generation branches. The real differences (ranges, the shared Special, derived gender and shininess) are documented, or computed on the server.
 
 Excluded: polling-only, WebSocket, JSON Patch diffs, change notices that force a refetch, per-generation discriminated unions, separate `dvs` and `statExp` fields, rescaling DVs to 0–31, a `{ status, data }` envelope, `200 null` for missing data, header-based versioning, and a public raw memory endpoint.
+
+Amended by [Battle tracker data model](./012-battle-tracker-data-model.md): `battle` outside battle is `{ active: false, lastBattle: LastBattle | null }`.

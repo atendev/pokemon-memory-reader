@@ -30,6 +30,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [Game identification](./tickets/009-game-identification.md): match by emulator-supplied hash, then header plus signature bytes, then header alone, then a manual pick; known-modified ROMs stay `unidentified` until the user picks, and `status` reports `match` and the ROM's header facts.
 - [How ROM hacks extend reference data](./tickets/010-hack-reference-data.md): hacks keep Gen 3-charmap name tables at hack-specific addresses, CFRU repoints some ROM header pointers but not move names, and expansion hacks need a per-build layout.
 - [What battle state is readable](./tickets/011-battle-state-readability.md): every generation exposes both active mons, the full opponent party from turn one and an in-battle flag that must gate every read, while trainer details are mostly ROM lookups by trainer ID.
+- [Battle tracker data model](./tickets/012-battle-tracker-data-model.md): one shape for singles and doubles with player and opponent sides, active only when the in-battle flag is set and the data validates, the full opponent party with a computed `revealed` flag (hidden in the viewer by default), `null` for missing and `"none"` for inactive field state, and a frozen `lastBattle` with outcome and `battleId`.
 - [Icon and sprite source](./tickets/016-icon-source.md): PokeAPI/sprites is the best default (tolerated, not licensed, no hotlink terms), and nothing covers Gen 1-2 box icons or hack species.
 
 ## Not yet specified

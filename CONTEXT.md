@@ -36,6 +36,22 @@ _Avoid_: GUI, dashboard, frontend
 A named piece of game state the API serves as one unit, such as the status, player, party, bag or battle. Clients read a resource whole and receive it whole when it changes.
 _Avoid_: Endpoint, topic, feed
 
+**Battler**:
+A Pokemon currently on the field in a battle position. It can differ from the party member it came from, for example after Transform.
+_Avoid_: Active mon, fighter
+
+**Side**:
+The player's or the opponent's half of a battle. Side conditions such as Reflect or Spikes belong to a side, not to one battler.
+_Avoid_: Team
+
+**Revealed**:
+An opponent party member the player has seen on the field. This program tracks it; the game does not store it.
+_Avoid_: Seen, known
+
+**Last battle**:
+The frozen snapshot of the most recent battle with its outcome, kept in memory until the game changes or the program restarts.
+_Avoid_: Battle history, previous battle
+
 **Decoder**:
 Turns raw bytes into domain data, such as a party Pokemon or a bag, for one data format like Gen 3 or CFRU.
 _Avoid_: Reader, parser
