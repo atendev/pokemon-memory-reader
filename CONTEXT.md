@@ -55,3 +55,7 @@ _Avoid_: Battle history, previous battle
 **Decoder**:
 Turns raw bytes into domain data, such as a party Pokemon or a bag, for one data format like Gen 3 or CFRU.
 _Avoid_: Reader, parser
+
+**Box**:
+One PC storage box holding a fixed number of Pokemon slots in game order. Gen 1-2 keep only the current box in live memory and the rest in save RAM.
+_Avoid_: Bank, storage page

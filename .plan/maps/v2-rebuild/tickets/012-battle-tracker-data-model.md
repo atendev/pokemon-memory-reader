@@ -44,3 +44,5 @@ Builds on [What battle state is readable](./011-battle-state-readability.md) and
 The single shape keeps singles and doubles in one schema. The `null` versus `"none"` split keeps the 006 null rule honest. `revealed` lets the API expose everything readable while the viewer stays spoiler-safe for streams. `lastBattle` with `battleId` gives Nuzlocke trackers one outcome per encounter without a history resource.
 
 Excluded: singles-only `playerMon`/`opponentMon` fields, emitting active data with nulls during the battle intro, a validation timeout, hiding unrevealed mons from the API, a reduced opponent mon schema, inferring caught from party diffs, a separate battle history resource, raw battle type bits, counting turns in the program, a "Pokémon left" field, volatile statuses and CFRU rooms in v2.0, and a card footnote for missing weather.
+
+Amended by [PC box reading](./013-pc-boxes.md): the shared Pokémon schema allows null `hp`, `maxHp`, `stats` and `status`, as box Pokémon need.

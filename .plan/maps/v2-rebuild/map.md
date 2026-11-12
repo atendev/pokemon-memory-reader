@@ -32,6 +32,7 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [What battle state is readable](./tickets/011-battle-state-readability.md): every generation exposes both active mons, the full opponent party from turn one and an in-battle flag that must gate every read, while trainer details are mostly ROM lookups by trainer ID.
 - [Battle tracker data model](./tickets/012-battle-tracker-data-model.md): one shape for singles and doubles with player and opponent sides, active only when the in-battle flag is set and the data validates, the full opponent party with a computed `revealed` flag (hidden in the viewer by default), `null` for missing and `"none"` for inactive field state, and a frozen `lastBattle` with outcome and `battleId`.
 - [Icon and sprite source](./tickets/016-icon-source.md): PokeAPI/sprites is the best default (tolerated, not licensed, no hotlink terms), and nothing covers Gen 1-2 box icons or hack species.
+- [PC box reading](./tickets/013-pc-boxes.md): boxes ship in v2.0 for Gen 1-3 as one whole-resource `boxes` topic plus a per-box snapshot route, read only on demand, with Gen 1-2 non-current boxes from SRAM (stale until saved), box Pokémon reusing the party schema with unstored fields null, a `features.boxes` status flag, and a fifth Boxes viewer screen.
 
 ## Not yet specified
 

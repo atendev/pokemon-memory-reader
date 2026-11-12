@@ -41,3 +41,5 @@ A single shape per resource keeps overlay code free of per-generation branches. 
 Excluded: polling-only, WebSocket, JSON Patch diffs, change notices that force a refetch, per-generation discriminated unions, separate `dvs` and `statExp` fields, rescaling DVs to 0–31, a `{ status, data }` envelope, `200 null` for missing data, header-based versioning, and a public raw memory endpoint.
 
 Amended by [Battle tracker data model](./012-battle-tracker-data-model.md): `battle` outside battle is `{ active: false, lastBattle: LastBattle | null }`.
+
+Amended by [PC box reading](./013-pc-boxes.md): adds `status.game.features`, the `not_found` error code, the `boxes` resource shape, and nullable `hp`, `maxHp`, `stats` and `status` on the shared Pokémon schema.

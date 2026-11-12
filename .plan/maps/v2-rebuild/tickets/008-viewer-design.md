@@ -28,3 +28,5 @@ The viewer is a sidebar app: a collapsible left rail with four screens (Party, B
 - **Battle data needed.** The Battle screen assumes the API can supply: the opponent's full party with level, HP, status, types, held items and moves, plus trainer class, name, prize money and usable items. Which of these are readable, and when, is still the battle tracker decision.
 
 Excluded: a list-and-detail party layout, top-tab and single-scroll navigation, bundled art, and dedicated icon art for status conditions.
+
+Amended by [PC box reading](./013-pc-boxes.md): adds a fifth screen, Boxes.
