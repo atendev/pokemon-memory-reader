@@ -1,4 +1,23 @@
-examples/
-docs/
-builds/
-Bizhawk/.agent-state.md
+node_modules/
+dist/
+out/
+pack/
+coverage/
+*.tsbuildinfo
+*.tgz
+
+.agent-state.md
+
+# ROMs, savestates and full RAM dumps never go in the repo. Fixtures are trimmed RAM slices.
+*.[gG][bB]
+*.[gG][bB][cC]
+*.[gG][bB][aA]
+*.[zZ][iI][pP]
+*.7[zZ]
+*.[sS][aA][vV]
+*.[sS][rR][mM]
+*.[sS][sS][0-9]
+*.[sS][tT][aA][tT][eE]
+*.[sS][tT][aA][tT][eE][0-9]
+*.[sS][tT][aA][tT][eE].[aA][uU][tT][oO]
+*.[dD][mM][pP]

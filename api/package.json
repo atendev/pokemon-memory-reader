@@ -1,0 +1,10 @@
+{
+  "name": "@pokemon-memory-reader/api",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
