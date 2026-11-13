@@ -30,3 +30,9 @@ A game profile is a JSON file for one ROM revision. One Zod schema checks every 
 Layouts stay in code because typed tables give strong types, fast tests and simpler decoders, which matter when agents do most of the building. The hacks that really change layouts are mostly CFRU, and CFRU needs its own decoder anyway. Data-driven layouts can be added later without breaking this design.
 
 Excluded: hand-writing all addresses, fetching symbols at runtime, TypeScript-module profiles, YAML and TOML, layouts as data that profiles override field by field, and putting name tables inside profiles.
+
+Amended by [ROM hack name tables](./020-hack-name-tables.md): every profile has a required `kind: "official" | "hack"`, not inherited through `extends`. Hack profiles declare a `nameTables` block giving the ROM location of each name table, and they must list all four categories, each as a table or `"vanilla"`. Names are read from ROM, so profiles still hold no names. A name table's entry layout (`stride`, `nameOffset`, inline or pointer name, length) lives in that profile, which narrows the rule that layouts live in decoder code: the rule still covers game-state structs, but not hack name tables, whose layout changes with each hack build.
+
+Amended by [Icon loading and fallbacks](./021-icon-loading.md): every profile has a required `artVersion` naming the PokeAPI/sprites version folder for its art. Hacks use their base game's folder.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): the dev-time generator also accepts a hack build's `.sym` file and records the hack and file hash as provenance.

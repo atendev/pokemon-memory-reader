@@ -45,3 +45,11 @@ Amended by [Battle tracker data model](./012-battle-tracker-data-model.md): `bat
 Amended by [PC box reading](./013-pc-boxes.md): adds `status.game.features`, the `not_found` error code, the `boxes` resource shape, and nullable `hp`, `maxHp`, `stats` and `status` on the shared Pokémon schema.
 
 Amended by [Importable package for overlay developers](./015-importable-package.md): schemas are loose objects that keep unknown keys. Error `code`, `dataFormat`, adapter `id` and topic names are open enums that may gain values, and every other enum is closed within `/api/v2`. The contract docs list the open enums. The SSE route ignores requested topics it doesn't know. It returns `400` before the stream opens if `topics` is missing or names no known topic. "The SSE stream never errors" still holds once the stream is open.
+
+Amended by [Read loop and latency budget](./018-read-loop.md): `status.adapter` gains the additive boolean `stalled`, true after 1 s of consecutive read timeouts, such as while the emulator is paused. The API docs also list fast-forward as a limitation, since intermediate states can be missed.
+
+Amended by [ROM hack name tables](./020-hack-name-tables.md): `name` is `string | null` on species, move, item and ability references, and `id` is always present. `status.game` gains `names: { species, moves, items, abilities }`. Each value is `"builtin" | "rom" | "unavailable"` as a closed enum, or `null` when the generation has no such names.
+
+Amended by [Bridge wire protocol](./022-bridge-wire-protocol.md): `status.adapter` gains `bridge` (the hello body, or `null`) and `problem: "unknown_bridge" | "protocol_mismatch" | "busy" | "bridge_error" | null`, both open enums in the API package. For `protocol_mismatch`, `bridge` holds only `bridge` and `protocol`.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): `status.rom` gains `expansion: { version, tagged } | null` and `status.game` gains `signature: "match" | "mismatch" | null`. On `kind: "hack"` profiles, `gender`, `ability`, `species.dex` and a boxed mon's `level` are `null` until Hack species data resolves.

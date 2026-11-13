@@ -41,3 +41,5 @@ Decoders are tested against **fixtures**: trimmed memory **slices** (one recorde
 Capturing through the adapter avoids parsing three savestate formats. Declared reads with a strict SliceAdapter keep the slices as small as the [License](./007-license.md) decision requires and make each decoder's memory footprint explicit. Reviewed golden files with a `verified` list keep real data honest without letting an agent bless its own output. Tiers keep the owner's capture work from blocking support for a whole format.
 
 Excluded: committing ROM bytes or decoded ROM tables, parsing savestate files, whole-domain captures, a permissive fake adapter, Bun snapshots, committed draft goldens, skipping tests when local files are missing, a full matrix on every revision, failing the suite on tier 2 gaps, blocking v2.0 on every verification fixture, reopening resolved tickets, an API field for fixture coverage, always or never anonymizing, Git LFS, a from-scratch test mon encoder, and a data-format folder level.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): `test:local` checks each official profile's signature against the owner's ROMs.
