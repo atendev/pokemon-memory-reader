@@ -29,12 +29,16 @@ Everything known about one ROM revision: how to identify it, its memory addresse
 _Avoid_: Game entry, game data, games DB row
 
 **Identification**:
-Matching the running ROM to a game profile. A match is exact (ROM hash), header-only (unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
+Matching the running ROM to a game profile. A match is exact (ROM hash), header (the ROM header and any signature bytes the profile lists agree, unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
 _Avoid_: Detection, game lookup
 
 **Data format**:
 The layout of game structs in memory that a family of games shares, such as Gen 1, Gen 2, Gen 3 or CFRU. Each data format has one decoder.
 _Avoid_: Engine, game type
+
+**Expansion hack**:
+A Gen 3 ROM hack built on the pokeemerald-expansion project. Its struct layouts usually differ from the official games' and change between expansion versions.
+_Avoid_: RHH hack
 
 **Reference data**:
 Names and lookup tables that don't change at runtime: species, moves, items and character maps, keyed by generation and language.
