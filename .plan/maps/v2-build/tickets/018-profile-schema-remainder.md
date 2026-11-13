@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794555906
+claimed_at: 2026-11-13T08:17:58Z
 ---
 
 # What else does the profile schema hold?
