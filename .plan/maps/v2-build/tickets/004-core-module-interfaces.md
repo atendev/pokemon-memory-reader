@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: [001, 002, 013, 016]
+claimed_by: wayfinder-master v2-build-master-1794582779
+claimed_at: 2026-11-13T15:12:59Z
 ---
 
 # Core module interfaces

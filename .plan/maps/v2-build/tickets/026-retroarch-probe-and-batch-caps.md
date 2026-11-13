@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794582779
+claimed_at: 2026-11-13T15:12:59Z
 ---
 
 # How is RetroArch probed, and what happens when a batch is too big?

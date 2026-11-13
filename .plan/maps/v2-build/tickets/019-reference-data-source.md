@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794582779
+claimed_at: 2026-11-13T15:12:59Z
 ---
 
 # Where does reference data come from?
