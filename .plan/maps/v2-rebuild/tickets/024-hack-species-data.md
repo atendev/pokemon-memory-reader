@@ -2,6 +2,8 @@
 type: grilling
 blocked_by: [023]
 assets: []
+claimed_by: wayfinder-master v2-rebuild-master-1794547728
+claimed_at: 2026-11-13T05:28:48Z
 ---
 
 # Hack species data
