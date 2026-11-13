@@ -18,6 +18,8 @@ Pokemon Memory Reader v2.0.0 is published through the release pipeline from the 
 
 ## Decisions so far
 
+- [Emulator Lua runtimes](./tickets/003-emulator-lua-runtimes.md): one core written for Lua 5.3/5.4 runs in mGBA and BizHawk if it avoids 5.5 changes, string arithmetic and `require`; shims wrap each emulator's sockets; CI uses `leafo/gh-actions-lua` with Lua 5.4.
+
 ## Not yet specified
 
 - The rest of Gen 3: player, bag, battle, and boxes resources; FireRed/LeafGreen and Ruby/Sapphire profiles; the full read loop with change detection, the `stalled` flag, SSE topics, and latest-wins queues; full identification (hash, signature, manual picks); and config and `/settings`. This waits on the tracer's code shape.
@@ -26,7 +28,7 @@ Pokemon Memory Reader v2.0.0 is published through the release pipeline from the 
 - The `v2.0.0-beta.1` prerelease: the first real run of the release pipeline, per-OS archives, the update banner, and the API package on npm.
 - Gen 1 and Gen 2 data formats, including Gen 1-2 boxes from SRAM.
 - CFRU and other hack profiles: name tables, species data, the `RHHEXP` refusal, and the `find-rom-tables` script.
-- The BizHawk bridge, which depends on whether the owner has a Windows machine for smoke tests.
+- The BizHawk bridge, which depends on whether the owner has a Windows machine for smoke tests. It also depends on whether BizHawk on Linux ships LuaSocket and whether its sockets poll while paused ([Emulator Lua runtimes](./tickets/003-emulator-lua-runtimes.md)).
 - Fixture capture and tier-1 verification for each data format. This hangs on which of the primary ROMs the owner has (Red US 1.0, Crystal US 1.1, Emerald, FireRed and Ruby US 1.0) and on a CFRU hack. A format with no verified fixtures ships with `supported: false`.
 - The release candidate, the `RELEASING.md` run for `v2.0.0`, and the merge to `main`.
 
