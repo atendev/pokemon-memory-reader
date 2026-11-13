@@ -1,5 +1,6 @@
 ---
 type: grilling
+assets: [../assets/026-retroarch-probe-and-batch-caps.md, ../assets/026-retroarch-probe-and-batch-caps-report.md]
 blocked_by: []
 claimed_by: wayfinder-master v2-build-master-1794582779
 claimed_at: 2026-11-13T15:12:59Z
