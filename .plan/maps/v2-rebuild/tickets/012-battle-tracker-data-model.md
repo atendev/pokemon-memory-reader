@@ -46,3 +46,5 @@ The single shape keeps singles and doubles in one schema. The `null` versus `"no
 Excluded: singles-only `playerMon`/`opponentMon` fields, emitting active data with nulls during the battle intro, a validation timeout, hiding unrevealed mons from the API, a reduced opponent mon schema, inferring caught from party diffs, a separate battle history resource, raw battle type bits, counting turns in the program, a "Pokémon left" field, volatile statuses and CFRU rooms in v2.0, and a card footnote for missing weather.
 
 Amended by [PC box reading](./013-pc-boxes.md): the shared Pokémon schema allows null `hp`, `maxHp`, `stats` and `status`, as box Pokémon need.
+
+Amended by [Read loop and latency budget](./018-read-loop.md): the one-tick push rule for `battle` holds except on cycles that read boxes (at most once a second, only while boxes are demanded), which can delay a change by up to the 1000 ms box timeout.

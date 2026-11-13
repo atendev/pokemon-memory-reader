@@ -17,3 +17,5 @@ Input from [Battle tracker data model](./012-battle-tracker-data-model.md): view
 Input from [Importable package for overlay developers](./015-importable-package.md): the package exports `DEFAULT_BASE_URL`, built from the default port and bind host this ticket settles, so pick them as named constants the package can import.
 
 Input from [Release pipeline](./017-release-pipeline.md): add an update-check on/off setting (default on), a `--port` flag, `--no-browser`, and a data-folder override as a flag or env var that the release smoke test uses to point at a temp folder. The program must shut down cleanly with exit code 0 on SIGINT and SIGTERM, and on Ctrl+C on Windows.
+
+Input from [Read loop and latency budget](./018-read-loop.md): add `pollHz` (integer 5-60, default 20, clamped with a logged warning when out of range). The other loop timings are internal constants and not settings. `--debug` also enables `GET /debug/metrics`.

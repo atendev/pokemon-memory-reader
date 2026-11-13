@@ -45,3 +45,5 @@ Amended by [Battle tracker data model](./012-battle-tracker-data-model.md): `bat
 Amended by [PC box reading](./013-pc-boxes.md): adds `status.game.features`, the `not_found` error code, the `boxes` resource shape, and nullable `hp`, `maxHp`, `stats` and `status` on the shared Pokémon schema.
 
 Amended by [Importable package for overlay developers](./015-importable-package.md): schemas are loose objects that keep unknown keys. Error `code`, `dataFormat`, adapter `id` and topic names are open enums that may gain values, and every other enum is closed within `/api/v2`. The contract docs list the open enums. The SSE route ignores requested topics it doesn't know. It returns `400` before the stream opens if `topics` is missing or names no known topic. "The SSE stream never errors" still holds once the stream is open.
+
+Amended by [Read loop and latency budget](./018-read-loop.md): `status.adapter` gains the additive boolean `stalled`, true after 1 s of consecutive read timeouts, such as while the emulator is paused. The API docs also list fast-forward as a limitation, since intermediate states can be missed.
