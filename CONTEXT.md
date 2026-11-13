@@ -52,6 +52,14 @@ _Avoid_: SDK, shared package, client library
 The web page the program serves that shows the current game state in a readable form, for people who don't use the API. It also shows connection status and settings.
 _Avoid_: GUI, dashboard, frontend
 
+**Icon pack**:
+Images a user puts in the data folder to replace or add Pokemon, item and type art in the viewer, including art for ROM-hack species no community source has. A file in the pack wins over any downloaded one.
+_Avoid_: Sprite pack, theme, skin
+
+**Art version**:
+The game version whose Pokemon sprites the viewer shows on its cards for a game profile, such as Emerald or Crystal. A ROM hack uses its base game's art version.
+_Avoid_: Sprite set, art style
+
 **Resource**:
 A named piece of game state the API serves as one unit, such as the status, player, party, bag or battle. Clients read a resource whole and receive it whole when it changes.
 _Avoid_: Endpoint, topic, feed
