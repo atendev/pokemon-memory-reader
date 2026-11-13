@@ -12,6 +12,10 @@ _Avoid_: Hook, connector, driver
 A small script that runs inside an emulator so an adapter can reach its memory. Only some emulators need one.
 _Avoid_: Plugin, injected script
 
+**Data folder**:
+The per-user folder where the program writes files for the user to pick up, such as the bridges. Its path depends on the OS.
+_Avoid_: App folder, install folder
+
 **Game profile**:
 Everything known about one ROM revision: how to identify it, its memory addresses, its language, and which data format it uses. Struct layouts belong to the data format, not the profile.
 _Avoid_: Game entry, game data, games DB row
