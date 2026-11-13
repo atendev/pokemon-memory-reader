@@ -49,3 +49,7 @@ Amended by [Importable package for overlay developers](./015-importable-package.
 Amended by [Read loop and latency budget](./018-read-loop.md): `status.adapter` gains the additive boolean `stalled`, true after 1 s of consecutive read timeouts, such as while the emulator is paused. The API docs also list fast-forward as a limitation, since intermediate states can be missed.
 
 Amended by [ROM hack name tables](./020-hack-name-tables.md): `name` is `string | null` on species, move, item and ability references, and `id` is always present. `status.game` gains `names: { species, moves, items, abilities }`. Each value is `"builtin" | "rom" | "unavailable"` as a closed enum, or `null` when the generation has no such names.
+
+Amended by [Bridge wire protocol](./022-bridge-wire-protocol.md): `status.adapter` gains `bridge` (the hello body, or `null`) and `problem: "unknown_bridge" | "protocol_mismatch" | "busy" | "bridge_error" | null`, both open enums in the API package. For `protocol_mismatch`, `bridge` holds only `bridge` and `protocol`.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): `status.rom` gains `expansion: { version, tagged } | null` and `status.game` gains `signature: "match" | "mismatch" | null`. On `kind: "hack"` profiles, `gender`, `ability`, `species.dex` and a boxed mon's `level` are `null` until Hack species data resolves.

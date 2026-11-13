@@ -27,3 +27,5 @@ The app identifies the ROM by checking signals in a fixed order and records how 
 A wrong profile decodes garbage that looks like real data, which is worse for a tracker than showing nothing. That's why a known-modified ROM waits for the user, and only the no-hash case falls back to the header.
 
 Excluded: hashing the ROM through the adapter, auto-loading the base profile for a modified ROM, refusing unknown ROMs outright, and identifying once only at attach.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): official Gen 3 profiles carry a vanilla signature, and a header match that fails it stays unidentified until a manual pick, which loads with a warning. A ROM whose scan finds the `RHHEXP` block never loads a non-expansion profile. The viewer notes header-plus-signature matches, and `status.game.signature` reports the result.

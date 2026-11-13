@@ -29,3 +29,5 @@ A hack's game profile declares where its name tables sit in ROM. The program rea
 - **Expansion hacks.** The `pointer` kind and per-build stride let `nameTables` describe pokeemerald-expansion hacks. Whether v2.0 supports their data format is a separate question, [Expansion hack data format](./023-expansion-hack-data-format.md).
 
 Excluded: per-hack JSON name arrays, offering both ROM reads and JSON, reading official games' names from ROM, placeholder strings such as `"Species #1234"`, dropping the whole reference to `null`, loading names lazily per ID, sending `null` names while tables load, anchor-name checks, unvalidated tables, falling back to official names for categories declared as tables, refusing hack profiles on adapters without ROM access, caching names in the data folder, a runtime ROM scan, and deciding `kind` from pret provenance.
+
+Amended by [Expansion hack data format](./023-expansion-hack-data-format.md): the `pointer` name kind is dropped from v2.0. Only `inline` remains, and the expansion data format may add `pointer` back later.

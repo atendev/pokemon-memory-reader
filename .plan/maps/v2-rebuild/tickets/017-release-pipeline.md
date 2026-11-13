@@ -47,3 +47,7 @@ Amends [Viewer design](./008-viewer-design.md): the connection screen gains the 
 Signing costs money or an approval, so neither blocks v2.0, and the docs cover the warnings. Drafts give the owner a gate between a green build and a public release, which is where the fixture coverage review fits. Embedding the bridges keeps them matched to the program with no extra download for the streamers and runners this program serves.
 
 Excluded: package managers at v2.0, a website or CDN, cross-compiling macOS on Linux, the default (AVX2) x64 builds, paid Windows signing or Apple notarization at v2.0, bare executables, a self-updating executable, no update check at all, bridges only as release assets, release-please or changesets, lockstep app and package versions, npm automation tokens, a dist-tag promotion workflow, publishing `rc.1` by hand without provenance, auto-publishing releases, moving or deleting pushed tags, a test-only exit flag in the product, and a long-lived v1 branch.
+
+Amended by [Icon loading and fallbacks](./021-icon-loading.md): `RELEASING.md` runs `check-icon-map` whenever the pinned sprites SHA changes and blocks the release until it passes.
+
+Amended by [Bridge wire protocol](./022-bridge-wire-protocol.md): the program generates the bridge files with the configured host and port and rewrites them whenever the generated content differs, not only when the version changes.

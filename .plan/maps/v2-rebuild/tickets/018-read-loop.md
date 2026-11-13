@@ -38,3 +38,5 @@ Open for implementation, not for the spec: confirm that paused mGBA, BizHawk and
 A single tick keeps the bridge adapters' resources from one sample (RetroArch's pipelined slices can span frames), keeps warm GETs off the adapter, and bounds the load an idle overlay costs. Two-stage detection keeps decoding off the hot path without emitting on bytes that don't change the resource.
 
 Excluded: per-resource cadences, reading on every GET, always reading every resource, reading the full WRAM block, hashing raw bytes only, decoded-only comparison, double-read or debounce before emitting, treating a timeout streak as a disconnect, unbounded per-client queues, dropping slow clients on buffer size, timing fields in the public `status`, and exposing the internal constants as settings.
+
+Amended by [Bridge wire protocol](./022-bridge-wire-protocol.md): each batch reads pointer words alongside the regions and addresses those regions with the previous batch's pointer values, dropping results whose pointer changed. With no known pointer (attach, game change, cold read) a cycle sends two requests in sequence. Bridge adapters keep at most one request in flight.
