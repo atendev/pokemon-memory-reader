@@ -57,8 +57,12 @@ A list of names stored in a ROM and indexed by ID, such as a hack's species or m
 _Avoid_: Name dump, string table
 
 **Species data**:
-The per-species facts a decoder needs for computed fields: gender ratio, ability slots, growth rate, National Dex number and experience curves. Official games take it from reference data. A hack's game profile says where its species tables sit in ROM, as it does for name tables.
+The per-species facts a decoder needs for computed fields: gender ratio, ability slots, growth rate, types, National Dex number and experience curves. Official games take it from reference data. A hack's game profile says where its species tables sit in ROM, as it does for name tables.
 _Avoid_: Base stats, species info
+
+**Move data**:
+The per-move facts a decoder needs: each move's type and base PP. Official games take it from reference data. A hack's game profile says where its move table sits in ROM, as it does for species data.
+_Avoid_: Move info, battle moves
 
 **API package**:
 The published library holding the API's schemas, types and client. The program, the viewer and outside overlays all import it, so it is the single definition of the API.
