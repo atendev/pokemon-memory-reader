@@ -1,1 +1,0 @@
-lua ../squish/squish.lua --minify-level=basic --output=pokemon-memory-reader.lua

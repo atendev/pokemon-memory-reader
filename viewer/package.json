@@ -1,0 +1,12 @@
+{
+  "name": "@pokemon-memory-reader/viewer",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pokemon-memory-reader/api": "workspace:*"
+  }
+}

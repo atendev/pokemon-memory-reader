@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test
+
+  # Off until the "API package build and check" ticket adds the api/ build and pins publint and attw.
+  api-package:
+    name: API package check
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - working-directory: api
+        run: |
+          bun run build
+          bun pm pack --destination ../pack
+      - run: |
+          bunx publint pack/*.tgz
+          bunx attw pack/*.tgz --profile esm-only
+
+  # Off until the "Tracer viewer and executable" ticket adds the entry point and scripts/smoke.ts.
+  compile-smoke:
+    name: Compile smoke (linux-x64)
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: test ! -e api/dist
+      - run: bun build --compile --target=bun-linux-x64-baseline --outfile out/pokemon-memory-reader server/src/main.ts
+      - run: bun scripts/smoke.ts out/pokemon-memory-reader "$(jq -r .version server/package.json)"

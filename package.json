@@ -1,0 +1,24 @@
+{
+  "name": "pokemon-memory-reader",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "workspaces": [
+    "server",
+    "viewer",
+    "api",
+    "internal",
+    "bridges"
+  ],
+  "scripts": {
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "typecheck": "bun run --workspaces typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.7",
+    "@types/bun": "1.4.2",
+    "typescript": "7.0.2"
+  }
+}
