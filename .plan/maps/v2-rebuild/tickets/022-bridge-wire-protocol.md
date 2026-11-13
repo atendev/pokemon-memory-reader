@@ -2,6 +2,8 @@
 type: grilling
 blocked_by: [001]
 assets: []
+claimed_by: wayfinder-master v2-rebuild-master-1794532844
+claimed_at: 2026-11-13T01:20:44Z
 ---
 
 # Bridge wire protocol
