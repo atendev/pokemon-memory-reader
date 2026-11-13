@@ -40,6 +40,10 @@ _Avoid_: Engine, game type
 Names and lookup tables that don't change at runtime: species, moves, items and character maps, keyed by generation and language.
 _Avoid_: Constants, static data
 
+**Name table**:
+A list of names stored in a ROM and indexed by ID, such as a hack's species or move names. A hack's game profile says where each name table is, so its names come from the running game instead of from reference data.
+_Avoid_: Name dump, string table
+
 **API package**:
 The published library holding the API's schemas, types and client. The program, the viewer and outside overlays all import it, so it is the single definition of the API.
 _Avoid_: SDK, shared package, client library

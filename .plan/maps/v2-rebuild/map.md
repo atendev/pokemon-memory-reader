@@ -38,10 +38,11 @@ An implementation-ready spec for rebuilding Pokemon Memory Reader as a standalon
 - [Release pipeline](./tickets/017-release-pipeline.md): per-OS archives, unsigned on Windows and ad-hoc signed on macOS (x64 baseline, arm64 and macOS best effort), built by GitHub Actions from `v<semver>` tags, smoke-tested on native runners (darwin-x64 under Rosetta), published from a draft after a committed `RELEASING.md` checklist; an update banner but no self-update; bridges embedded, written to a per-user data folder, served for download and attached to releases; the API package publishes from `api-v*` tags through npm trusted publishing.
 - [Read loop and latency budget](./tickets/018-read-loop.md): one global tick loop at `pollHz` (default 20) reading only demanded resources in one batched call, two-stage change detection (raw bytes, then decoded compare), a `stalled` status flag instead of disconnects on read timeouts (RetroArch still disconnects after 30 s of silence), latest-wins per-topic SSE queues, boxes capped at 1 Hz, and a ~40 ms typical, 73 ms worst-case and 100 ms p99 latency budget outside box cycles, which may add up to 1 s.
 - [Config file](./tickets/019-config-file.md): plain JSON `config.json` in the per-OS config folder (XDG on Linux), one `--data-dir`/`PMR_DATA_DIR` override that moves everything, flags beat the file and are never saved, default `http://127.0.0.1:7425`, the viewer saves through a `/settings` route whose writes are loopback-only (reads work on the LAN) with atomic merge writes, user profiles and manual picks in the data folder, and a private `internal/` package for the config and settings contract.
+- [ROM hack name tables](./tickets/020-hack-name-tables.md): hack profiles (a new required `kind: "official" | "hack"`) declare a ROM location for each name category or the literal `"vanilla"`; the program reads and validates the tables before entering `game`; failures and adapters without ROM access give `name: null`, now nullable on every reference; `status.game.names` reports each category as `builtin`, `rom` or `unavailable`, or `null` where the generation has no such names; the owner finds addresses with a dev-time `find-name-tables` script; expansion hack support moves to its own ticket.
 
 ## Not yet specified
 
-<!-- all earlier fog graduated into tickets 009-022 -->
+<!-- all earlier fog graduated into tickets 009-023 -->
 
 ## Out of scope
 
