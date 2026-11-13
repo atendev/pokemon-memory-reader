@@ -56,6 +56,10 @@ _Avoid_: Constants, static data
 A list of names stored in a ROM and indexed by ID, such as a hack's species or move names. A hack's game profile says where each name table is, so its names come from the running game instead of from reference data.
 _Avoid_: Name dump, string table
 
+**Species data**:
+The per-species facts a decoder needs for computed fields: gender ratio, ability slots, growth rate, National Dex number and experience curves. Official games take it from reference data. A hack's game profile says where its species tables sit in ROM, as it does for name tables.
+_Avoid_: Base stats, species info
+
 **API package**:
 The published library holding the API's schemas, types and client. The program, the viewer and outside overlays all import it, so it is the single definition of the API.
 _Avoid_: SDK, shared package, client library
