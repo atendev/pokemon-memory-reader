@@ -12,6 +12,14 @@ _Avoid_: Hook, connector, driver
 A small script that runs inside an emulator so an adapter can reach its memory. Only some emulators need one.
 _Avoid_: Plugin, injected script
 
+**Hello**:
+The first message a bridge sends on every connection. It names the bridge, the bridge protocol version and the emulator. A connection that never says hello is an unknown bridge.
+_Avoid_: Handshake, greeting
+
+**Memory domain**:
+A named area of emulated memory, such as ROM, EWRAM or cartridge RAM, read by offset from its start. Every adapter uses the same domain names, whatever the emulator calls them.
+_Avoid_: Region, bank, memory type
+
 **Data folder**:
 The per-user folder where the program keeps its files, such as the bridges, user game profiles and manual picks. Its path depends on the OS unless the user moves it.
 _Avoid_: App folder, install folder
