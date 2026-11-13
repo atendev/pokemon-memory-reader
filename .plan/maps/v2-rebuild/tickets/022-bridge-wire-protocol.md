@@ -15,3 +15,5 @@ Decide the transport and default port per bridge, message framing, the hello (br
 Input from [Release pipeline](./017-release-pipeline.md): the adapter refuses a protocol mismatch, and a bridge with no hello is reported as an unknown bridge. In both cases `status` lets the viewer tell the user to reload the bridge from the data-folder path or the `/bridges/<name>.lua` download. The protocol integer bumps only on wire changes.
 
 Input from [Read loop and latency budget](./018-read-loop.md): the read request is a list of ranges answered in one reply from one logical sample. Every request carries an id the reply echoes, and the adapter discards a late reply that arrives after its 250 ms timeout. A bridge keeps its socket open while the emulator is paused, and a closed socket is the only disconnect signal for mGBA and BizHawk, as the read loop answer states.
+
+Input from [Config file](./019-config-file.md): each bridge's endpoint is a setting, `adapters.mgba` and `adapters.bizhawk` with `host` (default `127.0.0.1`) and `port`. This ticket sets the two default ports. They must differ from each other, from the app's default 7425 and from RetroArch's 55355.

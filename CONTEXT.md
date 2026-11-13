@@ -13,8 +13,16 @@ A small script that runs inside an emulator so an adapter can reach its memory. 
 _Avoid_: Plugin, injected script
 
 **Data folder**:
-The per-user folder where the program writes files for the user to pick up, such as the bridges. Its path depends on the OS.
+The per-user folder where the program keeps its files, such as the bridges, user game profiles and manual picks. Its path depends on the OS unless the user moves it.
 _Avoid_: App folder, install folder
+
+**Settings**:
+The choices a user makes about how the program runs, such as its port or a pinned adapter. They persist between runs. Viewer display preferences that each browser keeps for itself are not settings.
+_Avoid_: Preferences, options, config
+
+**Manual pick**:
+The game profile a user chose for a ROM that identification couldn't match. It is remembered per ROM.
+_Avoid_: Override, forced game
 
 **Game profile**:
 Everything known about one ROM revision: how to identify it, its memory addresses, its language, and which data format it uses. Struct layouts belong to the data format, not the profile.

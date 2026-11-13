@@ -32,3 +32,5 @@ Excluded: a list-and-detail party layout, top-tab and single-scroll navigation, 
 Amended by [PC box reading](./013-pc-boxes.md): adds a fifth screen, Boxes.
 
 Amended by [Release pipeline](./017-release-pipeline.md): the connection screen shows the bridge data-folder path with a copy button, a download button per bridge and steps per emulator. The app shows an update banner linking to the release page. Settings or an About page shows the version string and the third-party notices.
+
+Amended by [Config file](./019-config-file.md): Settings reads and writes through the viewer-only `/settings` route. It shows each field's source, disables fields a flag overrides, marks port, host and open-browser as "restart to apply", shows the config file and profiles folder paths, and shows a banner naming the file when saves are refused.
