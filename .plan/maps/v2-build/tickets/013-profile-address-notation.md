@@ -58,3 +58,5 @@ Not covered here: how an adapter turns `{ domain, offset }` into its emulator's 
 **Why.** pret `.sym` files, hack `.sym` files and hack docs all print bus addresses. Keeping that notation lets the generator copy addresses as they are and lets people paste hand-written CFRU addresses without converting them. Translating at load means decoders and fixtures keep the domain-plus-offset contract from Decoder test fixtures and Bridge wire protocol, and a malformed or unmapped address fails at startup, not mid-read. The [decision report](../assets/013-profile-address-notation-report.md) records a check of the map against the pret symbol files: every state symbol tried in pokered, pokecrystal and pokeemerald maps, and the WRAM bank numbers each repo prints.
 
 **Excluded:** domain-prefixed strings (`"ewram:0x244ec"`) and `{ domain, offset }` objects in profiles, ROM tables written as file offsets, folding GBA mirrors, bare 16-bit GB addresses, per-decoder pointer rules, and raising a `problem` for a bad pointer.
+
+**Checks.** The audit approved in round 4. CI run 43393858299 passed on df81768.
