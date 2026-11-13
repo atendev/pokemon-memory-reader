@@ -18,19 +18,21 @@ Pokemon Memory Reader v2.0.0 is published through the release pipeline from the 
 
 ## Decisions so far
 
+- [Consolidated v2 spec](./tickets/001-consolidated-spec.md): `../v2-rebuild/spec.md` folds the 24 v2-rebuild tickets and their amendments into 14 numbered subsystem sections that build tickets cite as "spec §N.M", plus spikes with fallbacks (§15), a decision index (§16), and 15 open conflicts and gaps (§17) left unresolved. Each §17 item is now a grilling ticket, 013 to 027.
+- [Workspace skeleton and CI](./tickets/002-workspace-skeleton-and-ci.md): Bun 1.4.2 workspace (server, viewer, api, internal, bridges) on TS 7 strict and Biome 2.6, SHA-pinned `ci.yml` green, `v1-lua` tag at 064d0a4 with the v1 tree removed, GPL-3.0-or-later app and MIT `api/`; the API package build and its CI check move to [API package build and check](./tickets/012-api-package-build-and-check.md).
 - [Emulator Lua runtimes](./tickets/003-emulator-lua-runtimes.md): one core written for Lua 5.3/5.4 runs in mGBA and BizHawk if it avoids 5.5 changes, string arithmetic and `require`; shims wrap each emulator's sockets; CI uses `leafo/gh-actions-lua` with Lua 5.4.
 
 ## Not yet specified
 
-- The rest of Gen 3: player, bag, battle, and boxes resources; FireRed/LeafGreen and Ruby/Sapphire profiles; the full read loop with change detection, the `stalled` flag, SSE topics, and latest-wins queues; full identification (hash, signature, manual picks); and config and `/settings`. This waits on the tracer's code shape.
-- The RetroArch adapter over network commands.
-- The full viewer: the five screens, the collapsible sidebar, Settings, the hidden opponent party, and icons with the `/icons` route, cache and icon packs.
-- The `v2.0.0-beta.1` prerelease: the first real run of the release pipeline, per-OS archives, the update banner, and the API package on npm.
-- Gen 1 and Gen 2 data formats, including Gen 1-2 boxes from SRAM.
-- CFRU and other hack profiles: name tables, species data, the `RHHEXP` refusal, and the `find-rom-tables` script.
+- The rest of Gen 3: player, bag, battle, and boxes resources; FireRed/LeafGreen and Ruby/Sapphire profiles; the full read loop with change detection, the `stalled` flag, SSE topics, and latest-wins queues; full identification (hash, signature, manual picks); and config and `/settings`. This waits on the tracer's code shape and on [How are ROMs keyed and re-identified?](./tickets/014-rom-keying-and-reidentification.md), [Is `battle.modes` an open enum?](./tickets/015-battle-modes-enum.md), [What shapes do `player` and `bag` have?](./tickets/017-player-and-bag-shapes.md) and [What happens to signatures for revisions the owner doesn't own?](./tickets/022-unowned-revision-signatures.md).
+- The RetroArch adapter over network commands. Waits on [How are ROMs keyed and re-identified?](./tickets/014-rom-keying-and-reidentification.md) and [How is RetroArch probed, and what happens when a batch is too big?](./tickets/026-retroarch-probe-and-batch-caps.md).
+- The full viewer: the five screens, the collapsible sidebar, Settings, the hidden opponent party, and icons with the `/icons` route, cache and icon packs. Waits on [Which routes serve the viewer's controls and info?](./tickets/021-viewer-control-routes.md).
+- The `v2.0.0-beta.1` prerelease: the first real run of the release pipeline, per-OS archives, the update banner, and the API package on npm. Waits on [How do prereleases ship while main stays untouched?](./tickets/024-prereleases-without-main.md) and [Which licenses does the third-party allowlist accept?](./tickets/027-third-party-license-allowlist.md).
+- Gen 1 and Gen 2 data formats, including Gen 1-2 boxes from SRAM. Waits on [What shapes do `player` and `bag` have?](./tickets/017-player-and-bag-shapes.md).
+- CFRU and other hack profiles: name tables, species data, the `RHHEXP` refusal, and the `find-rom-tables` script. Waits on [How is the species-info layout confirmed, and does the signature still catch CFRU builds without DPE?](./tickets/023-cfru-species-layout-and-signature.md).
 - The BizHawk bridge, which depends on whether the owner has a Windows machine for smoke tests. It also depends on whether BizHawk on Linux ships LuaSocket and whether its sockets poll while paused ([Emulator Lua runtimes](./tickets/003-emulator-lua-runtimes.md)).
 - Fixture capture and tier-1 verification for each data format. This hangs on which of the primary ROMs the owner has (Red US 1.0, Crystal US 1.1, Emerald, FireRed and Ruby US 1.0) and on a CFRU hack. A format with no verified fixtures ships with `supported: false`.
-- The release candidate, the `RELEASING.md` run for `v2.0.0`, and the merge to `main`.
+- The release candidate, the `RELEASING.md` run for `v2.0.0`, and the merge to `main`. Waits on [What happens to signatures for revisions the owner doesn't own?](./tickets/022-unowned-revision-signatures.md).
 
 ## Out of scope
 

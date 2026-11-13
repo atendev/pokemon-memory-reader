@@ -1,6 +1,6 @@
 ---
 type: task
-blocked_by: [004, 005]
+blocked_by: [004, 005, 016, 019]
 ---
 
 # Gen 3 party decoder

@@ -1,6 +1,6 @@
 ---
 type: task
-blocked_by: [006]
+blocked_by: [006, 013, 026]
 ---
 
 # mGBA bridge and adapter

@@ -1,6 +1,6 @@
 ---
 type: task
-blocked_by: [001, 004]
+blocked_by: [001, 004, 013, 018, 019]
 ---
 
 # Emerald profile and generator
