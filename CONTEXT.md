@@ -49,7 +49,7 @@ A Gen 3 ROM hack built on the pokeemerald-expansion project. Its struct layouts 
 _Avoid_: RHH hack
 
 **Reference data**:
-Names and lookup tables that don't change at runtime: species, moves, items and character maps, keyed by generation and language.
+Names and lookup tables that don't change at runtime: species, move, item, ability and location names, character maps, species data and move data. Tables are keyed by data format and language, except location names, which are keyed by art version and language.
 _Avoid_: Constants, static data
 
 **Name table**:
@@ -57,7 +57,7 @@ A list of names stored in a ROM and indexed by ID, such as a hack's species or m
 _Avoid_: Name dump, string table
 
 **Species data**:
-The per-species facts a decoder needs for computed fields: gender ratio, ability slots, growth rate, types, National Dex number and experience curves. Official games take it from reference data. A hack's game profile says where its species tables sit in ROM, as it does for name tables.
+The per-species facts a decoder needs for computed fields: gender ratio, ability slots, growth rate, types, National Dex number and experience curves. Official games take it from reference data, except the experience curves, which are formulas built into the program, and Gen 1 types, which the game stores with each Pokemon. A hack's game profile says where its species tables sit in ROM, as it does for name tables.
 _Avoid_: Base stats, species info
 
 **Move data**:
@@ -77,7 +77,7 @@ Images a user puts in the data folder to replace or add Pokemon, item and type a
 _Avoid_: Sprite pack, theme, skin
 
 **Art version**:
-The game version whose Pokemon sprites the viewer shows on its cards for a game profile, such as Emerald or Crystal. A ROM hack uses its base game's art version.
+The game version whose Pokemon sprites the viewer shows on its cards for a game profile, such as Emerald or Crystal. Paired versions such as Ruby and Sapphire share one. A ROM hack uses its base game's art version. The art version also picks which game's location names a profile uses.
 _Avoid_: Sprite set, art style
 
 **Resource**:
