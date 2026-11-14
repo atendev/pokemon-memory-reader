@@ -29,7 +29,7 @@ The choices a user makes about how the program runs, such as its port or a pinne
 _Avoid_: Preferences, options, config
 
 **Manual pick**:
-The game profile a user chose for a ROM that identification couldn't match. It is remembered per ROM.
+The game profile a user chose for a ROM that identification couldn't match. It is remembered for that ROM. A base-game pick instead covers every modified ROM of the same official game, as long as any signature bytes the profile lists still match.
 _Avoid_: Override, forced game
 
 **Game profile**:
@@ -39,6 +39,10 @@ _Avoid_: Game entry, game data, games DB row
 **Identification**:
 Matching the running ROM to a game profile. A match is exact (ROM hash), header (the ROM header and any signature bytes the profile lists agree, unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
 _Avoid_: Detection, game lookup
+
+**Modified ROM**:
+A ROM whose header names an official game but whose bytes match none of that game's known revisions, such as a randomizer seed or a hack built on the game.
+_Avoid_: Patched ROM, altered ROM, bad dump
 
 **Data format**:
 The layout of game structs in memory that a family of games shares, such as Gen 1, Gen 2, Gen 3 or CFRU. Each data format has one decoder.
