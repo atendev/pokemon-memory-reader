@@ -13,22 +13,10 @@ Spec §17 item 2. Decide how manual picks are keyed when the mGBA bridge sends o
 
 Record the answer as an amendment that the spec section can cite. Don't edit `spec.md` in this ticket.
 
-## Handoff
+## Answer
 
-- Branch `t3/rom-keying-reidentification` is pushed. The resolution is commit `5c3e475`, "plan: decide how ROMs are keyed and re-identified", and this handoff commit sits on top of it.
-- Done:
-  - The grilling interview is complete, and the owner confirmed every decision.
-  - Written: [the amendment](../assets/014-rom-keying-and-reidentification.md), [the decision report](../assets/014-rom-keying-and-reidentification-report.md), and three research files (`014-mgba-checksum-types.md`, `014-retroarch-get-status.md`, `014-randomizer-rom-identity.md`).
-  - The `CONTEXT.md` glossary now covers base-game picks under Manual pick and adds Modified ROM.
-  - The `haiku` auditor approved in round 5 of 5, with no open objections.
-  - Local lint, typecheck and tests pass. `map.md` is untouched.
-  - The master was told PUSHED. The CI result is pending.
-- Left, in order:
-  1. Wait for the master's CI result for this branch.
-  2. On CI red, run runner step 7 with a new auditor, then commit, push and return PUSHED.
-  3. On CI green or no CI, add `## Answer` to this ticket and delete this section in the same commit. A draft Answer is at `/tmp/r014-commit/answer.md`. If that file is gone, write the decision, reason and exclusions from the amendment's items 2 to 7, Why and Excluded. Commit, push, and return DONE.
-  4. DONE report:
-     - Decision: `- [How are ROMs keyed and re-identified?](./tickets/014-rom-keying-and-reidentification.md): picks key by any emulator hash, else a header key tagged with the platform, plus RetroArch's content name; an opt-in base-game pick covers randomizer seeds; only RetroArch re-checks, every 2 s; the mGBA bridge stays CRC32-only.`
-     - Surfaced: none.
-     - Notes for tickets 021, 026 and 004 are in the amendment's Hand-offs section.
-- Read first: this ticket, then the amendment.
+A manual pick is keyed by the strongest signal the emulator gives: `sha1:`, else `crc32:`, else a header key tagged with the platform, `header:gba:<gameCode>:<version>:<title>` or `header:gb:<maskRomVersion>:<globalChecksum>:<title>`. On RetroArch without a hash, the key adds `:name:<contentName>`. gpSP, once RetroArch stops sending CRC32, uses `name:<platform>:<contentName>`. An opt-in base-game pick, `base:<profileId>`, covers every modified ROM of an official game that passes the profile's signature, so one pick serves every randomizer seed. Only RetroArch re-checks, every 2 s (`romCheckIntervalMs`), by comparing `GET_STATUS` and the header bytes. Bridges rely on their game message. The mGBA bridge stays CRC32-only, because mGBA master's SHA-1 hashes the unpatched file when mGBA soft-patches a ROM. Full rules are in [the amendment](../assets/014-rom-keying-and-reidentification.md), and every decision is in [the report](../assets/014-rom-keying-and-reidentification-report.md).
+
+Why: hash keys keep hacks built on one base header apart. The global checksum is the GB header field that tells official ROMs apart. RetroArch keys its own per-game overrides by content name. The base-game pick spares randomizer players a pick for every seed. Bridges already send the game message before any read on a new ROM.
+
+Excluded: §9.6's SHA-1-only rule, header keys when a hash exists, a GB key without the checksum, gpSP picks that last only for the session, a base-game pick that applies without asking, `romName` in keys, a timer on bridges, reading the header in every RetroArch batch, and sending mGBA's SHA-1 from the bridge.
