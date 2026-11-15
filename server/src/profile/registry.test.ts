@@ -1,0 +1,190 @@
+import { describe, expect, test } from "bun:test";
+import emerald from "./builtin/emerald-us-1.0.json";
+import { loadProfiles } from "./registry";
+
+const base = emerald as unknown as Record<string, unknown>;
+const hackParts = {
+  nameTables: {
+    species: "vanilla",
+    moves: "vanilla",
+    items: "vanilla",
+    abilities: "vanilla",
+    locations: "vanilla",
+  },
+  speciesData: { info: "vanilla", dex: "vanilla", exp: "vanilla" },
+  moveData: "vanilla",
+};
+const child = (id: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  kind: "official",
+  name: id,
+  extends: "emerald-us-1.0",
+  fixture: "none",
+  ...extra,
+});
+const user = (path: string, json: unknown) => ({ path, json });
+const load = (users: ReturnType<typeof user>[], builtin: unknown[] = [base]) =>
+  loadProfiles({ builtin, user: users });
+
+describe("extends", () => {
+  test("inherits layout data but never identity, identify, fixture, provenance or features", () => {
+    const { registry, problems } = load([
+      user("a.json", child("emerald-copy", { fixture: "smoke" })),
+    ]);
+    expect(problems).toEqual([]);
+    const copy = registry.get("emerald-copy");
+    expect(copy?.addresses.gPlayerParty).toEqual({
+      domain: "ewram",
+      offset: 0x244ec,
+    });
+    expect(copy?.artVersion).toBe("emerald");
+    expect(copy?.trainerTables.trainers?.count).toBe(855);
+    expect(copy?.identify).toBeNull();
+    expect(copy?.provenance).toBeNull();
+    expect(copy?.fixture).toBe("smoke");
+    expect(copy?.name).toBe("emerald-copy");
+  });
+
+  test("merges one level deep, and null removes an inherited key", () => {
+    const { registry, problems } = load([
+      user(
+        "a.json",
+        child("c", {
+          addresses: { gPlayerParty: "0x02000000" },
+          trainerTables: { money: null },
+        }),
+      ),
+    ]);
+    expect(problems).toEqual([]);
+    const c = registry.get("c");
+    expect(c?.addresses.gPlayerParty).toEqual({ domain: "ewram", offset: 0 });
+    expect(c?.addresses.gEnemyParty).toEqual({
+      domain: "ewram",
+      offset: 0x24744,
+    });
+    expect(c?.trainerTables.money).toBeUndefined();
+    expect(c?.trainerTables.trainers).toBeDefined();
+  });
+
+  test("nulling a required address fails the child alone", () => {
+    const { registry, problems } = load([
+      user("a.json", child("c", { addresses: { gPlayerParty: null } })),
+    ]);
+    expect(registry.get("c")).toBeUndefined();
+    expect(registry.get("emerald-us-1.0")).toBeDefined();
+    expect(problems[0]?.message).toContain("addresses.gPlayerParty");
+  });
+
+  test("a missing parent names the parent", () => {
+    const { problems } = load([
+      user("a.json", child("c", { extends: "nope" })),
+    ]);
+    expect(problems[0]?.message).toContain('"nope"');
+  });
+
+  test("a cycle lists the whole chain", () => {
+    const { registry, problems } = load([
+      user("a.json", child("a", { extends: "b" })),
+      user("b.json", child("b", { extends: "a" })),
+    ]);
+    expect(registry.get("a")).toBeUndefined();
+    expect(registry.get("b")).toBeUndefined();
+    expect(problems.some((p) => p.message.includes("a → b → a"))).toBe(true);
+  });
+
+  test("an official profile can't extend a hack, but a hack can extend an official one", () => {
+    const hack = child("h", { kind: "hack", ...hackParts });
+    const { registry, problems } = load([
+      user("h.json", hack),
+      user("o.json", child("o", { extends: "h" })),
+    ]);
+    expect(registry.get("h")?.kind).toBe("hack");
+    expect(registry.get("h")?.features.boxes).toBe(false);
+    expect(registry.get("o")).toBeUndefined();
+    expect(problems.find((p) => p.path === "o.json")?.message).toContain(
+      "can't extend a hack",
+    );
+  });
+
+  test("chains resolve through intermediate parents", () => {
+    const { registry } = load([
+      user("a.json", child("a", { addresses: { gEnemyParty: "0x02000010" } })),
+      user("b.json", child("b", { extends: "a" })),
+    ]);
+    expect(registry.get("b")?.addresses.gEnemyParty).toEqual({
+      domain: "ewram",
+      offset: 0x10,
+    });
+  });
+});
+
+describe("user files", () => {
+  test("a valid replacement wins and becomes the parent of its children", () => {
+    const replacement = {
+      ...structuredClone(base),
+      name: "My Emerald",
+      fixture: "none",
+    };
+    const { registry, problems } = load([
+      user("r.json", replacement),
+      user("c.json", child("c")),
+    ]);
+    expect(problems).toEqual([]);
+    expect(registry.get("emerald-us-1.0")?.name).toBe("My Emerald");
+    expect(registry.all().length).toBe(2);
+  });
+
+  test("a broken replacement is skipped, the built-in stays and its children resolve against it", () => {
+    const broken = {
+      ...structuredClone(base),
+      addresses: { gPlayerParty: "oops" },
+    };
+    const { registry, problems } = load([
+      user("r.json", broken),
+      user("c.json", child("c")),
+    ]);
+    expect(registry.get("emerald-us-1.0")?.name).toBe(
+      "Pokémon Emerald (US 1.0)",
+    );
+    expect(registry.get("c")).toBeDefined();
+    const problem = problems.find((p) => p.path === "r.json");
+    expect(problem?.source).toBe("user");
+    expect(problem?.message).toContain("built-in kept");
+  });
+
+  test("a replacement that extends a profile extending it is skipped (amendment 018 order example)", () => {
+    const { registry, problems } = load([
+      user("r.json", child("emerald-us-1.0", { extends: "x" })),
+      user("x.json", child("x")),
+    ]);
+    expect(registry.get("emerald-us-1.0")?.name).toBe(
+      "Pokémon Emerald (US 1.0)",
+    );
+    expect(registry.get("x")).toBeDefined();
+    expect(problems.some((p) => p.path === "r.json")).toBe(true);
+  });
+
+  test("omitting fixture on a user profile means none", () => {
+    const { fixture: _drop, ...file } = child("c");
+    const { registry } = load([user("c.json", file)]);
+    expect(registry.get("c")?.fixture).toBe("none");
+  });
+
+  test("a bad file lands in problems and never throws", () => {
+    const { registry, problems } = load([
+      user("bad.json", "not an object"),
+      user("bad2.json", { id: 3 }),
+    ]);
+    expect(problems.map((p) => p.path)).toEqual(["bad.json", "bad2.json"]);
+    expect(registry.all().length).toBe(1);
+  });
+});
+
+describe("built-in files", () => {
+  test("must state fixture", () => {
+    const { fixture: _drop, ...file } = base;
+    const { registry, problems } = load([], [file]);
+    expect(registry.all()).toEqual([]);
+    expect(problems[0]?.message).toContain("fixture");
+  });
+});

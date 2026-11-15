@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!.plan", "!.vscode"]
+    "includes": ["**", "!.plan", "!.vscode", "!server/src/profile/builtin"]
   },
   "formatter": {
     "indentStyle": "space"
