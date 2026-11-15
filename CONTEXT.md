@@ -18,7 +18,7 @@ _Avoid_: Handshake, greeting
 
 **Memory domain**:
 A named area of emulated memory, such as ROM, EWRAM or cartridge RAM, read by offset from its start. Every adapter uses the same domain names, whatever the emulator calls them.
-_Avoid_: Region, bank, memory type
+_Avoid_: Bank, memory type
 
 **Data folder**:
 The per-user folder where the program keeps its files, such as the bridges, user game profiles and manual picks. Its path depends on the OS unless the user moves it.
@@ -108,8 +108,12 @@ _Avoid_: Reader, parser
 A set of slices captured from one real game state, stored with the decoded result expected from them. The expected result names which values the owner confirmed on the game's own screens. A fixture never holds ROM data.
 _Avoid_: Savestate, dump, snapshot
 
+**Region**:
+A span of one memory domain that a decoder declares it reads, either at a fixed address or at the target of a pointer the program reads first. Its length covers the most the decoder could need, such as a full party.
+_Avoid_: Chunk, area
+
 **Slice**:
-One memory range inside a fixture, covering only what a decoder reads.
+The bytes of one region as read, from the running game or stored in a fixture.
 _Avoid_: Chunk, region dump
 
 **Box**:
