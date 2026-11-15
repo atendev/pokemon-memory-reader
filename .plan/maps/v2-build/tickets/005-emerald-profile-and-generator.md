@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [001, 004, 013, 018, 019]
+claimed_by: wayfinder-master v2-build-master-1794786410
+claimed_at: 2026-11-15T23:46:50Z
 ---
 
 # Emerald profile and generator

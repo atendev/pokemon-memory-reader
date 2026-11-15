@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [002, 003, 004]
+claimed_by: wayfinder-master v2-build-master-1794786410
+claimed_at: 2026-11-15T23:46:50Z
 ---
 
 # Bridge protocol core
