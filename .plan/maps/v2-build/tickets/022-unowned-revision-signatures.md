@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794792924
+claimed_at: 2026-11-16T03:56:33Z
 ---
 
 # What happens to signatures for revisions the owner doesn't own?
