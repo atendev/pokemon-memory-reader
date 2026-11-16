@@ -88,6 +88,14 @@ _Avoid_: Sprite set, art style
 A named piece of game state the API serves as one unit, such as the status, player, party, bag or battle. Clients read a resource whole and receive it whole when it changes.
 _Avoid_: Endpoint, topic, feed
 
+**Pocket**:
+One section of the bag that holds one kind of item, such as Key Items or Berries. Gen 1 has a single pocket.
+_Avoid_: Bag tab, category
+
+**Map section**:
+The named area of the region map that the player is in or that a Pokemon was met in. Gen 2 calls it a landmark and Gen 1 a town-map location.
+_Avoid_: Area, zone, map name
+
 **Battler**:
 A Pokemon currently on the field in a battle position. It can differ from the party member it came from, for example after Transform.
 _Avoid_: Active mon, fighter
