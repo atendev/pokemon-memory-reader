@@ -35,7 +35,7 @@ export function startServer(options: ServerOptions): RunningServer {
     clock: options.clock ?? systemClock,
     log,
   });
-  const app = createApp({ resources: loop });
+  const app = createApp({ resources: loop, log });
   const server = Bun.serve({
     hostname: options.host ?? DEFAULT_HOST,
     port: options.port ?? DEFAULT_PORT,

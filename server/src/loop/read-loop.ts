@@ -191,12 +191,14 @@ export function createReadLoop(
   function tick(): void {
     if (closed) return;
     const started = clock.now();
-    void work().finally(() => {
-      if (closed) return;
-      // A cycle that overruns skips the missed ticks and never queues (spec §8.1).
-      const wait = Math.max(0, intervalMs - (clock.now() - started));
-      cancelTick = clock.setTimeout(tick, wait);
-    });
+    void work()
+      .catch((error) => log.error("tick failed", { error }))
+      .finally(() => {
+        if (closed) return;
+        // A cycle that overruns skips the missed ticks and never queues (spec §8.1).
+        const wait = Math.max(0, intervalMs - (clock.now() - started));
+        cancelTick = clock.setTimeout(tick, wait);
+      });
   }
 
   const stopListening = adapter.subscribe((state) => {
