@@ -1,3 +1,6 @@
+import { BRIDGE_CAPS } from "../adapter/bridge/constants";
+import { declaredRegions } from "../format/registry";
+import { type BatchCaps, checkRequestCaps } from "./caps";
 import { type Profile, profileFile, profileFull } from "./schema";
 
 export type RomHeader =
@@ -36,6 +39,8 @@ export interface LoadInput {
     readonly path: string;
     readonly json: unknown;
   }>;
+  /** The bridge caps every profile's reads must fit. Tests lower them; the default is the real bridges'. */
+  readonly caps?: BatchCaps;
 }
 
 type Json = Record<string, unknown>;
@@ -136,6 +141,7 @@ function resolve(
 function finish(
   file: Source["file"],
   byId: ReadonlyMap<string, Source>,
+  caps: BatchCaps,
 ): { ok: true; profile: Profile } | { ok: false; error: string } {
   const resolved = resolve(file, byId, []);
   if (!resolved.ok) return resolved;
@@ -149,6 +155,11 @@ function finish(
     );
     return { ok: false, error: issues.join("; ") };
   }
+  const declared = declaredRegions(parsed.data);
+  const tooBig =
+    checkRequestCaps("main batch", declared.main, caps) ??
+    checkRequestCaps("box request", declared.boxes, caps);
+  if (tooBig !== null) return { ok: false, error: tooBig };
   return { ok: true, profile: parsed.data };
 }
 
@@ -187,7 +198,8 @@ function overlay(
 }
 
 /**
- * Loads once into an immutable registry in amendment 018's three steps. A user replacement that
+ * Loads once into an immutable registry in amendment 018's three steps. Each resolved profile's
+ * decoder reads must fit the bridge caps (amendment 026 §6). A user replacement that
  * fails for any reason is skipped and the built-in keeps its ID. Problems never throw.
  */
 export function loadProfiles(input: LoadInput): {
@@ -195,6 +207,7 @@ export function loadProfiles(input: LoadInput): {
   readonly problems: readonly ProfileProblem[];
 } {
   const problems: ProfileProblem[] = [];
+  const caps = input.caps ?? BRIDGE_CAPS;
   const builtin = input.builtin.flatMap((json, index) => {
     const id =
       isRecord(json) && typeof json.id === "string" ? json.id : `#${index}`;
@@ -223,7 +236,7 @@ export function loadProfiles(input: LoadInput): {
   const everything = overlay(builtin, user);
   const validReplacements: Source[] = [];
   for (const entry of user.filter((e) => builtinIds.has(e.file.id))) {
-    const result = finish(entry.file, everything);
+    const result = finish(entry.file, everything, caps);
     if (result.ok) validReplacements.push(entry);
     else
       problems.push({
@@ -243,7 +256,7 @@ export function loadProfiles(input: LoadInput): {
   // Step 3: every profile resolves against that set.
   const profiles: Profile[] = [];
   for (const entry of finalSet.values()) {
-    const result = finish(entry.file, finalSet);
+    const result = finish(entry.file, finalSet, caps);
     if (result.ok) profiles.push(result.profile);
     else
       problems.push({

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { BRIDGE_CAPS } from "../adapter/bridge/constants";
+import { declaredRegions } from "../format/registry";
 import emerald from "./builtin/emerald-us-1.0.json";
+import { checkRequestCaps } from "./caps";
 import { loadProfiles } from "./registry";
+import type { Profile } from "./schema";
 
 const base = emerald as unknown as Record<string, unknown>;
 const hackParts = {
@@ -198,5 +202,36 @@ describe("duplicate IDs", () => {
     expect(problems.map((p) => p.path)).toEqual(["b.json"]);
     expect(problems[0]?.message).toContain("duplicate");
     expect(registry.get("dup")?.name).toBe("second");
+  });
+});
+
+describe("bridge caps", () => {
+  const caps = { maxRanges: 512, maxBytes: 100, mergeGap: 32 };
+
+  test("a profile whose batch exceeds a cap fails to load, naming the region and the cap", () => {
+    const { registry, problems } = loadProfiles({
+      builtin: [base],
+      user: [],
+      caps,
+    });
+    expect(registry.get("emerald-us-1.0")).toBeUndefined();
+    expect(problems).toHaveLength(1);
+    expect(problems[0]?.source).toBe("builtin");
+    expect(problems[0]?.message).toContain("main batch needs 2 ranges");
+    expect(problems[0]?.message).toContain("largest region party.party");
+    expect(problems[0]?.message).toContain("512 ranges and 100 bytes");
+  });
+
+  test("the Emerald profile fits the real bridge caps", () => {
+    const { registry, problems } = load([]);
+    expect(problems).toEqual([]);
+    const profile = registry.get("emerald-us-1.0");
+    expect(profile).toBeDefined();
+    // Guards against a vacuous pass: the check really measured the party regions.
+    const declared = declaredRegions(profile as Profile);
+    expect(declared.main.map((p) => p.part)).toEqual(["party"]);
+    expect(
+      checkRequestCaps("main batch", declared.main, BRIDGE_CAPS),
+    ).toBeNull();
   });
 });
