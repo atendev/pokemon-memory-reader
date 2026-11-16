@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [007, 008, 014, 016, 020, 025]
+claimed_by: wayfinder-master v2-build-master-1794792924
+claimed_at: 2026-11-16T03:04:46Z
 ---
 
 # Tracer API: status and party
