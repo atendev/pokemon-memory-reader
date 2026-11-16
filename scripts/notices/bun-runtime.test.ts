@@ -129,6 +129,46 @@ describe("bun-runtime.json components", () => {
     }
   });
 
+  test("only the bun entry carries the MIT terms file, after Bun's own text", () => {
+    const withTerms = manifest.components.filter((c) =>
+      c.texts.some((t) => t.endsWith("__MIT-terms.txt")),
+    );
+    expect(withTerms.map((c) => c.name)).toEqual(["bun"]);
+    const bun = withTerms[0];
+    expect(bun?.spdx).toBe("MIT");
+    expect(bun?.texts).toEqual([
+      `texts/bun_${manifest.bunVersion}__LICENSE.md.txt`,
+      `texts/bun_${manifest.bunVersion}__MIT-terms.txt`,
+    ]);
+  });
+
+  test("Bun's LICENSE.md text is the vendored copy, unchanged", () => {
+    const text = readFileSync(
+      join(dir, `texts/bun_${manifest.bunVersion}__LICENSE.md.txt`),
+    );
+    expect(new Bun.CryptoHasher("sha256").update(text).digest("hex")).toBe(
+      "51402e15bdab948668eb5bcca05c096bc8c47beaf96f0db4b41777faf546ba4f",
+    );
+  });
+
+  test("the MIT terms file is the pinned SPDX template body under a two-line header", () => {
+    const text = readFileSync(
+      join(dir, `texts/bun_${manifest.bunVersion}__MIT-terms.txt`),
+      "utf8",
+    );
+    const lines = text.split("\n");
+    expect(lines.slice(0, 2)).toEqual([
+      "[MIT License terms named by Bun's LICENSE.md. That file gives no",
+      "copyright line, so none is given here.]",
+    ]);
+    expect(lines[2]).toBe("");
+    expect(text.endsWith("\n")).toBe(true);
+    const body = lines.slice(3).join("\n");
+    expect(new Bun.CryptoHasher("sha256").update(body).digest("hex")).toBe(
+      "83330a27667f812efa9c7cdaefd4c83f95b57a7454323a61ee29291312640468",
+    );
+  });
+
   test("entries that need an amendment are flagged, not passed off as accepted", () => {
     const blocked = manifest.components
       .filter((c) => c.blockedUntilAmendment)

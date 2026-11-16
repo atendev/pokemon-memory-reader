@@ -532,8 +532,11 @@
         "darwin-x64",
         "darwin-arm64"
       ],
-      "texts": ["texts/bun_1.4.2__LICENSE.md.txt"],
-      "notes": "Bun and its Rust workspace crates (src/*, 94 crates, none declares a license field). LICENSE.md says \"Bun itself is MIT-licensed\" and carries no copyright line or MIT text, so the shipped text is Bun's own LICENSE.md."
+      "texts": [
+        "texts/bun_1.4.2__LICENSE.md.txt",
+        "texts/bun_1.4.2__MIT-terms.txt"
+      ],
+      "notes": "Bun and its Rust workspace crates (src/*, 94 crates, none declares a license field). LICENSE.md says \"Bun itself is MIT-licensed\" and carries no copyright line or MIT text, so Bun's own LICENSE.md ships byte for byte, followed by bun_1.4.2__MIT-terms.txt, the SPDX MIT terms with no copyright line (amendment 045). Each Bun pin bump's completeness review checks whether upstream now ships a full MIT text with a copyright line. If so, switch to that text, drop the terms file and remove its test case. If not, carry the terms file over under the new version's file name."
     },
     {
       "name": "bun-usockets",
