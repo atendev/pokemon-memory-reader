@@ -20,3 +20,7 @@ Ship the tracer as one compiled executable that serves a minimal viewer. Follow 
 
 - The CI compile smoke is green.
 - Running the executable locally serves the viewer, which shows the no-game state.
+
+## Resolution
+
+The tracer ships as one executable built with `bun build --compile`. It serves a React viewer with one Party screen, which reads `status` and `party` through the API package's client, shows six cards with name fallbacks and no icons, and shows an empty state when no game is loaded. It writes the mGBA bridge into the data folder and serves it at `/bridges/mgba.lua`. `scripts/smoke.ts` checks the version, startup, `status` as `disconnected`, the viewer HTML and its assets, the bridge, and a SIGTERM exit of 0. The compile-smoke job in `ci.yml` is on. Decisions: plain CSS (Tailwind deferred), a 1 s poll until SSE, mGBA fixed at 127.0.0.1:7426 until the config tickets, no `config.json` yet, and only the `mgba` bridge because `bizhawk.lua` doesn't exist. Audit approved in round 2, CI green on 929c865 (PR 11). The decision report is `../assets/010-tracer-viewer-and-executable-report.md`. No browser has executed the viewer bundle yet.

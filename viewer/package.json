@@ -7,6 +7,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pokemon-memory-reader/api": "workspace:*"
+    "@pokemon-memory-reader/api": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
   }
 }

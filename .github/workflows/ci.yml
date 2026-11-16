@@ -73,10 +73,8 @@ jobs:
           bunx publint pack/*.tgz
           bunx attw pack/*.tgz --profile esm-only
 
-  # Off until the "Tracer viewer and executable" ticket adds the entry point and scripts/smoke.ts.
   compile-smoke:
     name: Compile smoke (linux-x64)
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -87,5 +85,9 @@ jobs:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - run: test ! -e api/dist
-      - run: bun build --compile --target=bun-linux-x64-baseline --outfile out/pokemon-memory-reader server/src/main.ts
+      - run: >-
+          bun build --compile --target=bun-linux-x64-baseline
+          --define 'PMR_TARGET="linux-x64-baseline"'
+          --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
+          --outfile out/pokemon-memory-reader server/src/main.ts
       - run: bun scripts/smoke.ts out/pokemon-memory-reader "$(jq -r .version server/package.json)"
