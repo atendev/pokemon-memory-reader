@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794807670
+claimed_at: 2026-11-16T06:19:17Z
 ---
 
 # Which bytes form the Ruby/Sapphire signature?
