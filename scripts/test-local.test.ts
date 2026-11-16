@@ -4,10 +4,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  parseFailures,
   parseLedger,
   rateSignatureEvidence,
 } from "./generate-profiles/evidence";
-import type { ShippedProfile } from "./generate-profiles/gate";
+import {
+  releaseGateProblems,
+  type ShippedProfile,
+} from "./generate-profiles/gate";
 import {
   checkProfile,
   readBuiltinProfiles,
@@ -59,10 +63,13 @@ function writeRom(name: string, rom: Buffer): string {
 }
 
 let ledgerPath = "";
+let failuresPath = "";
 let n = 0;
 beforeEach(() => {
   ledgerPath = join(dir, `ledger-${n++}.json`);
   writeFileSync(ledgerPath, "[]\n");
+  failuresPath = join(dir, `failures-${n}.json`);
+  writeFileSync(failuresPath, "[]\n");
 });
 
 const NOW = new Date("2026-11-16T12:00:00Z");
@@ -158,6 +165,7 @@ describe("run", () => {
         profiles: [profileFor("a", "pret/x", romA)],
         env: { PMR_ROM_A: writeRom("a.gba", romA) },
         ledgerPath,
+        failuresPath,
       },
       log,
     );
@@ -172,7 +180,12 @@ describe("run", () => {
     const { out, log } = lines();
     const code = await run(
       ["--record"],
-      { profiles: [profileFor("a", "pret/x", romA)], env: {}, ledgerPath },
+      {
+        profiles: [profileFor("a", "pret/x", romA)],
+        env: {},
+        ledgerPath,
+        failuresPath,
+      },
       log,
     );
     expect(code).toBe(0);
@@ -184,7 +197,7 @@ describe("run", () => {
     const { out, log } = lines();
     const code = await run(
       [],
-      { profiles: readBuiltinProfiles(), env: {}, ledgerPath },
+      { profiles: readBuiltinProfiles(), env: {}, ledgerPath, failuresPath },
       log,
     );
     expect(code).toBe(0);
@@ -200,6 +213,7 @@ describe("run", () => {
         profiles: [profile],
         env: { PMR_ROM_A: writeRom("bad.gba", bad) },
         ledgerPath,
+        failuresPath,
       },
       log,
     );
@@ -211,7 +225,11 @@ describe("run", () => {
   test("an unknown argument exits 2", async () => {
     const { log } = lines();
     expect(
-      await run(["--recrod"], { profiles: [], env: {}, ledgerPath }, log),
+      await run(
+        ["--recrod"],
+        { profiles: [], env: {}, ledgerPath, failuresPath },
+        log,
+      ),
     ).toBe(2);
   });
 
@@ -223,7 +241,7 @@ describe("run", () => {
       const { out, log } = lines();
       const code = await run(
         ["--record"],
-        { profiles, env: env(), ledgerPath, now: NOW },
+        { profiles, env: env(), ledgerPath, failuresPath, now: NOW },
         log,
       );
       expect(code).toBe(0);
@@ -235,7 +253,13 @@ describe("run", () => {
 
     test("a second run with the same inputs gives no diff", async () => {
       const { out, log } = lines();
-      const options = { profiles, env: env(), ledgerPath, now: NOW };
+      const options = {
+        profiles,
+        env: env(),
+        ledgerPath,
+        failuresPath,
+        now: NOW,
+      };
       await run(["--record"], options, log);
       const first = readFileSync(ledgerPath, "utf8");
       // A later day must not change the file either: the first entry for a profile and ROM stays.
@@ -252,7 +276,7 @@ describe("run", () => {
       const { log } = lines();
       await run(
         ["--record"],
-        { profiles, env: env(), ledgerPath, now: NOW },
+        { profiles, env: env(), ledgerPath, failuresPath, now: NOW },
         log,
       );
       const rated = rateSignatureEvidence(
@@ -276,6 +300,7 @@ describe("run", () => {
             PMR_ROM_C: writeRom("c.gba", bad),
           },
           ledgerPath,
+          failuresPath,
           now: NOW,
         },
         log,
@@ -289,7 +314,7 @@ describe("run", () => {
       const { log } = lines();
       await run(
         ["--record"],
-        { profiles, env: env(), ledgerPath, now: NOW },
+        { profiles, env: env(), ledgerPath, failuresPath, now: NOW },
         log,
       );
       const recorded = readFileSync(ledgerPath, "utf8");
@@ -307,6 +332,7 @@ describe("run", () => {
             PMR_ROM_C: writeRom("c.gba", bad),
           },
           ledgerPath,
+          failuresPath,
           now: NOW,
         },
         log,
@@ -329,6 +355,7 @@ describe("run", () => {
             PMR_ROM_D: writeRom("d.gba", romB),
           },
           ledgerPath,
+          failuresPath,
           now: NOW,
         },
         log,
@@ -337,6 +364,214 @@ describe("run", () => {
       expect(parseLedger(readFileSync(ledgerPath, "utf8"))).toEqual([
         { profileId: "d", sha1: sha1Of(romB), date: "2026-11-16" },
       ]);
+    });
+  });
+
+  describe("the failure record", () => {
+    const failing = profileFor("c", "pret/x", bad);
+    const sibling = profileFor("b", "pret/x", romB);
+    const failEnv = () => ({ PMR_ROM_C: writeRom("c.gba", bad) });
+    const failures = () => parseFailures(readFileSync(failuresPath, "utf8"));
+    const gate = (profiles: ShippedProfile[]) =>
+      releaseGateProblems(
+        profiles,
+        parseLedger(readFileSync(ledgerPath, "utf8")),
+        failures(),
+        [],
+        "",
+      ).filter((p) => p.includes("is blocked"));
+
+    test("a failed owner check is written, and the gate blocks every profile of the repo", async () => {
+      const { out, log } = lines();
+      const code = await run(
+        ["--record"],
+        {
+          profiles: [failing],
+          env: failEnv(),
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      expect(code).toBe(1);
+      expect(failures()).toEqual([
+        {
+          profileId: "c",
+          repo: "pret/x",
+          sha1: sha1Of(bad),
+          date: "2026-11-16",
+        },
+      ]);
+      expect(out.some((l) => l.startsWith("failure record updated"))).toBe(
+        true,
+      );
+      expect(readFileSync(ledgerPath, "utf8")).toBe("[]\n");
+      expect(gate([failing, sibling, profileFor("d", "pret/y", romB)])).toEqual(
+        [
+          "c is blocked: the owner check failed for c and no later pass has cleared it",
+          "b is blocked: the owner check failed for c and no later pass has cleared it",
+        ],
+      );
+    });
+
+    test("a run without --record writes no failure", async () => {
+      const { log } = lines();
+      await run(
+        [],
+        {
+          profiles: [failing],
+          env: failEnv(),
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      expect(readFileSync(failuresPath, "utf8")).toBe("[]\n");
+    });
+
+    test("a second identical failing run gives no diff", async () => {
+      const { out, log } = lines();
+      const options = {
+        profiles: [failing],
+        env: failEnv(),
+        ledgerPath,
+        failuresPath,
+        now: NOW,
+      };
+      await run(["--record"], options, log);
+      const first = readFileSync(failuresPath, "utf8");
+      out.length = 0;
+      await run(
+        ["--record"],
+        { ...options, now: new Date("2026-12-01T00:00:00Z") },
+        log,
+      );
+      expect(readFileSync(failuresPath, "utf8")).toBe(first);
+      expect(out.some((l) => l.startsWith("failure record updated"))).toBe(
+        false,
+      );
+    });
+
+    test("a later pass for the same profile and ROM clears the block, and a repeat run gives no diff", async () => {
+      const { log } = lines();
+      await run(
+        ["--record"],
+        {
+          profiles: [failing],
+          env: failEnv(),
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      // The generator is fixed: the profile's signature now matches the same ROM bytes.
+      const fixed = profileFor("c", "pret/x", bad, [
+        { address: "0x080001bc", bytes: "cc033208" },
+        { address: "0x080001cc", bytes: "00000000" },
+      ]);
+      const options = {
+        profiles: [fixed],
+        env: failEnv(),
+        ledgerPath,
+        failuresPath,
+        now: NOW,
+      };
+      expect(await run(["--record"], options, log)).toBe(0);
+      expect(failures()).toEqual([]);
+      expect(gate([fixed, sibling])).toEqual([]);
+      const ledger = readFileSync(ledgerPath, "utf8");
+      expect(await run(["--record"], options, log)).toBe(0);
+      expect(readFileSync(ledgerPath, "utf8")).toBe(ledger);
+      expect(readFileSync(failuresPath, "utf8")).toBe("[]\n");
+    });
+
+    test("a pass for another ROM or another profile leaves the failure in place", async () => {
+      const { log } = lines();
+      await run(
+        ["--record"],
+        {
+          profiles: [failing],
+          env: failEnv(),
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      const recorded = readFileSync(failuresPath, "utf8");
+      const otherRevision = profileFor("c", "pret/x", romB);
+      await run(
+        ["--record"],
+        {
+          profiles: [otherRevision],
+          env: { PMR_ROM_C: writeRom("c2.gba", romB) },
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      await run(
+        ["--record"],
+        {
+          profiles: [profileFor("d", "pret/x", romB)],
+          env: { PMR_ROM_D: writeRom("d.gba", romB) },
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      expect(readFileSync(failuresPath, "utf8")).toBe(recorded);
+    });
+
+    test("a pass clears its own failure even when another profile in the repo fails this run", async () => {
+      const { log } = lines();
+      const seeded = [
+        {
+          profileId: "b",
+          repo: "pret/x",
+          sha1: sha1Of(romB),
+          date: "2026-11-01",
+        },
+      ];
+      writeFileSync(failuresPath, `${JSON.stringify(seeded, null, 2)}\n`);
+      await run(
+        ["--record"],
+        {
+          profiles: [sibling, failing],
+          env: { ...failEnv(), PMR_ROM_B: writeRom("b.gba", romB) },
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      // b's row is gone, c's is new, so the repo stays blocked, and b's pass is still kept out of the ledger.
+      expect(failures().map((f) => f.profileId)).toEqual(["c"]);
+      expect(readFileSync(ledgerPath, "utf8")).toBe("[]\n");
+    });
+
+    test("a wrong or unreadable file is not recorded and says so", async () => {
+      const { out, log } = lines();
+      const wrong = writeRom("wrong.gba", syntheticRom(0x33, GOOD));
+      const code = await run(
+        ["--record"],
+        {
+          profiles: [failing],
+          env: { PMR_ROM_C: wrong },
+          ledgerPath,
+          failuresPath,
+          now: NOW,
+        },
+        log,
+      );
+      expect(code).toBe(1);
+      expect(readFileSync(failuresPath, "utf8")).toBe("[]\n");
+      expect(out.some((l) => l.startsWith("not recorded  c:"))).toBe(true);
     });
   });
 });
