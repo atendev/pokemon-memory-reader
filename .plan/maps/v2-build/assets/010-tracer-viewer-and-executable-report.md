@@ -21,13 +21,18 @@ Checked locally: a linux-x64-baseline executable built with `bun build --compile
 3. **Party is polled only when `status.state === "game"`.** In any other state the party GET would only return an error. `status` is always polled.
 4. **The mGBA adapter sits at 127.0.0.1:7426.** Settings and selector tickets own the endpoint. The constant sits in `main.ts` with a comment.
 5. **No `config.json` yet.** Flags and `PMR_DATA_DIR` are the only inputs. A flag will win over the config file when it arrives.
-6. **The install steps name no data-folder path.** No route exposes it, and ticket 021 owns that. The terminal prints the path.
+6. **The install steps name no data-folder path.** No route exposes it, and ticket 021 owns that. The terminal prints the path at startup.
 7. **Only the `mgba` bridge is built, served and smoke-checked.** `bizhawk.lua` doesn't exist. Spec §13.3 lists both files, so the smoke script has a one-entry list that the BizHawk ticket extends. This is the one deliberate departure from the spec text.
 8. **`PmrApiError.status` holds the status resource and `httpStatus` the HTTP code.** The error body carries `status`, so the field name follows the API.
 9. **The executable's port-in-use and bad-flag paths exit 1 and 2.** A Windows console with a TTY waits for Enter before closing after a fatal error, per spec §9.7. Tests spawn `bun server/src/main.ts` with no TTY.
 10. **Bridge lookup goes through a `Map`, never a path join.** A request can't reach the filesystem. The tests include `..%2F` cases and `constructor.lua`.
 11. **The smoke script picks a free port by binding port 0 and releasing it.** A tiny race exists between release and start. CI runners start one executable at a time, so the cost is accepted over a test-only flag, which the spec forbids.
 12. **The CI build defines `PMR_COMMIT` from `GITHUB_SHA::7`.** The release ticket reuses the same defines.
+
+13. **The primary button fill is `#0066cc`, not system blue.** The auditor measured white on `#0a84ff` at 3.65:1, under the 4.5:1 floor the `apple` skill sets for 17 pt text. `#0066cc` gives 5.5:1. Decided by the implementer after the auditor's objection.
+14. **The smoke script also fetches every script and stylesheet the viewer page names.** No browser is installed here, so nothing runs the React bundle. Fetching the assets proves the compiled executable embeds and serves them. A runtime error in the bundle would still pass, and the auditor accepted that gap.
+15. **"No-game state" means the empty states.** A fresh run has no emulator, so `status.state` is `disconnected` and the viewer shows "Waiting for an emulator" with the bridge download link. `no_game` and `unidentified` have their own copy. The render tests are labelled to say so. Auditor raised the ambiguity, the implementer chose the reading.
+16. **A failed shutdown step logs and exits 1.** Before, a throw from `server.stop()` left an unhandled rejection until the 2 s timer fired. The auditor flagged it as non-blocking and the implementer fixed it anyway.
 
 ## Surfaced
 
@@ -36,4 +41,4 @@ Checked locally: a linux-x64-baseline executable built with `bun build --compile
 
 ## Audit
 
-Pending.
+A haiku auditor ran two rounds. Round 1 returned two problems (button contrast, and no evidence the served viewer loads), both fixed above in decisions 13 to 15. Round 2 returned APPROVE. Its one remaining note is that nothing executes the bundle in a browser. CI is the only check of the `bun-linux-x64-baseline` target with the `--define` flags.
