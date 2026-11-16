@@ -14,3 +14,7 @@ claimed_at: 2026-11-16T03:41:12Z
 ## Acceptance
 
 - The TCP test gets the valid frame, then a `badFrame` result, with no timeout.
+
+## Answer
+
+A raw TCP listener serves a valid frame followed by a bad one, and the test client's `next()` now delivers the valid frame, then throws `BadFrameError` carrying the decoder's reason, with no timeout. `badFrame()` still returns the reason, and `maybeNext()` returns `null` at once on a broken stream. Five tests in `server/test/bridge/tcp-bad-frame.test.ts` cover one write, two writes with `next()` waiting, a bad frame split at its kind byte, a valid frame after the bad one never arriving, and plain silence still timing out. A raw listener serves the bytes because the Lua core never sends a malformed frame. Audit approved on round 2, CI green on c52a19a. [Report](../assets/032-bad-frame-tcp-test-report.md).
