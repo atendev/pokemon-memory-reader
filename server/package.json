@@ -10,6 +10,7 @@
   "dependencies": {
     "@pokemon-memory-reader/api": "workspace:*",
     "@pokemon-memory-reader/internal": "workspace:*",
+    "hono": "4.13.13",
     "zod": "4.6.7"
   }
 }
