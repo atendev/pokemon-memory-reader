@@ -25,6 +25,7 @@
       "version": "2.0.0-alpha.0",
       "dependencies": {
         "@pokemon-memory-reader/api": "workspace:*",
+        "@pokemon-memory-reader/internal": "workspace:*",
       },
     },
     "viewer": {

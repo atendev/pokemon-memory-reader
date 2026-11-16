@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pokemon-memory-reader/api": "workspace:*"
+    "@pokemon-memory-reader/api": "workspace:*",
+    "@pokemon-memory-reader/internal": "workspace:*"
   }
 }
