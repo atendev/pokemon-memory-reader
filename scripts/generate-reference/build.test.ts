@@ -5,9 +5,11 @@ import { extract, type Files } from "./extract";
 
 /** Hand-written inputs in pret's syntax. None of it is copied from a pret file. */
 const emeraldFiles: Files = {
-  speciesConstants: "#define SPECIES_NONE 0\n#define SPECIES_FOO 1\n#define SPECIES_BAR 2\n",
+  speciesConstants:
+    "#define SPECIES_NONE 0\n#define SPECIES_FOO 1\n#define SPECIES_BAR 2\n",
   moveConstants: "#define MOVE_NONE 0\n#define MOVE_HIT 1\n",
-  itemConstants: "enum {\n ITEM_NONE,\n ITEM_BALL,\n ITEM_034,\n ITEM_TM01,\n};\n",
+  itemConstants:
+    "enum {\n ITEM_NONE,\n ITEM_BALL,\n ITEM_034,\n ITEM_TM01,\n};\n",
   abilityConstants: "#define ABILITY_NONE 0\n#define ABILITY_ONE 1\n",
   pokemonConstants:
     "#define TYPE_NORMAL 0\n#define TYPE_FIRE 10\n#define MON_GENDERLESS 0xFF\n#define GROWTH_FAST 4\n",
@@ -49,13 +51,18 @@ const emeraldFiles: Files = {
     },
     [SPECIES_BAR] = SAME_TYPES,
   `,
-  moveInfo: "[MOVE_HIT] =\n{\n .effect = 0,\n .type = TYPE_FIRE,\n .pp = 25,\n},\n",
-  dexOrder: "const u16 gSpeciesToNationalPokedexNum[] = {\n SPECIES_TO_NATIONAL(FOO),\n SPECIES_TO_NATIONAL(BAR),\n};\n",
+  moveInfo:
+    "[MOVE_HIT] =\n{\n .effect = 0,\n .type = TYPE_FIRE,\n .pp = 25,\n},\n",
+  dexOrder:
+    "const u16 gSpeciesToNationalPokedexNum[] = {\n SPECIES_TO_NATIONAL(FOO),\n SPECIES_TO_NATIONAL(BAR),\n};\n",
   charmap:
     "@ Latin\n'A' = BB\n'\\'' = B4\n'’' = B4\n'…' = B0\nPKMN = 53 54\n@ Hiragana\n'あ' = 01\n'‥' = B0\n@ string placeholders\n'Z' = D4\n",
 };
 
-const withFiles = (changes: Partial<Files>): Files => ({ ...emeraldFiles, ...changes });
+const withFiles = (changes: Partial<Files>): Files => ({
+  ...emeraldFiles,
+  ...changes,
+});
 
 const source = (repo: string, files: Files): Source => ({
   repo,
@@ -74,24 +81,44 @@ describe("string readers", () => {
   });
 
   test("any other control code fails", () => {
-    expect(() => stringLiteral('_("{PLAYER}")')).toThrow("unhandled control code");
+    expect(() => stringLiteral('_("{PLAYER}")')).toThrow(
+      "unhandled control code",
+    );
   });
 });
 
 describe("constants", () => {
   test("evaluates sums over known names", () => {
-    expect(evaluate("A + (B - 1)", new Map([["A", 2], ["B", 4]]))).toBe(5);
+    expect(
+      evaluate(
+        "A + (B - 1)",
+        new Map([
+          ["A", 2],
+          ["B", 4],
+        ]),
+      ),
+    ).toBe(5);
     expect(evaluate("A + C", new Map([["A", 2]]))).toBeNull();
   });
 
   test("reads defines that refer to each other and enum bodies", () => {
-    const constants = readConstants("#define B A + 1\n#define A 4\nenum { X, Y = 9, Z };\n");
+    const constants = readConstants(
+      "#define B A + 1\n#define A 4\nenum { X, Y = 9, Z };\n",
+    );
     expect(constants.get("B")).toBe(5);
-    expect([constants.get("X"), constants.get("Y"), constants.get("Z")]).toEqual([0, 9, 10]);
+    expect([
+      constants.get("X"),
+      constants.get("Y"),
+      constants.get("Z"),
+    ]).toEqual([0, 9, 10]);
   });
 
   test("a table entry written as a macro name resolves through the macro", () => {
-    const entries = readEntries("[ID_ONE] = BODY,", /ID_\w+/, new Map([["BODY", "{ .a = 1 }"]]));
+    const entries = readEntries(
+      "[ID_ONE] = BODY,",
+      /ID_\w+/,
+      new Map([["BODY", "{ .a = 1 }"]]),
+    );
     expect(entries.get("ID_ONE")).toBe("{ .a = 1 }");
   });
 });
@@ -100,13 +127,20 @@ describe("extract", () => {
   const out = extract("emerald", emeraldFiles);
 
   test("names are keyed by numeric ID and skip ID 0", () => {
-    expect([...out.species]).toEqual([[1, "FOO"], [2, "BAR"]]);
+    expect([...out.species]).toEqual([
+      [1, "FOO"],
+      [2, "BAR"],
+    ]);
     expect([...out.moves]).toEqual([[1, "HIT"]]);
     expect([...out.abilities]).toEqual([[1, "ONE"]]);
   });
 
   test("items keep filler names and take a TM's ID from the entry", () => {
-    expect([...out.items]).toEqual([[1, "BALL"], [2, "????????"], [3, "TM01"]]);
+    expect([...out.items]).toEqual([
+      [1, "BALL"],
+      [2, "????????"],
+      [3, "TM01"],
+    ]);
   });
 
   test("species data resolves macros, gender percentages and growth rates", () => {
@@ -126,7 +160,10 @@ describe("extract", () => {
 
   test("move data and dex numbers come from their tables", () => {
     expect(out.moveData.get(1)).toEqual({ type: 10, pp: 25 });
-    expect([...out.dex]).toEqual([[1, 7], [2, 8]]);
+    expect([...out.dex]).toEqual([
+      [1, 7],
+      [2, 8],
+    ]);
   });
 
   test("the charmap splits Latin from kana and stops at the placeholders", () => {
@@ -138,8 +175,11 @@ describe("extract", () => {
   });
 
   test("an item at the wrong list position fails", () => {
-    const text = '{"items":[{"english":"A","itemId":"ITEM_NONE"},{"english":"B","itemId":"ITEM_034"},{"english":"C","itemId":"ITEM_BALL"}]}';
-    expect(() => extract("firered", withFiles({ items: text }))).toThrow("list position");
+    const text =
+      '{"items":[{"english":"A","itemId":"ITEM_NONE"},{"english":"B","itemId":"ITEM_034"},{"english":"C","itemId":"ITEM_BALL"}]}';
+    expect(() => extract("firered", withFiles({ items: text }))).toThrow(
+      "list position",
+    );
   });
 });
 
@@ -158,21 +198,30 @@ describe("buildReference", () => {
   });
 
   test("a name that differs between repos fails and names both repos", () => {
-    const other = withFiles({ speciesNames: '[SPECIES_FOO] = _("OOF"),\n[SPECIES_BAR] = _("BAR"),\n' });
-    expect(() => buildReference([source("pret/a", emeraldFiles), source("pret/b", other)])).toThrow(
-      /species name 1: pret\/a "FOO" vs pret\/b "OOF"/,
-    );
+    const other = withFiles({
+      speciesNames: '[SPECIES_FOO] = _("OOF"),\n[SPECIES_BAR] = _("BAR"),\n',
+    });
+    expect(() =>
+      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)]),
+    ).toThrow(/species name 1: pret\/a "FOO" vs pret\/b "OOF"/);
   });
 
   test("the same kana glyph spelled two ways agrees", () => {
-    const other = withFiles({ charmap: emeraldFiles.charmap.replace("'‥' = B0", "'⋯' = B0") });
-    expect(buildReference([source("pret/a", emeraldFiles), source("pret/b", other)]).charmap.kana[0xb0]).toBe("‥");
+    const other = withFiles({
+      charmap: emeraldFiles.charmap.replace("'‥' = B0", "'⋯' = B0"),
+    });
+    expect(
+      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)])
+        .charmap.kana[0xb0],
+    ).toBe("‥");
   });
 
   test("a byte that two repos map to different glyphs fails", () => {
-    const other = withFiles({ charmap: emeraldFiles.charmap.replace("'A' = BB", "'B' = BB") });
-    expect(() => buildReference([source("pret/a", emeraldFiles), source("pret/b", other)])).toThrow(
-      "charmap byte 0xbb",
-    );
+    const other = withFiles({
+      charmap: emeraldFiles.charmap.replace("'A' = BB", "'B' = BB"),
+    });
+    expect(() =>
+      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)]),
+    ).toThrow("charmap byte 0xbb");
   });
 });
