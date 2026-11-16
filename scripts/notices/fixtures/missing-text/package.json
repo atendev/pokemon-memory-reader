@@ -1,0 +1,8 @@
+{
+  "name": "fixture-missing-text",
+  "private": true,
+  "dependencies": {
+    "no-text-pkg": "1.0.0",
+    "readme-only-pkg": "1.0.0"
+  }
+}

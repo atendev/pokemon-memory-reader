@@ -1,0 +1,7 @@
+{
+  "odd-pkg@3.1.0": {
+    "spdx": "MIT",
+    "reason": "License field points at TERMS.txt, which is the MIT text.",
+    "text": "package:TERMS.txt"
+  }
+}

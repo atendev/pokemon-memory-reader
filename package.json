@@ -17,11 +17,16 @@
     "typecheck": "bun run --workspaces typecheck && tsc --noEmit -p scripts",
     "build:exe": "bun build --compile --outfile out/pokemon-memory-reader server/src/main.ts",
     "generate:profiles": "bun scripts/generate-profiles/main.ts",
-    "generate:reference": "bun scripts/generate-reference/main.ts"
+    "generate:reference": "bun scripts/generate-reference/main.ts",
+    "notices": "bun scripts/notices.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7",
     "@types/bun": "1.4.2",
+    "@types/spdx-expression-parse": "4.0.0",
+    "spdx-exceptions": "2.5.0",
+    "spdx-expression-parse": "4.0.0",
+    "spdx-license-ids": "3.0.24",
     "typescript": "7.0.2"
   }
 }

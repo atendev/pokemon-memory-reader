@@ -1,0 +1,11 @@
+{
+  "name": "fixture-allowed",
+  "private": true,
+  "dependencies": {
+    "mit-pkg": "1.0.0",
+    "apache-pkg": "2.0.0",
+    "or-pkg": "1.0.0",
+    "llvm-pkg": "1.0.0",
+    "lower-pkg": "1.0.0"
+  }
+}

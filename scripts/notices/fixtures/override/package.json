@@ -1,0 +1,7 @@
+{
+  "name": "fixture-override",
+  "private": true,
+  "dependencies": {
+    "odd-pkg": "3.1.0"
+  }
+}
