@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794807670
+claimed_at: 2026-11-16T06:00:30Z
 ---
 
 # Which licenses does the third-party allowlist accept?

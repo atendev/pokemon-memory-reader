@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [029]
+claimed_by: wayfinder-master v2-build-master-1794807670
+claimed_at: 2026-11-16T06:00:30Z
 ---
 
 # Signature evidence ledger, generator field and release gate
