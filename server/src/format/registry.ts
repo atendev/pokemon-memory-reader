@@ -32,6 +32,34 @@ function bind<P, R extends Regions, T>(
   };
 }
 
+/** A decoder part's name with every region it declares at maximum size. */
+export interface DeclaredPart {
+  readonly part: string;
+  readonly regions: Regions;
+}
+
+/**
+ * What the loaded game's decoders read, split into the main batch and the box request (amendment
+ * 026 §6). It needs no reference data, so a profile is measured the same whether or not its
+ * language has any. No format has a box decoder yet, so `boxes` is empty.
+ */
+export function declaredRegions(profile: Profile): {
+  readonly main: readonly DeclaredPart[];
+  readonly boxes: readonly DeclaredPart[];
+} {
+  switch (profile.dataFormat) {
+    case "gen3":
+      return {
+        main: gen3Decoder.party
+          ? [{ part: "party", regions: gen3Decoder.party.regions(profile) }]
+          : [],
+        boxes: [],
+      };
+    default:
+      return { main: [], boxes: [] };
+  }
+}
+
 /**
  * Binds the profile's data format to its decoder and the reference data for its language.
  * A format with no decoder, or no reference data, binds no parts. The `supported` flag and its
