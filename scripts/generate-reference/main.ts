@@ -7,7 +7,11 @@ import { extract, type Files } from "./extract";
 
 const OUT = join(import.meta.dir, "../../server/src/reference/data");
 
-async function fetchText(repo: string, ref: string, file: string): Promise<string> {
+async function fetchText(
+  repo: string,
+  ref: string,
+  file: string,
+): Promise<string> {
   const url = `https://raw.githubusercontent.com/${repo}/${ref}/${file}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: ${response.status}`);
@@ -21,7 +25,10 @@ for (const definition of sources) {
     await Promise.all(
       Object.entries(definition.files).map(
         async ([role, path]) =>
-          [role, await fetchText(definition.repo, definition.commit, path)] as const,
+          [
+            role,
+            await fetchText(definition.repo, definition.commit, path),
+          ] as const,
       ),
     ),
   ) as Files;
@@ -34,4 +41,7 @@ for (const definition of sources) {
 }
 
 await mkdir(OUT, { recursive: true });
-await writeFile(join(OUT, "gen3-en.json"), renderReference(buildReference(read)));
+await writeFile(
+  join(OUT, "gen3-en.json"),
+  renderReference(buildReference(read)),
+);

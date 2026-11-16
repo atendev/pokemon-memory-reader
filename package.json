@@ -15,7 +15,8 @@
     "lint": "biome ci .",
     "format": "biome check --write .",
     "typecheck": "bun run --workspaces typecheck && tsc --noEmit -p scripts",
-    "generate:profiles": "bun scripts/generate-profiles/main.ts"
+    "generate:profiles": "bun scripts/generate-profiles/main.ts",
+    "generate:reference": "bun scripts/generate-reference/main.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7",

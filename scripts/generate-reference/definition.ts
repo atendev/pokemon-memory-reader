@@ -15,6 +15,7 @@ export type SourceRole =
   | "itemConstants"
   | "abilityConstants"
   | "pokemonConstants"
+  | "growthConstants"
   | "pokedexConstants"
   | "speciesNames"
   | "moveNames"
@@ -36,6 +37,7 @@ export const sources: readonly SourceDefinition[] = [
       itemConstants: "include/constants/items.h",
       abilityConstants: "include/constants/abilities.h",
       pokemonConstants: "include/constants/pokemon.h",
+      growthConstants: "include/constants/pokemon.h",
       pokedexConstants: "include/constants/pokedex.h",
       speciesNames: "src/data/text/species_names.h",
       moveNames: "src/data/text/move_names.h",
@@ -57,6 +59,7 @@ export const sources: readonly SourceDefinition[] = [
       itemConstants: "include/constants/items.h",
       abilityConstants: "include/constants/abilities.h",
       pokemonConstants: "include/constants/pokemon.h",
+      growthConstants: "include/constants/pokemon.h",
       pokedexConstants: "include/constants/pokedex.h",
       speciesNames: "src/data/text/species_names.h",
       moveNames: "src/data/text/move_names.h",
@@ -78,6 +81,7 @@ export const sources: readonly SourceDefinition[] = [
       itemConstants: "include/constants/items.h",
       abilityConstants: "include/constants/abilities.h",
       pokemonConstants: "include/constants/pokemon.h",
+      growthConstants: "include/pokemon.h",
       pokedexConstants: "include/constants/species.h",
       speciesNames: "src/data/text/species_names_en.h",
       moveNames: "src/data/text/move_names_en.h",

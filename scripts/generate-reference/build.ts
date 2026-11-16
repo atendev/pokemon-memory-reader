@@ -61,7 +61,10 @@ function agree<T>(
   }
   if (conflicts.length) {
     const shown = conflicts.slice(0, CONFLICT_LIMIT).join("\n  ");
-    const more = conflicts.length > CONFLICT_LIMIT ? `\n  and ${conflicts.length - CONFLICT_LIMIT} more` : "";
+    const more =
+      conflicts.length > CONFLICT_LIMIT
+        ? `\n  and ${conflicts.length - CONFLICT_LIMIT} more`
+        : "";
     throw new Error(
       `${what} disagree between repos, so the table needs per-game keys:\n  ${shown}${more}`,
     );
@@ -69,7 +72,15 @@ function agree<T>(
   return new Map([...merged].map(([id, entry]) => [id, entry.value]));
 }
 
-/** Charmaps agree when each byte shares a glyph in every repo that maps it. The first repo's first glyph wins. */
+/** Glyphs two pret repos spell differently for one byte. The first is rewritten to the second before comparing. */
+const GLYPH_ALIASES: Readonly<Record<string, string>> = { "\u22ef": "\u2025" };
+
+const canonical = (glyph: string) => GLYPH_ALIASES[glyph] ?? glyph;
+
+/**
+ * Charmaps agree when each byte shares a glyph in every repo that maps it. A byte with several glyphs
+ * takes its plain ASCII one, since pret writes names such as FARFETCH'D with it, else its first.
+ */
 function agreeCharmap(
   sources: readonly Source[],
   pick: (extracted: Extracted) => Map<number, string[]>,
@@ -77,11 +88,13 @@ function agreeCharmap(
   const out: Array<string | null> = new Array(256).fill(null);
   const seen = new Map<number, { glyphs: string[]; repo: string }>();
   for (const source of sources) {
-    for (const [byte, glyphs] of pick(source.extracted)) {
+    for (const [byte, raw] of pick(source.extracted)) {
+      const glyphs = raw.map(canonical);
       const before = seen.get(byte);
       if (!before) {
         seen.set(byte, { glyphs, repo: source.repo });
-        out[byte] = glyphs[0] ?? null;
+        out[byte] =
+          glyphs.find((glyph) => glyph < "\u007f") ?? glyphs[0] ?? null;
       } else if (!glyphs.some((glyph) => before.glyphs.includes(glyph))) {
         throw new Error(
           `charmap byte 0x${byte.toString(16)}: ${before.repo} ${JSON.stringify(before.glyphs)} vs ${source.repo} ${JSON.stringify(glyphs)}`,
@@ -99,7 +112,12 @@ function table<T>(merged: Map<number, T>): Array<T | null> {
 
 export function buildReference(sources: readonly Source[]): ReferenceFile {
   const species = agree("species name", sources, (x) => x.species);
-  const speciesData = agree("species data", sources, (x) => x.speciesData, (a, b) => JSON.stringify(a) === JSON.stringify(b));
+  const speciesData = agree(
+    "species data",
+    sources,
+    (x) => x.speciesData,
+    (a, b) => JSON.stringify(a) === JSON.stringify(b),
+  );
   const dex = agree("National Dex number", sources, (x) => x.dex);
   const lastSpecies = Math.max(...species.keys());
   const rows = new Map<number, ReferenceFile["speciesData"][number]>();
@@ -109,7 +127,11 @@ export function buildReference(sources: readonly Source[]): ReferenceFile {
   return {
     dataFormat: "gen3",
     language: "en",
-    provenance: sources.map(({ repo, commit, files }) => ({ repo, commit, files })),
+    provenance: sources.map(({ repo, commit, files }) => ({
+      repo,
+      commit,
+      files,
+    })),
     charmap: {
       latin: agreeCharmap(sources, (x) => x.latin),
       kana: agreeCharmap(sources, (x) => x.kana),
@@ -122,7 +144,12 @@ export function buildReference(sources: readonly Source[]): ReferenceFile {
     },
     speciesData: table(rows),
     moveData: table(
-      agree("move data", sources, (x) => x.moveData, (a, b) => a.type === b.type && a.pp === b.pp),
+      agree(
+        "move data",
+        sources,
+        (x) => x.moveData,
+        (a, b) => a.type === b.type && a.pp === b.pp,
+      ),
     ),
   };
 }

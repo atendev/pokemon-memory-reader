@@ -1,6 +1,7 @@
 import {
   type Constants,
   field,
+  printCodes,
   readConstants,
   readEntries,
   readMacros,
@@ -42,12 +43,17 @@ const NAME_ENTRY = /\[([A-Z][A-Z0-9_]*)\]\s*=\s*(_\("(?:[^"\\]|\\.)*"\))/g;
 
 function need(constants: Constants, name: string, where: string): number {
   const value = constants.get(name);
-  if (value === undefined) throw new Error(`${where}: unknown constant ${name}`);
+  if (value === undefined)
+    throw new Error(`${where}: unknown constant ${name}`);
   return value;
 }
 
 /** Lines like `[SPECIES_FOO] = _("FOO"),` to ID to text. ID 0 is skipped (amendment 019 §2). */
-function namedTable(text: string, constants: Constants, where: string): Map<number, string> {
+function namedTable(
+  text: string,
+  constants: Constants,
+  where: string,
+): Map<number, string> {
   const out = new Map<number, string>();
   for (const match of stripComments(text).matchAll(NAME_ENTRY)) {
     const id = need(constants, match[1] ?? "", where);
@@ -67,36 +73,98 @@ function rubyAbilities(text: string): Map<number, string> {
   return out;
 }
 
-function items(text: string, layout: Layout, constants: Constants): Map<number, string> {
+const ITEM_NAME = /\.name\s*=\s*(_\("(?:[^"\\]|\\.)*"\))/;
+
+/**
+ * Item names by numeric ID. Emerald keys its table by constant. Ruby and FireRed list entries in ID
+ * order, so the position is the ID, and an entry that names its own ID must agree with its position.
+ * Filler entries such as `????????` are kept (amendment 019 §2).
+ */
+function items(
+  text: string,
+  layout: Layout,
+  constants: Constants,
+): Map<number, string> {
   const out = new Map<number, string>();
-  const put = (constant: string, name: string) => {
-    const id = need(constants, constant, "items");
+  const put = (id: number, name: string) => {
     if (id !== 0) out.set(id, name);
   };
+  const listed = (names: Array<{ name: string; itemId: string }>) => {
+    names.forEach(({ name, itemId }, position) => {
+      if (
+        itemId !== "ITEM_NONE" &&
+        need(constants, itemId, "items") !== position
+      ) {
+        throw new Error(`items: ${itemId} sits at list position ${position}`);
+      }
+      put(position, name);
+    });
+  };
   if (layout === "firered") {
-    const json = JSON.parse(text) as { items: Array<{ english: string; itemId: string }> };
-    for (const item of json.items) put(item.itemId, item.english);
-    return out;
-  }
-  for (const match of stripComments(text).matchAll(
-    /\.name\s*=\s*(_\("(?:[^"\\]|\\.)*"\))\s*,\s*\.itemId\s*=\s*(ITEM_\w+)/g,
-  )) {
-    put(match[2] ?? "", stringLiteral(match[1] ?? ""));
+    const json = JSON.parse(text) as {
+      items: Array<{ english: string; itemId: string }>;
+    };
+    listed(
+      json.items.map((item) => ({
+        name: printCodes(item.english),
+        itemId: item.itemId,
+      })),
+    );
+  } else if (layout === "ruby") {
+    listed(
+      [
+        ...stripComments(text).matchAll(
+          /\.name\s*=\s*(_\("(?:[^"\\]|\\.)*"\))\s*,\s*\.itemId\s*=\s*(ITEM_\w+)/g,
+        ),
+      ].map((match) => ({
+        name: stringLiteral(match[1] ?? ""),
+        itemId: match[2] ?? "",
+      })),
+    );
+  } else {
+    for (const [key, body] of readEntries(text, /ITEM_\w+/)) {
+      const name = ITEM_NAME.exec(body)?.[1];
+      if (name === undefined) throw new Error(`items: ${key} has no name`);
+      // The TM and HM keys are macros outside the constants file, so those entries name their own ID.
+      const own = /\.itemId\s*=\s*(ITEM_\w+)/.exec(body)?.[1] ?? "ITEM_NONE";
+      const ownId =
+        own === "ITEM_NONE" ? undefined : need(constants, own, "items");
+      const keyId = constants.get(key);
+      if (keyId !== undefined && ownId !== undefined && keyId !== ownId) {
+        throw new Error(`items: ${key} is ${keyId} but names itself ${ownId}`);
+      }
+      const id = keyId ?? ownId;
+      if (id === undefined)
+        throw new Error(`items: ${key} has no resolvable ID`);
+      put(id, stringLiteral(name));
+    }
   }
   return out;
 }
 
 function gender(text: string, constants: Constants): number {
   const percent = /^PERCENT_FEMALE\(\s*([\d.]+)\s*\)$/.exec(text);
-  if (percent) return Math.floor(Math.min(254, (Number(percent[1]) * 255) / 100));
+  if (percent)
+    return Math.floor(Math.min(254, (Number(percent[1]) * 255) / 100));
   return need(constants, text, "genderRatio");
 }
 
-function pair(text: string | null, constants: Constants, where: string): [number, number] {
+function pair(
+  text: string | null,
+  constants: Constants,
+  where: string,
+): [number, number] {
   const inner = /^\{([^}]*)\}$/.exec(text ?? "")?.[1];
-  const parts = (inner ?? "").split(",").map((part) => part.trim()).filter(Boolean);
-  if (parts.length !== 2) throw new Error(`${where}: expected two values in ${text}`);
-  return [need(constants, parts[0] ?? "", where), need(constants, parts[1] ?? "", where)];
+  const parts = (inner ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length !== 2)
+    throw new Error(`${where}: expected two values in ${text}`);
+  return [
+    need(constants, parts[0] ?? "", where),
+    need(constants, parts[1] ?? "", where),
+  ];
 }
 
 function speciesData(
@@ -127,21 +195,32 @@ function speciesData(
     out.set(id, {
       types,
       genderRatio: gender(field(body, "genderRatio") ?? "", constants),
-      growthRate: need(constants, field(body, "growthRate") ?? "", `${key} growthRate`),
+      growthRate: need(
+        constants,
+        field(body, "growthRate") ?? "",
+        `${key} growthRate`,
+      ),
       abilities,
     });
   }
   return out;
 }
 
-function moveData(text: string, constants: Constants, moves: Constants): Map<number, MoveRow> {
+function moveData(
+  text: string,
+  constants: Constants,
+  moves: Constants,
+): Map<number, MoveRow> {
   const out = new Map<number, MoveRow>();
   for (const [key, body] of readEntries(text, /MOVE_\w+/)) {
     const id = need(moves, key, "move info");
     if (id === 0) continue;
     const pp = Number(field(body, "pp"));
     if (!Number.isInteger(pp)) throw new Error(`${key}: pp is not a number`);
-    out.set(id, { type: need(constants, field(body, "type") ?? "", `${key} type`), pp });
+    out.set(id, {
+      type: need(constants, field(body, "type") ?? "", `${key} type`),
+      pp,
+    });
   }
   return out;
 }
@@ -198,7 +277,10 @@ function charmap(text: string): {
       else if (/^@\s*string placeholders/.test(line)) target = null;
       continue;
     }
-    const match = /^'(\\'|[^'\\]{1,2})'\s*=\s*([0-9A-Fa-f]{2})\s*(?:@.*)?$/.exec(line.trim());
+    const match =
+      /^'(\\'|[^'\\]{1,2})'\s*=\s*([0-9A-Fa-f]{2})\s*(?:@.*)?$/.exec(
+        line.trim(),
+      );
     if (!match || !target) continue;
     const glyph = (match[1] ?? "").replace("\\'", "'");
     if ([...glyph].length !== 1) continue;
@@ -213,7 +295,10 @@ export function extract(layout: Layout, files: Files): Extracted {
   const moves = readConstants(files.moveConstants);
   const itemIds = readConstants(files.itemConstants);
   const abilityIds = readConstants(files.abilityConstants);
-  const shared = readConstants(files.pokemonConstants, new Map(abilityIds));
+  const shared = readConstants(
+    files.growthConstants,
+    readConstants(files.pokemonConstants, new Map(abilityIds)),
+  );
   const dexNumbers = readConstants(files.pokedexConstants);
   return {
     species: namedTable(files.speciesNames, species, "species names"),

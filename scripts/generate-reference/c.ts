@@ -20,7 +20,7 @@ export type Constants = Map<string, number>;
 
 /** Integer expressions over known names: numbers, names, parentheses, `+` and `-`. */
 export function evaluate(expr: string, constants: Constants): number | null {
-  const tokens = expr.match(/0x[0-9a-fA-F]+|\d+|[A-Za-z_]\w*|[()+\-]/g);
+  const tokens = expr.match(/0x[0-9a-fA-F]+|\d+|[A-Za-z_]\w*|[()+-]/g);
   if (!tokens || tokens.join("") !== expr.replace(/\s+/g, "")) return null;
   let position = 0;
   const primary = (): number | null => {
@@ -39,7 +39,10 @@ export function evaluate(expr: string, constants: Constants): number | null {
   };
   const sum = (): number | null => {
     let total = primary();
-    while (total !== null && (tokens[position] === "+" || tokens[position] === "-")) {
+    while (
+      total !== null &&
+      (tokens[position] === "+" || tokens[position] === "-")
+    ) {
       const op = tokens[position++];
       const next = primary();
       if (next === null) return null;
@@ -55,10 +58,15 @@ export function evaluate(expr: string, constants: Constants): number | null {
  * Reads `#define NAME expr` lines and `enum { A, B = 5, C }` bodies into one table.
  * A name whose expression cannot be evaluated is skipped, except that the caller may fail on a missing key later.
  */
-export function readConstants(text: string, into: Constants = new Map()): Constants {
+export function readConstants(
+  text: string,
+  into: Constants = new Map(),
+): Constants {
   const clean = stripComments(text).replace(/\\\n/g, " ");
   const pending: Array<[string, string]> = [];
-  for (const match of clean.matchAll(/^[ \t]*#define[ \t]+([A-Za-z_]\w*)[ \t]+([^\n]+)$/gm)) {
+  for (const match of clean.matchAll(
+    /^[ \t]*#define[ \t]+([A-Za-z_]\w*)[ \t]+([^\n]+)$/gm,
+  )) {
     pending.push([match[1] ?? "", (match[2] ?? "").trim()]);
   }
   for (const match of clean.matchAll(/enum\s*\w*\s*\{([^}]*)\}/g)) {
@@ -69,7 +77,8 @@ export function readConstants(text: string, into: Constants = new Map()): Consta
       const assign = /^([A-Za-z_]\w*)\s*=\s*(.+)$/.exec(entry);
       if (assign) {
         const value = evaluate((assign[2] ?? "").trim(), into);
-        if (value === null) throw new Error(`enum value not evaluable: ${entry}`);
+        if (value === null)
+          throw new Error(`enum value not evaluable: ${entry}`);
         into.set(assign[1] ?? "", value);
         next = value + 1;
       } else if (/^[A-Za-z_]\w*$/.test(entry)) {
@@ -98,7 +107,9 @@ export function readConstants(text: string, into: Constants = new Map()): Consta
 export function readMacros(text: string): Map<string, string> {
   const macros = new Map<string, string>();
   const clean = stripComments(text);
-  for (const match of clean.matchAll(/^[ \t]*#define[ \t]+([A-Za-z_]\w*)[ \t]*((?:\\\n|[^\n])*)$/gm)) {
+  for (const match of clean.matchAll(
+    /^[ \t]*#define[ \t]+([A-Za-z_]\w*)[ \t]*((?:\\\n|[^\n])*)$/gm,
+  )) {
     macros.set(match[1] ?? "", (match[2] ?? "").replace(/\\\n/g, " ").trim());
   }
   return macros;
@@ -141,15 +152,31 @@ export function readEntries(
 }
 
 export function field(body: string, name: string): string | null {
-  const match = new RegExp(`\\.${name}\\s*=\\s*(\\{[^}]*\\}|[^,\\n}]+)`).exec(body);
+  const match = new RegExp(`\\.${name}\\s*=\\s*(\\{[^}]*\\}|[^,\\n}]+)`).exec(
+    body,
+  );
   return match ? (match[1] ?? "").trim() : null;
+}
+
+/** Control codes that print fixed text. `{POKEBLOCK}` is five charmap bytes that the game draws as POKéBLOCK. */
+const PRINTED_CODES: Readonly<Record<string, string>> = {
+  "{POKEBLOCK}": "POKéBLOCK",
+};
+
+/** Replaces the control codes that print fixed text and fails on any other `{CODE}` or backslash. */
+export function printCodes(text: string): string {
+  const printed = text.replace(
+    /\{[A-Z_]+\}/g,
+    (code) => PRINTED_CODES[code] ?? code,
+  );
+  if (/[{}\\]/.test(printed))
+    throw new Error(`unhandled control code in ${JSON.stringify(text)}`);
+  return printed;
 }
 
 /** The contents of a pret `_("...")` string literal, with C escapes. Fails on an unhandled `{CODE}`. */
 export function stringLiteral(source: string): string {
   const match = /^_\(\s*"((?:[^"\\]|\\.)*)"\s*\)$/.exec(source.trim());
   if (!match) throw new Error(`not a string literal: ${source}`);
-  const inner = (match[1] ?? "").replace(/\\(['"\\])/g, "$1");
-  if (/[{}\\]/.test(inner)) throw new Error(`unhandled control code in ${JSON.stringify(inner)}`);
-  return inner;
+  return printCodes((match[1] ?? "").replace(/\\(['"\\])/g, "$1"));
 }
