@@ -1,7 +1,17 @@
-export type Platform = "gb" | "gba";
+export const PLATFORMS = ["gb", "gba"] as const;
+export type Platform = (typeof PLATFORMS)[number];
+
+export const DOMAINS = [
+  "rom",
+  "ewram",
+  "iwram",
+  "wram",
+  "hram",
+  "sram",
+] as const;
+export type Domain = (typeof DOMAINS)[number];
 export type GbaDomain = "rom" | "ewram" | "iwram";
 export type GbDomain = "rom" | "wram" | "hram" | "sram";
-export type Domain = GbaDomain | GbDomain;
 
 export interface MemoryAddress {
   readonly domain: Domain;

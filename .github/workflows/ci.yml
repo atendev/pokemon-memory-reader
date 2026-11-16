@@ -23,10 +23,34 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
+      - uses: leafo/gh-actions-lua@32909a2dea0a48c433aec79e7fcd31b4cd55800f # v13.1.0
+        with:
+          luaVersion: "5.4"
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
       - run: bun test
+        env:
+          EXPECT_LUA_VERSION: "5.4"
+
+  # The shared Lua protocol core also has to run under Lua 5.3, which BizHawk on some Linux distros loads.
+  bridge-lua-5-3:
+    name: Bridge protocol (Lua 5.3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: leafo/gh-actions-lua@32909a2dea0a48c433aec79e7fcd31b4cd55800f # v13.1.0
+        with:
+          luaVersion: "5.3"
+      - run: bun install --frozen-lockfile
+      - run: bun test server/test/bridge
+        env:
+          EXPECT_LUA_VERSION: "5.3"
 
   # Off until the "API package build and check" ticket adds the api/ build and pins publint and attw.
   api-package:
