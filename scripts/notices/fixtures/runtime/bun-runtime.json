@@ -1,0 +1,39 @@
+{
+  "bunVersion": "1.4.2",
+  "targets": ["linux-x64", "linux-arm64", "windows-x64", "darwin-arm64"],
+  "components": [
+    {
+      "name": "libc++abi",
+      "version": "19.1.0",
+      "spdx": "Apache-2.0 WITH LLVM-exception",
+      "source": "https://example.com/libcxxabi",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64", "darwin-arm64"],
+      "texts": ["texts/apache.txt"]
+    },
+    {
+      "name": "jsc",
+      "version": "1.0.0",
+      "spdx": "LGPL-2.1-or-later AND BSD-2-Clause",
+      "source": "https://example.com/jsc",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64", "darwin-arm64"],
+      "texts": ["texts/mit.txt"]
+    },
+    {
+      "name": "sqlite",
+      "version": "3.53.2",
+      "spdx": "blessing",
+      "source": "https://example.com/sqlite",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64"],
+      "texts": ["texts/mit.txt"]
+    },
+    {
+      "name": "odd-clap",
+      "version": "1.0.0",
+      "spdx": "Unlicense",
+      "source": "https://example.com/clap",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64", "darwin-arm64"],
+      "texts": ["texts/mit.txt"],
+      "blockedUntilAmendment": true
+    }
+  ]
+}
