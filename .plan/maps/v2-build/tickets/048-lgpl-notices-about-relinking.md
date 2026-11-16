@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [040]
+claimed_by: wayfinder-master v2-build-master-1794843940
+claimed_at: 2026-11-16T15:46:14Z
 ---
 
 # LGPL notices section, About line and relinking doc
