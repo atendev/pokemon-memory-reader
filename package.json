@@ -18,7 +18,8 @@
     "build:exe": "bun build --compile --outfile out/pokemon-memory-reader server/src/main.ts",
     "generate:profiles": "bun scripts/generate-profiles/main.ts",
     "generate:reference": "bun scripts/generate-reference/main.ts",
-    "notices": "bun scripts/notices.ts"
+    "notices": "bun scripts/notices.ts",
+    "test:local": "bun scripts/test-local.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7",
