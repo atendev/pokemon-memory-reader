@@ -18,7 +18,7 @@ Check in the Bun runtime notices manifest that [the 027 amendment](../assets/027
 
 ## Handoff
 
-Branch t3/bun-runtime-notices-manifest, work commit 750967b plus the report fix. Done: manifest (199 components), 266 texts, test, report; tests, tsc and biome pass. Generator was a throwaway in /tmp (gone); regenerate by hand only if needed.
+Branch t3/bun-runtime-notices-manifest, work commit 750967b plus the report fix. Done: manifest (199 components), 265 texts, test, report; tests, tsc and biome pass. Generator was a throwaway in /tmp (gone); regenerate by hand only if needed.
 Left, in order:
 1. Audit round 1 returned NOT APPROVED (points: tier not enforced here, bun MIT text weak, text-vs-SPDX unchecked, no branch recorded, lol-html duplicate). Report is fixed to state these as open or by design. Start a new haiku auditor, send it the changed report hunk and these objections, and count from round 2.
 2. Optionally record the chosen branch in notes for the OR entries (WebKit, picohttpparser, zstd).

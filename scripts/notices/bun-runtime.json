@@ -3206,7 +3206,7 @@
         "darwin-arm64"
       ],
       "texts": ["texts/tinycc_git-05f0fafaa3be__COPYING.txt"],
-      "notes": "COPYING is LGPL-2.1; file headers read \"version 2 of the License, or (at your option) any later version\". Per-target enablement is unverified. LGPL compliance is a separate ticket."
+      "notes": "COPYING is LGPL-2.1; file headers (checked in tcc.c, libtcc.c and tccgen.c at the pinned commit) read \"version 2 of the License, or (at your option) any later version\", so both LGPL-2.0-or-later and LGPL-2.1-or-later hold. Per-target enablement is unverified. LGPL compliance is a separate ticket."
     },
     {
       "name": "to-buffer",
