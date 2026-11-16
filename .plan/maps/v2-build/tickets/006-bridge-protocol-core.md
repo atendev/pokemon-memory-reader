@@ -20,16 +20,10 @@ Implement the bridge wire protocol on both sides and prove in CI that they agree
 - CI is green with the cross-language tests running.
 - A deliberately broken frame on either side fails a test.
 
-## Handoff
+## Answer
 
-Branch `t3/bridge-protocol-core`. Implementation is done and committed as a `wip:` commit. Local: 48 tests pass under Lua 5.4 (`EXPECT_LUA_VERSION=5.4 LUA_BIN=lua5.4 bun test`), typecheck and Biome clean. Lua 5.3 runs only in CI.
+The bridge wire protocol is built on both sides and CI proves they agree. The Lua core is `bridges/src/core.lua`, with a fake shim and a stdin/stdout harness in `bridges/test/`. The TypeScript codec, constants and message types are in `server/src/adapter/bridge/`. Bun tests open real TCP connections and pass each connection's bytes to the Lua core one command at a time, because stock Lua has no sockets. They cover hello, game messages, batched reads up to the 64 KiB cap, all seven error codes and ordered id echo for one request in flight.
 
-Done: `bridges/src/core.lua`, fake shim and harness in `bridges/test/`, the TS codec in `server/src/adapter/bridge/`, cross-language tests in `server/test/bridge/`, CI Lua installs (5.4 in `check`, 5.3 in `bridge-lua-5-3`, with `EXPECT_LUA_VERSION`), and the decision report `assets/006-bridge-protocol-core-report.md`.
+CI installs Lua 5.4 with `leafo/gh-actions-lua` in `check` and runs the bridge tests under Lua 5.3 in a separate `bridge-lua-5-3` job. All four checks passed on PR #5. Mutation runs show a broken frame fails a test on either side. The haiku audit approved in round 3.
 
-Left, in order:
-1. Round 3 of the audit with the same haiku auditor (agent a4a9c907cac01a2d6, continue with SendMessage if it is still reachable, else start a new one). The last audit round was 2. Round 2's open objection was that `FrameDecoder.push` delayed a bad frame to the next push. It is fixed: `push` now returns `{ frames, badFrame }` together, with tests and the `lua-bridge.ts` client updated. Ask it to confirm.
-2. Add the audit verdict and rounds to the report's Audit section, and note that "one request in flight" is adapter-owned (spec 4.5) so the test shows ordered id echo, and that JSON escape and per-connection id restart are untested at the edges. Run unslop on the report.
-3. Push the branch without forcing, open a PR against `wayfinder/v2-build-master` if the repo uses PRs, return PUSHED.
-4. On CI green, write `## Answer` into this file, remove this Handoff section, commit, push, return DONE with the Decisions line.
-
-Read first: the report, `bridges/src/core.lua`, `server/src/adapter/bridge/wire.ts`, `server/test/bridge/core.test.ts`.
+Decisions are in [the report](../assets/006-bridge-protocol-core-report.md). Spec gaps it settled: a READ body whose length disagrees with its range count is `bad_frame` with id 0 and a close, an empty READ gets an empty DATA reply, and HELLO, GAME, DATA or ERROR sent to the bridge is `unknown_kind`. Zod schemas for JSON bodies wait for the bridge adapter ticket.
