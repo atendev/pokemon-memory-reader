@@ -13,3 +13,7 @@ blocked_by: [007, 031]
 
 - Starting the server generates the mGBA bridge with the configured host and port, shown by a test.
 - `GET /bridges/mgba.lua` returns that script, and an unknown name returns the spec's error body.
+
+## Ruled out
+
+[Tracer viewer and executable](./010-tracer-viewer-and-executable.md) already generates the bridges at startup into the data folder and serves them at `/bridges/<name>.lua` through a name map. Nothing is left for this ticket. Writing a configured host and port into the bridge comes with config and `/settings`.
