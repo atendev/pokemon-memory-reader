@@ -68,6 +68,8 @@ export interface MonSpec {
     spd: number;
   };
   isEgg?: boolean;
+  /** Overrides the set the OT name is encoded with. */
+  otSet?: "latin" | "kana";
   abilityNum?: number;
   status?: number;
   level?: number;
@@ -122,7 +124,11 @@ export function encodeMon(spec: MonSpec): Uint8Array {
   out[0x13] = spec.flags ?? 0x02;
   // A hatching egg stores its OT in the game's language, not Japanese.
   out.set(
-    encodeText(spec.otName ?? "ASH", 7, spec.isEgg ? "latin" : set),
+    encodeText(
+      spec.otName ?? "ASH",
+      7,
+      spec.otSet ?? (spec.isEgg ? "latin" : set),
+    ),
     0x14,
   );
 

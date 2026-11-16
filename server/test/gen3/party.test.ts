@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { Party } from "@pokemon-memory-reader/api/schemas";
+import { NATURES, Party } from "@pokemon-memory-reader/api/schemas";
 import { Bytes } from "../../src/format/bytes";
 import { gen3Party } from "../../src/format/gen3/party";
 import { SUBSTRUCT_POSITIONS } from "../../src/format/gen3/structs";
 import type { DecodeContext } from "../../src/format/types";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
+import type { Profile } from "../../src/profile/schema";
 import { referenceData } from "../../src/reference";
 import {
   encodeMon,
@@ -21,7 +22,7 @@ if (profile?.dataFormat !== "gen3") throw new Error("Emerald profile missing");
 const reference = referenceData("gen3", "en");
 if (!reference) throw new Error("Gen 3 English reference data missing");
 
-const ctx: DecodeContext<typeof profile> = {
+const ctx: DecodeContext<Profile<"gen3">> = {
   profile,
   ...reference,
   names: {
@@ -261,6 +262,25 @@ describe("eggs", () => {
     expect(egg.ot?.name).toBe("BRENDAN");
   });
 
+  test("decode the OT with kana when the profile language is ja", () => {
+    const japanese = {
+      ...ctx,
+      profile: { ...profile, language: "ja" } as unknown as Profile<"gen3">,
+    };
+    const result = gen3Party.decode(
+      {
+        count: new Bytes(Uint8Array.of(1)),
+        party: new Bytes(
+          partyBytes([
+            encodeMon({ ...treecko, isEgg: true, otName: "ア", otSet: "kana" }),
+          ]),
+        ),
+      },
+      japanese,
+    );
+    expect(result.ok && result.value.pokemon[0]?.ot?.name).toBe("ア");
+  });
+
   test("keep the species that will hatch", () => {
     expect(egg.species.name).toBe("TREECKO");
   });
@@ -315,6 +335,23 @@ describe("field rules", () => {
     expect(
       decodeOne({ ...treecko, species: 387, abilityNum: 1 }).ability?.id,
     ).toBe(12);
+  });
+
+  test("the second ability decodes when the species has one", () => {
+    expect(
+      decodeOne({ ...treecko, species: 386, abilityNum: 0 }).ability?.id,
+    ).toBe(35);
+    expect(
+      decodeOne({ ...treecko, species: 386, abilityNum: 1 }).ability?.id,
+    ).toBe(68);
+  });
+
+  test("a personality with bit 31 set stays unsigned for the order, nature and gender", () => {
+    const mon = decodeOne({ ...treecko, personality: 0xfffffff0 });
+    expect(mon.personality).toBe(0xfffffff0);
+    expect(mon.moves.map((m) => m.id)).toEqual([TACKLE, EMBER]);
+    expect(mon.nature).toBe(NATURES[0xfffffff0 % 25] ?? null);
+    expect(mon.gender).toBe("male");
   });
 
   test("a dual-typed species lists both types", () => {
