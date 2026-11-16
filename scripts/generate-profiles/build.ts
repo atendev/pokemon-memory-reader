@@ -89,3 +89,19 @@ export function renderIndex(ids: readonly string[]): string {
     "",
   ].join("\n");
 }
+
+/** Fails unless pret's `<sha1>  <file>` line lists exactly the definition's SHA-1. */
+export function checkSha1(
+  text: string,
+  expected: readonly string[],
+  file: string,
+): void {
+  const found = text
+    .split("\n")
+    .map((line) => line.trim().split(/\s+/)[0]?.toLowerCase() ?? "")
+    .filter((hash) => /^[0-9a-f]{40}$/.test(hash));
+  if (found.length === 0 || found.some((hash) => !expected.includes(hash)))
+    throw new Error(
+      `${file} lists ${found.join(", ") || "no SHA-1"} but the definition has ${expected.join(", ")}`,
+    );
+}

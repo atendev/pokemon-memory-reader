@@ -127,18 +127,9 @@ function tables<A extends z.ZodType, H extends z.ZodType>(addr: A, header: H) {
     moveData: z.union([romTable, z.literal("vanilla")]),
     trainerTables: z
       .object({
-        trainers: z
-          .object({ base: addr, count: z.int().min(1) })
-          .strict()
-          .optional(),
-        classNames: z
-          .object({ base: addr, count: z.int().min(1) })
-          .strict()
-          .optional(),
-        money: z
-          .object({ base: addr, count: z.int().min(1) })
-          .strict()
-          .optional(),
+        trainers: z.object({ base: addr, count }).strict().optional(),
+        classNames: z.object({ base: addr, count }).strict().optional(),
+        money: z.object({ base: addr, count }).strict().optional(),
       })
       .strict(),
     identify: z

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { loadProfiles } from "../registry";
-import { builtinProfiles } from "./index";
+import { builtinProfiles } from "./builtin/index";
+import { loadProfiles } from "./registry";
 
 test("every built-in profile loads without a problem", () => {
   const { registry, problems } = loadProfiles({

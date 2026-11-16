@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildProfile, renderIndex, renderProfile } from "./build";
+import { buildProfile, checkSha1, renderIndex, renderProfile } from "./build";
 import { definitions } from "./definitions";
 import { parseSymFile } from "./sym";
 
@@ -84,5 +84,22 @@ describe("the Emerald profile", () => {
     const odd = new Map(symbols);
     odd.set("gTrainers", { address: 0x08310030, size: 41 });
     expect(() => buildProfile(definition, odd)).toThrow("multiple");
+  });
+});
+
+describe("checkSha1", () => {
+  const hash = "f3ae088181bf583e55daf962a92bb46f4f1d07b7";
+  test("accepts pret's line format", () => {
+    expect(() =>
+      checkSha1(`${hash}  pokeemerald.gba\n`, [hash], "rom.sha1"),
+    ).not.toThrow();
+  });
+  test("rejects a different hash", () => {
+    expect(() =>
+      checkSha1(`${"0".repeat(40)}  pokeemerald.gba\n`, [hash], "rom.sha1"),
+    ).toThrow("rom.sha1");
+  });
+  test("rejects a file with no hash", () => {
+    expect(() => checkSha1("<html>", [hash], "rom.sha1")).toThrow("no SHA-1");
   });
 });

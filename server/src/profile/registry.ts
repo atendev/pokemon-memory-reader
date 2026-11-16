@@ -206,6 +206,18 @@ export function loadProfiles(input: LoadInput): {
     return checked ? [checked] : [];
   });
   const builtinIds = new Set(builtin.map((entry) => entry.file.id));
+  for (const layer of [builtin, user]) {
+    const seen = new Set<string>();
+    for (const entry of layer) {
+      if (seen.has(entry.file.id))
+        problems.push({
+          source: entry.source,
+          path: entry.path,
+          message: `duplicate profile ID "${entry.file.id}", this file overrides the earlier one`,
+        });
+      seen.add(entry.file.id);
+    }
+  }
 
   // Step 1: each replacement resolves with every built-in and user profile in place.
   const everything = overlay(builtin, user);

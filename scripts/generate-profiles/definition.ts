@@ -11,6 +11,8 @@ export interface ProfileDefinition {
     readonly commit: string;
     readonly symbolFile: string;
   };
+  /** The pret file that holds the build's SHA-1, at a pinned commit on the repo's main branch. The generator fails if `identify.sha1` disagrees. */
+  readonly sha1: { readonly commit: string; readonly file: string };
   /** Profile key to symbol. A pointer symbol becomes a pointer entry that reads the target at offset 0. */
   readonly addresses: ReadonlyArray<{
     readonly key: string;

@@ -188,3 +188,15 @@ describe("built-in files", () => {
     expect(problems[0]?.message).toContain("fixture");
   });
 });
+
+describe("duplicate IDs", () => {
+  test("reports two user files with one ID, and the later file wins", () => {
+    const { registry, problems } = load([
+      user("a.json", child("dup", { name: "first" })),
+      user("b.json", child("dup", { name: "second" })),
+    ]);
+    expect(problems.map((p) => p.path)).toEqual(["b.json"]);
+    expect(problems[0]?.message).toContain("duplicate");
+    expect(registry.get("dup")?.name).toBe("second");
+  });
+});
