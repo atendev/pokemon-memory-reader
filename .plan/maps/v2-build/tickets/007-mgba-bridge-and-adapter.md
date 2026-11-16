@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [006, 013, 026]
+claimed_by: wayfinder-master v2-build-master-1794792924
+claimed_at: 2026-11-16T01:36:35Z
 ---
 
 # mGBA bridge and adapter

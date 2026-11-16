@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [004, 005, 016, 019]
+claimed_by: wayfinder-master v2-build-master-1794792924
+claimed_at: 2026-11-16T01:36:35Z
 ---
 
 # Gen 3 party decoder

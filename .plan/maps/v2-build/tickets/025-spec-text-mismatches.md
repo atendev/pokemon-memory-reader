@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794792924
+claimed_at: 2026-11-16T01:36:35Z
 ---
 
 # Do these text mismatches read the way the spec shows them?
