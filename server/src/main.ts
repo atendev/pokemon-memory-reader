@@ -13,7 +13,7 @@ import {
 } from "./data-folder";
 import { consoleLog } from "./log";
 import { builtinProfiles } from "./profile/builtin";
-import { loadProfiles } from "./profile/registry";
+import { loadStartupProfiles } from "./profile/startup";
 import { startServer } from "./server";
 
 /** The mGBA bridge's default endpoint. The config ticket makes it a setting (spec §9.2). */
@@ -81,12 +81,21 @@ async function run(
   }
   console.log(`Data folder: ${dataFolder}`);
 
-  const { registry, problems } = loadProfiles({
-    builtin: builtinProfiles,
-    user: [],
-  });
-  for (const problem of problems)
-    log.warn(`profile ${problem.path}: ${problem.message}`);
+  const profiles = loadStartupProfiles(
+    { builtin: builtinProfiles, user: [] },
+    log,
+  );
+  if (!profiles.ok) {
+    console.error(profiles.message);
+    return exitAfterFatal(1);
+  }
+  const registry = profiles.registry;
+  console.log(
+    `Profiles: ${registry
+      .all()
+      .map((profile) => profile.id)
+      .join(", ")}`,
+  );
 
   const bridges = await generateBridges({ mgba: MGBA_ENDPOINT });
   await installBridges(dataFolder, bridges, log);
