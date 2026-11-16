@@ -230,7 +230,8 @@ body {
   min-width: 44px;
   padding: 0 16px;
   border-radius: 12px;
-  background: var(--blue);
+  /* #0066cc under white text is 5.5:1. System blue is 3.7:1 and fails the 4.5:1 floor for 17 pt text. */
+  background: #06c;
   color: #fff;
   font-weight: 600;
   text-decoration: none;

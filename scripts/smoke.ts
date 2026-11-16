@@ -82,6 +82,23 @@ async function checkServing(base: string, dataDir: string): Promise<void> {
   check(viewer.status === 200, `GET / returned ${viewer.status}`);
   const html = await viewer.text();
   check(/<html/i.test(html), "GET / did not return the viewer HTML");
+  // The page is useless without its bundle, so every script and stylesheet it names has to load.
+  const assets = [
+    ...html.matchAll(/(?:src|href)="(\/[^"]+\.(?:js|css))"/g),
+  ].map((match) => match[1] as string);
+  check(
+    assets.some((path) => path.endsWith(".js")) &&
+      assets.some((path) => path.endsWith(".css")),
+    "the viewer HTML names no script or stylesheet",
+  );
+  for (const path of assets) {
+    const asset = await fetch(`${base}${path}`);
+    check(asset.status === 200, `GET ${path} returned ${asset.status}`);
+    check(
+      (await asset.text()).length > 0,
+      `GET ${path} returned an empty body`,
+    );
+  }
 
   for (const name of BRIDGES) {
     const bridge = await fetch(`${base}/bridges/${name}.lua`);

@@ -5,8 +5,8 @@ import { mon, status } from "./testing";
 
 const ready = <T,>(value: T) => ({ kind: "ready", value }) as const;
 
-describe("the no-game state", () => {
-  test("a disconnected program tells the user to load the bridge and links the download", () => {
+describe("the empty states, shown while there is no game to read", () => {
+  test("a fresh run is disconnected, so it tells the user to load the bridge and links the download", () => {
     const html = renderToStaticMarkup(
       <Screen status={status("disconnected")} party={{ kind: "loading" }} />,
     );

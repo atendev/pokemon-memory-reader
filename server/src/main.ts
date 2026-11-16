@@ -143,9 +143,14 @@ async function run(
       log.error(`shutdown hung while stopping ${step}`);
       process.exit(1);
     }, SHUTDOWN_MS);
-    await server.stop();
-    step = "the adapter";
-    await adapter.close();
+    try {
+      await server.stop();
+      step = "the adapter";
+      await adapter.close();
+    } catch (error) {
+      log.error(`shutdown failed while stopping ${step}`, { error });
+      process.exit(1);
+    }
     clearTimeout(timer);
     process.exit(0);
   };
