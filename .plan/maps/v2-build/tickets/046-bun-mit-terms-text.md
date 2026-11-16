@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794828615
+claimed_at: 2026-11-16T11:30:15Z
 ---
 
 # Add the MIT terms text to Bun's manifest entry
