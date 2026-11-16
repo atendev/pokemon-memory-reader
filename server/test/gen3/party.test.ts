@@ -194,6 +194,19 @@ describe("a known mon round-trips", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(Party.safeParse(result.value).success).toBe(true);
   });
+
+  test("a party full of null fields still validates", () => {
+    const result = decode([
+      encodeMon({ ...treecko, isEgg: true, friendship: 20, nickname: "" }),
+      encodeMon({ ...treecko, species: 500, moves: [1000, 0, 0, 0] }),
+      encodeMon({ ...treecko, metLocation: 0xfd, metGame: 9 }),
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = Party.safeParse(result.value);
+      expect(parsed.success).toBe(true);
+    }
+  });
 });
 
 describe("party count and failures", () => {
@@ -301,6 +314,11 @@ describe("shininess", () => {
   test("a mon whose XOR is 8 or more is not", () => {
     expect(decodeOne({ ...shiny, personality: 0x454e0109 }).shiny).toBe(false);
     expect(decodeOne({ ...shiny, personality: 0x455e0101 }).shiny).toBe(false);
+  });
+
+  test("the threshold sits between XOR 7 and XOR 8", () => {
+    expect(decodeOne({ ...shiny, personality: 0x454e0105 }).shiny).toBe(true);
+    expect(decodeOne({ ...shiny, personality: 0x454e010a }).shiny).toBe(false);
   });
 });
 

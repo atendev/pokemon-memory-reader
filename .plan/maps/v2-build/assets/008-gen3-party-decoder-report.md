@@ -1,6 +1,6 @@
 # Gen 3 party decoder: decision report
 
-Ticket: [Gen 3 party decoder](../tickets/008-gen3-party-decoder.md). Work spanned three implementer threads. All decisions below were made by the implementer (main thread) unless noted. The auditor's verdict is at the end.
+Ticket: [Gen 3 party decoder](../tickets/008-gen3-party-decoder.md). Four implementer threads built this. The implementer (main thread) made every decision below unless noted. The audit verdicts are at the end.
 
 ## What was built
 
@@ -8,7 +8,7 @@ Ticket: [Gen 3 party decoder](../tickets/008-gen3-party-decoder.md). Work spanne
 - `server/src/reference/index.ts`: `referenceData("gen3", "en")` and `createCharmap`.
 - `api/src/schemas.ts`: `Pokemon` and `Party` (`{ pokemon: Pokemon[] }`) from amendment 016 §1. `zod` is an optional peer dependency and a dev dependency of `api/`.
 - `server/src/format/{bytes,regions,types}.ts` and `format/gen3/{structs,mon,party,index}.ts`: the decoder contract from interfaces 004 and the Gen 3 party decoder.
-- `server/test/gen3/`: a synthetic encoder (encrypt, shuffle, checksum) and 30 tests.
+- `server/test/gen3/`: a synthetic encoder (encrypt, shuffle, checksum) and 38 tests.
 
 No ROM bytes are committed. Test mons are built from a hand-written encoder.
 
@@ -25,6 +25,7 @@ No ROM bytes are committed. Test mons are built from a hand-written encoder.
 9. **`met.location.name` is `null` for every location until location names ship.** The context's `names.locations` is a stub, and 0xFD-0xFF never get a name. A follow-up ticket covers the Gen 3 location-name reference data.
 10. **Status precedence.** Toxic (bit 7) is checked first, then sleep (bits 0-2), then poison, burn, freeze, paralysis.
 11. **Schemas are loose objects with closed enums**, per amendment 016 §3 and spec §7.11.
+12. **Personality stays unsigned.** `Bytes.u32le` reads with `DataView.getUint32`, so a personality value of 2^31 or more stays positive. A test covers it. Raised by the round 1 auditor; decided by the implementer.
 
 ## Verification
 
@@ -35,4 +36,10 @@ No ROM bytes are committed. Test mons are built from a hand-written encoder.
 
 ## Audit
 
-Pending.
+One haiku auditor ran rounds 2 and 3. A different haiku auditor ran round 1. Verdict: APPROVE in round 3.
+
+- Round 1 raised five points. Personality might read as signed (it does not, see decision 12). The second-ability path, the egg OT kana path and personality of 2^31 or more each needed a test, and all three have one. The test encoder's position table is hand-written from pokeemerald, so it does not depend on the decoder. The reference-value expectations pass in the suite.
+- Round 2 found no decoding defects. The auditor checked the substructure order table, the key, the checksum, every struct offset, and the IV, EV, origins, shiny, gender, nature, Hidden Power, status, Pokérus and PP-up logic. It raised two gaps in test evidence: no test hit the shiny boundary at XOR 7 and 8, and `Party.safeParse` ran only on a plain party.
+- Round 3 approved after two new tests. One checks personalities with XOR 7 (shiny) and XOR 8 (not shiny). The other validates a party holding an egg, an unknown species with an unknown move, and an unnamed met location against `Party`.
+
+Surfaced ticket: "Gen 3 location names reference data", a task blocked by this ticket, because decision 9 leaves `met.location.name` null.
