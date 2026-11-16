@@ -1,0 +1,259 @@
+/*
+ * Dark theme on Apple's semantic dark palette and type scale (the apple skill). Sizes are px on
+ * the web: 8 px grid, 16 px page margin (24 px from 720 px), 12 px card radius, 44 px minimum hit
+ * target, 11 px type floor. Tailwind arrives with the full viewer ticket.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --surface: #1c1c1e;
+  --surface-2: #2c2c2e;
+  --label: #fff;
+  --label-2: rgba(235, 235, 245, 0.6);
+  --separator: rgba(84, 84, 88, 0.6);
+  --blue: #0a84ff;
+  --green: #30d158;
+  --orange: #ff9f0a;
+  --red: #ff453a;
+  --gray: #8e8e93;
+  --font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI",
+    Roboto, system-ui, sans-serif;
+  --margin: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--label);
+  font: 400 17px / 22px var(--font);
+  letter-spacing: -0.024em;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 var(--margin) 32px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--separator);
+  margin-bottom: 24px;
+}
+
+.app-title {
+  margin: 0;
+  font: 600 20px / 25px var(--font);
+  letter-spacing: 0.019em;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.016em;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray);
+}
+.dot-game {
+  background: var(--green);
+}
+.dot-no_game,
+.dot-unidentified {
+  background: var(--orange);
+}
+.dot-down {
+  background: var(--red);
+}
+
+.title-1 {
+  margin: 0 0 8px;
+  font: 700 28px / 34px var(--font);
+  letter-spacing: 0.013em;
+}
+.headline {
+  margin: 0;
+  font: 600 17px / 22px var(--font);
+}
+.body {
+  margin: 0 0 16px;
+}
+.subheadline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
+  letter-spacing: -0.016em;
+}
+.footnote {
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: -0.006em;
+}
+.caption {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+.muted {
+  color: var(--label-2);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.party {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mon {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mon-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+.mon-names {
+  min-width: 0;
+}
+.mon-title {
+  overflow-wrap: anywhere;
+}
+
+.hp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hp-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.hp-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.hp-high {
+  background: var(--green);
+}
+.hp-mid {
+  background: var(--orange);
+}
+.hp-low {
+  background: var(--red);
+}
+.hp-none {
+  background: var(--gray);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.facts div {
+  min-width: 0;
+}
+.facts dt {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  background: transparent;
+  border: 1px dashed var(--separator);
+}
+
+.empty {
+  max-width: 672px;
+}
+.steps {
+  margin: 8px 0 0;
+  padding-left: 24px;
+}
+.steps li {
+  margin: 8px 0;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.button:focus-visible {
+  outline: 2px solid #409cff;
+  outline-offset: 2px;
+}
+.button:active {
+  opacity: 0.75;
+}
+
+@media (min-width: 720px) {
+  :root {
+    --margin: 24px;
+  }
+  .party {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp-fill {
+    transition: none;
+  }
+}

@@ -16,12 +16,14 @@ const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
 const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = ["party"];
 
 /**
- * The HTTP app (spec §7). Only the status and party snapshots are served. The SSE route, the
- * remaining resources, `/openapi.json`, the settings routes and the bridge downloads join it as
- * their tickets land.
+ * The HTTP app (spec §7). Only the status and party snapshots and the bridge downloads are
+ * served. The SSE route, the remaining resources, `/openapi.json` and the settings routes join it
+ * as their tickets land. The viewer is served by `Bun.serve` itself (see `startServer`).
  */
 export function createApp(deps: {
   readonly resources: Resources;
+  /** Bridge source by name, served at `/bridges/<name>.lua` (spec §4.11). Absent means no bridge routes. */
+  readonly bridges?: Readonly<Record<string, string>>;
   readonly log?: Log;
 }): Hono {
   const { resources } = deps;
@@ -55,6 +57,17 @@ export function createApp(deps: {
       return c.json(body, 503);
     });
   }
+
+  // Looked up in the map and never joined to a path, so no request reaches the filesystem (spec §4.11).
+  const bridges = new Map(Object.entries(deps.bridges ?? {}));
+  app.get("/bridges/:file", (c) => {
+    const file = c.req.param("file");
+    const source = file.endsWith(".lua")
+      ? bridges.get(file.slice(0, -4))
+      : undefined;
+    if (source === undefined) return c.notFound();
+    return c.body(source, 200, { "Content-Type": "text/plain; charset=utf-8" });
+  });
 
   const failure = (code: string, message: string): ErrorBody => ({
     error: { code, message },

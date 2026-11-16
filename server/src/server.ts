@@ -1,4 +1,5 @@
 import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
+import type { HTMLBundle } from "bun";
 import type { Adapter } from "./adapter/types";
 import { createApp } from "./app/app";
 import { type Clock, systemClock } from "./clock";
@@ -15,6 +16,10 @@ export interface ServerOptions {
   readonly port?: number;
   /** Default 20. */
   readonly pollHz?: number;
+  /** Bridge source by name, served at `/bridges/<name>.lua`. */
+  readonly bridges?: Readonly<Record<string, string>>;
+  /** The viewer's HTML import. Served at `/`, with its scripts and styles. Without it `/` is a 404. */
+  readonly viewer?: HTMLBundle;
   readonly clock?: Clock;
   readonly log?: Log;
 }
@@ -35,10 +40,11 @@ export function startServer(options: ServerOptions): RunningServer {
     clock: options.clock ?? systemClock,
     log,
   });
-  const app = createApp({ resources: loop, log });
+  const app = createApp({ resources: loop, bridges: options.bridges, log });
   const server = Bun.serve({
     hostname: options.host ?? DEFAULT_HOST,
     port: options.port ?? DEFAULT_PORT,
+    ...(options.viewer ? { routes: { "/": options.viewer } } : {}),
     fetch: app.fetch,
   });
   return {

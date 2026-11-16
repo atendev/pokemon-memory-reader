@@ -1,5 +1,7 @@
 import { isIP } from "node:net";
-import { resolve } from "node:path";
+// Text imports, so the sources travel inside a compiled executable (spec §4.11).
+import core from "./core.lua" with { type: "text" };
+import mgbaShim from "./mgba-shim.lua" with { type: "text" };
 
 export interface BridgeSettings {
   /** An IPv4 or IPv6 literal. The bridge binds to exactly this address (spec §4.1). */
@@ -9,7 +11,7 @@ export interface BridgeSettings {
   readonly build: string;
 }
 
-const SOURCE = resolve(import.meta.dir);
+const SHIMS = { mgba: mgbaShim } as const;
 
 /** The URL parser puts every IPv6 spelling into one form, so `::0`, `0:0::0` and `::ffff:0.0.0.0` meet the entries here. */
 const WILDCARDS = new Set(["0.0.0.0", "[::]", "[::ffff:0:0]"]);
@@ -48,9 +50,7 @@ export async function buildBridge(
   settings: BridgeSettings,
 ): Promise<string> {
   checkSettings(settings);
-  const core = await Bun.file(`${SOURCE}/core.lua`).text();
-  const shim = await Bun.file(`${SOURCE}/${name}-shim.lua`).text();
-  const filled = shim
+  const filled = SHIMS[name]
     .replace("@HOST@", settings.host)
     .replace("@PORT@", String(settings.port))
     .replace("@BUILD@", settings.build);
