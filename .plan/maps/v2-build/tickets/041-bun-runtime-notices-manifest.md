@@ -16,11 +16,13 @@ Check in the Bun runtime notices manifest that [the 027 amendment](../assets/027
 - The manifest lists every component the pinned Bun binary bundles, each with an SPDX expression the runtime tier accepts and its license text.
 - A test fails when `packageManager` names a Bun version the manifest isn't pinned to.
 
-## Handoff
+---
 
-Branch t3/bun-runtime-notices-manifest, work commit 750967b plus the report fix. Done: manifest (199 components), 265 texts, test, report; tests, tsc and biome pass. Generator was a throwaway in /tmp (gone); regenerate by hand only if needed.
-Left, in order:
-1. Audit round 1 returned NOT APPROVED (points: tier not enforced here, bun MIT text weak, text-vs-SPDX unchecked, no branch recorded, lol-html duplicate). Report is fixed to state these as open or by design. Start a new haiku auditor, send it the changed report hunk and these objections, and count from round 2.
-2. Optionally record the chosen branch in notes for the OR entries (WebKit, picohttpparser, zstd).
-3. On APPROVE: push without forcing, open a PR against wayfinder/v2-build-master if the repo uses PRs, return PUSHED.
-Surface on DONE: amendment tickets for `Unlicense` (bun_clap) and `Artistic-2.0` (domain-browser). Read first: the report in assets/041-bun-runtime-notices-manifest-report.md.
+`scripts/notices/bun-runtime.json` lists 199 components for Bun 1.4.2 (tag `bun-v1.4.2`), with 265 license texts under `scripts/notices/texts/`. `scripts/notices/bun-runtime.test.ts` fails when `packageManager` names a different Bun version. [Report](../assets/041-bun-runtime-notices-manifest-report.md).
+
+- The list comes from the tag's native dependency pins, the cargo graph for eight targets (proc-macro crates left out), a scan of vendored source headers, and the polyfill lockfile closure.
+- Two entries are outside the runtime tier: `bun_clap` (`Unlicense`) and `domain-browser` (`Artistic-2.0`). They carry `blockedUntilAmendment: true` and are not marked as passing, per amendment 027 item 7. The acceptance line "an SPDX expression the runtime tier accepts" is unmet for them until amendments land.
+- Bun's own entry ships `LICENSE.md`, which has no copyright line or MIT grant. Whether that text is enough is an owner decision.
+- tinycc is `-or-later`: its source headers say "version 2 ... or any later version".
+- Still open: BoringSSL's seven files without the Apache header, JavaScriptCore's per-file census, per-target enablement of tinycc, lsquic and libwebp, simdutf's exact version and ICU's tag.
+- The tier is enforced by `scripts/notices.ts` in [ticket 040](./040-third-party-notices-script.md), not by this test.
