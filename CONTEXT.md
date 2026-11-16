@@ -29,7 +29,7 @@ The choices a user makes about how the program runs, such as its port or a pinne
 _Avoid_: Preferences, options, config
 
 **Manual pick**:
-The game profile a user chose for a ROM that identification couldn't match. It is remembered for that ROM. A base-game pick instead covers every modified ROM of the same official game, as long as any signature bytes the profile lists still match.
+The game profile a user chose for a ROM that identification couldn't match. It is remembered for that ROM. A base-game pick instead covers every modified ROM of the same official game, as long as the profile's signature, if it has one, still matches.
 _Avoid_: Override, forced game
 
 **Game profile**:
@@ -37,8 +37,12 @@ Everything known about one ROM revision: how to identify it, its memory addresse
 _Avoid_: Game entry, game data, games DB row
 
 **Identification**:
-Matching the running ROM to a game profile. A match is exact (ROM hash), header (the ROM header and any signature bytes the profile lists agree, unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
+Matching the running ROM to a game profile. A match is exact (ROM hash), header (the ROM header and the profile's signature, if it has one, agree, unconfirmed) or manual (picked by the user). A ROM with no match is unidentified.
 _Avoid_: Detection, game lookup
+
+**Signature**:
+ROM words a game profile lists with their expected values, pointers to the game's data tables. A ROM matched only by its header whose signature fails has had its tables moved, so it counts as a modified ROM. A hash match is trusted, and a signature that fails there is only logged as a profile error.
+_Avoid_: Header signature, signature bytes
 
 **Modified ROM**:
 A ROM whose header names an official game but whose bytes match none of that game's known revisions, such as a randomizer seed or a hack built on the game.
