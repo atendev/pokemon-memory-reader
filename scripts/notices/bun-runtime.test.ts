@@ -169,10 +169,22 @@ describe("bun-runtime.json components", () => {
     );
   });
 
+  test("domain-browser points at the npm tarball and names its upstream tag", () => {
+    const entry = manifest.components.find((c) => c.name === "domain-browser");
+    expect(entry?.version).toBe("4.23.0");
+    expect(entry?.source).toBe(
+      "https://registry.npmjs.org/domain-browser/-/domain-browser-4.23.0.tgz",
+    );
+    expect((entry as { notes?: string }).notes).toContain(
+      "https://github.com/bevry/domain-browser/tree/v4.23.0",
+    );
+    expect((entry as { notes?: string }).notes).toContain("amendment 044");
+  });
+
   test("entries that need an amendment are flagged, not passed off as accepted", () => {
     const blocked = manifest.components
       .filter((c) => c.blockedUntilAmendment)
       .map((c) => c.name);
-    expect(blocked.sort()).toEqual(["domain-browser"]);
+    expect(blocked).toEqual([]);
   });
 });

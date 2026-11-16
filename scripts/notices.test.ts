@@ -19,6 +19,7 @@ import {
   type NoticesOptions,
   type Overrides,
   PERMISSIVE_TIER,
+  RUNTIME_ENTRY_EXCEPTIONS,
   RUNTIME_TIER,
   renderNotices,
   repoOptions,
@@ -39,6 +40,7 @@ function fixtureOptions(
     overrides: {},
     noticesDir: dir,
     embeddedDevPackages: [],
+    runtimeEntryExceptions: [],
     lockfilePath: null,
     packageManager: "bun@1.4.2",
     modulesDirName: "fixture_modules",
@@ -93,6 +95,21 @@ describe("tiers", () => {
 
   test("LLVM-exception is the only allowed exception", () => {
     expect([...EXCEPTIONS]).toEqual(["LLVM-exception"]);
+  });
+
+  test("the one runtime entry exception is domain-browser@4.23.0 under amendment 044", () => {
+    expect([...RUNTIME_ENTRY_EXCEPTIONS]).toEqual([
+      {
+        entry: "domain-browser@4.23.0",
+        spdx: "Artistic-2.0",
+        amendment: "amendment 044",
+        note: "Accepted under amendment 044. Bun's LICENSE.md lists domain-browser as MIT. Versions up to 4.22.0 were MIT, but 4.23.0, the version Bun bundles, is Artistic-2.0, and its own LICENSE.md below governs.",
+      },
+    ]);
+    for (const e of RUNTIME_ENTRY_EXCEPTIONS) {
+      expect(PERMISSIVE_TIER).not.toContain(e.spdx);
+      expect(RUNTIME_TIER).not.toContain(e.spdx);
+    }
   });
 
   test("no dev dependency is embedded yet", () => {
@@ -658,6 +675,211 @@ describe("Bun runtime manifest", () => {
   });
 });
 
+describe("runtime entry exceptions", () => {
+  const manifestPath = join(FIXTURES, "runtime/bun-runtime.json");
+  const exception = {
+    entry: "artistic-thing@2.0.0",
+    spdx: "Artistic-2.0",
+    amendment: "amendment 000",
+    note: "Accepted under amendment 000 for tests.",
+  };
+
+  /** Runs the notices over a copy of the runtime fixture manifest with one extra Artistic-2.0 component. */
+  function withManifest<T>(
+    version: string,
+    check: (path: string, dir: string) => T,
+  ): T {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.components = manifest.components.filter(
+      (c: { name: string }) => c.name !== "odd-clap",
+    );
+    manifest.components.push({
+      name: "artistic-thing",
+      version,
+      spdx: "Artistic-2.0",
+      source: "https://example.com/artistic-thing.tgz",
+      targets: manifest.targets,
+      texts: ["texts/mit.txt"],
+    });
+    const dir = mkdtempSync(join(tmpdir(), "notices-exception-"));
+    try {
+      writeFileSync(join(dir, "bun-runtime.json"), JSON.stringify(manifest));
+      mkdirSync(join(dir, "texts"));
+      writeFileSync(join(dir, "texts/apache.txt"), "text\n");
+      writeFileSync(join(dir, "texts/mit.txt"), "text\n");
+      return check(join(dir, "bun-runtime.json"), dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const collect = (
+    path: string,
+    dir: string,
+    runtimeEntryExceptions: NoticesOptions["runtimeEntryExceptions"],
+  ) =>
+    collectNotices(
+      fixtureOptions("runtime", {
+        roots: [],
+        manifestPath: path,
+        noticesDir: dir,
+        runtimeEntryExceptions,
+      }),
+    );
+
+  test("checkExpression accepts the extra ID only when it is passed", () => {
+    expect(checkExpression("Artistic-2.0", "runtime").ok).toBe(false);
+    expect(
+      checkExpression("Artistic-2.0", "runtime", ["Artistic-2.0"]).ok,
+    ).toBe(true);
+    expect(checkExpression("Artistic-2.0", "permissive").ok).toBe(false);
+    const both = checkExpression("Artistic-2.0 AND GPL-2.0-only", "runtime", [
+      "Artistic-2.0",
+    ]);
+    expect(both.ok).toBe(false);
+  });
+
+  test("an entry on the exact name@version passes under its ID", () => {
+    withManifest("2.0.0", (path, dir) => {
+      const { problems, entries, blocked } = collect(path, dir, [exception]);
+      expect(problems).toEqual([]);
+      expect(blocked).toEqual([]);
+      expect(entries.find((e) => e.name === "artistic-thing")?.note).toBe(
+        exception.note,
+      );
+    });
+  });
+
+  test("without the exception the same entry fails the runtime tier", () => {
+    withManifest("2.0.0", (path, dir) => {
+      const { problems } = collect(path, dir, []);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain("artistic-thing@2.0.0");
+      expect(problems[0]).toContain("Artistic-2.0");
+    });
+  });
+
+  test("another version fails, and the exception is reported stale", () => {
+    withManifest("2.0.1", (path, dir) => {
+      const { problems } = collect(path, dir, [exception]);
+      expect(problems).toHaveLength(2);
+      expect(problems.some((p) => p.includes("artistic-thing@2.0.1"))).toBe(
+        true,
+      );
+      expect(problems).toContain(
+        "Runtime entry exception artistic-thing@2.0.0 is stale: that component is not in the Bun manifest.",
+      );
+    });
+  });
+
+  test("the rest of the expression still has to pass", () => {
+    withManifest("2.0.0", (path, dir) => {
+      const manifest = JSON.parse(readFileSync(path, "utf8"));
+      const entry = manifest.components.find(
+        (c: { name: string }) => c.name === "artistic-thing",
+      );
+      entry.spdx = "Artistic-2.0 AND GPL-2.0-only";
+      writeFileSync(path, JSON.stringify(manifest));
+      const { problems } = collect(path, dir, [exception]);
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toContain("GPL-2.0-only");
+    });
+  });
+
+  test("an npm closure entry with the same name@version never matches", () => {
+    const failing = (runtimeEntryExceptions: readonly (typeof exception)[]) =>
+      collectNotices(
+        fixtureOptions("disallowed", { runtimeEntryExceptions }),
+      ).problems.filter((p) => p.startsWith("gpl-pkg@1.0.0"));
+    const without = failing([]);
+    expect(without).toHaveLength(1);
+    expect(
+      failing([{ ...exception, entry: "gpl-pkg@1.0.0", spdx: "GPL-3.0-only" }]),
+    ).toEqual(without);
+  });
+
+  test("an override with the same name@version never matches", () => {
+    const base = JSON.parse(
+      readFileSync(join(FIXTURES, "override/overrides.json"), "utf8"),
+    ) as Overrides;
+    const overrides: Overrides = Object.fromEntries(
+      Object.entries(base).map(([key, o]) => [
+        key,
+        { ...o, spdx: "Artistic-2.0" },
+      ]),
+    );
+    const { problems } = collectNotices(
+      fixtureOptions("override", {
+        overrides,
+        runtimeEntryExceptions: Object.keys(overrides).map((entry) => ({
+          ...exception,
+          entry,
+        })),
+      }),
+    );
+    expect(problems.some((p) => p.includes("(override)"))).toBe(true);
+    expect(problems.some((p) => p.includes("stale"))).toBe(false);
+  });
+
+  test("with no manifest, exceptions are not checked for staleness", () => {
+    const { problems } = collectNotices(
+      fixtureOptions("allowed", { runtimeEntryExceptions: [exception] }),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  test("the notices print the note under the Source line", () => {
+    withManifest("2.0.0", (path, dir) => {
+      const { entries } = collect(path, dir, [exception]);
+      const text = renderNotices(entries);
+      expect(text).toContain(
+        `artistic-thing 2.0.0\nLicense: Artistic-2.0\nSource: https://example.com/artistic-thing.tgz\n${exception.note}\n\n`,
+      );
+      expect(text).not.toContain(
+        "jsc 1.0.0\nLicense: LGPL-2.1-or-later AND BSD-2-Clause\nSource: https://example.com/jsc\nAccepted",
+      );
+    });
+  });
+
+  test("a stale exception fails notices --check", () => {
+    const { lines, out } = capture();
+    const opts = fixtureOptions("runtime", {
+      roots: [],
+      manifestPath,
+      noticesDir: join(FIXTURES, "runtime"),
+      runtimeEntryExceptions: [exception],
+    });
+    expect(run(["--check"], opts, out)).toBe(1);
+    expect(
+      lines.some((l) => l.message.includes("artistic-thing@2.0.0 is stale")),
+    ).toBe(true);
+  });
+
+  test("the repo's exception passes domain-browser@4.23.0 and prints its note", () => {
+    const { entries, problems, blocked } = collectNotices(repoOptions());
+    expect(problems).toEqual([]);
+    expect(blocked).not.toContain("domain-browser@4.23.0");
+    const entry = entries.find((e) => e.name === "domain-browser");
+    expect(entry?.version).toBe("4.23.0");
+    expect(entry?.source).toBe(
+      "https://registry.npmjs.org/domain-browser/-/domain-browser-4.23.0.tgz",
+    );
+    expect(renderNotices(entries)).toContain(
+      `Source: https://registry.npmjs.org/domain-browser/-/domain-browser-4.23.0.tgz\n${RUNTIME_ENTRY_EXCEPTIONS[0]?.note}\n`,
+    );
+  });
+
+  test("dropping the repo's exception makes domain-browser fail", () => {
+    const { problems } = collectNotices({
+      ...repoOptions(),
+      runtimeEntryExceptions: [],
+    });
+    expect(problems.some((p) => p.includes("domain-browser@4.23.0"))).toBe(
+      true,
+    );
+  });
+});
+
 describe("renderNotices", () => {
   test("lists each entry with its text, sorted, and names builds that only some targets include", () => {
     const { entries } = collectNotices(
@@ -689,6 +911,7 @@ describe("renderNotices", () => {
       origin: "npm" as const,
       builds: null,
       source: null,
+      note: null,
       texts: [{ file: "LICENSE", text: "t" }],
     });
     const sorted = [entry("10.0.0"), entry("9.0.0"), entry("9.10.0")].sort(
@@ -708,7 +931,7 @@ describe("the repo", () => {
   test("passes against the installed dependencies and the checked-in Bun manifest", () => {
     const { entries, problems, blocked } = collectNotices(repoOptions());
     expect(problems).toEqual([]);
-    expect(blocked).toEqual(["domain-browser@4.23.0"]);
+    expect(blocked).toEqual([]);
     const npm = entries.filter((e) => e.origin === "npm").map((e) => e.name);
     for (const name of ["zod", "hono", "react", "react-dom"])
       expect(npm).toContain(name);
@@ -726,12 +949,7 @@ describe("the command line", () => {
     const { lines, out } = capture();
     const target = join(tmpdir(), "notices-should-not-exist.txt");
     expect(run(["--check", "--out", target], repoOptions(), out)).toBe(0);
-    expect(
-      lines.some(
-        (l) =>
-          l.level === "warn" && l.message.includes("domain-browser@4.23.0"),
-      ),
-    ).toBe(true);
+    expect(lines.some((l) => l.level === "warn")).toBe(false);
     expect(lines.at(-1)?.message).toContain("Notices check passed");
     expect(() => readFileSync(target)).toThrow();
   });

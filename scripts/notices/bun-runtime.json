@@ -1063,7 +1063,7 @@
       "version": "4.23.0",
       "spdx": "Artistic-2.0",
       "kind": "embedded-js",
-      "source": "https://www.npmjs.com/package/domain-browser/v/4.23.0",
+      "source": "https://registry.npmjs.org/domain-browser/-/domain-browser-4.23.0.tgz",
       "targets": [
         "linux-x64",
         "linux-arm64",
@@ -1073,8 +1073,7 @@
         "darwin-arm64"
       ],
       "texts": ["texts/domain-browser_4.23.0__LICENSE.md.txt"],
-      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). NEEDS AMENDMENT: Artistic-2.0 is not in the runtime tier. See the stop-and-amend rule in amendment 027 item 7.",
-      "blockedUntilAmendment": true
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). Upstream tag: https://github.com/bevry/domain-browser/tree/v4.23.0. Accepted under amendment 044 as a runtime entry exception."
     },
     {
       "name": "dtoa",

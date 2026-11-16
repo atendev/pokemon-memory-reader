@@ -48,6 +48,27 @@ export const RUNTIME_TIER: readonly string[] = [
 /** Exceptions a `WITH` clause may name, in either tier. */
 export const EXCEPTIONS: readonly string[] = ["LLVM-exception"];
 
+/** One Bun runtime entry that may use a license ID outside the tiers (amendment 044 item 3). */
+export interface RuntimeEntryException {
+  /** The exact `name@version` of a Bun manifest entry. */
+  entry: string;
+  /** The one SPDX ID the entry may use on top of the runtime tier. */
+  spdx: string;
+  amendment: string;
+  /** Printed under the entry's `Source:` line in the notices file. */
+  note: string;
+}
+
+/** Bun manifest entries that pass with an ID outside both tiers, each approved for one exact version. Adding one takes an amendment. */
+export const RUNTIME_ENTRY_EXCEPTIONS: readonly RuntimeEntryException[] = [
+  {
+    entry: "domain-browser@4.23.0",
+    spdx: "Artistic-2.0",
+    amendment: "amendment 044",
+    note: "Accepted under amendment 044. Bun's LICENSE.md lists domain-browser as MIT. Versions up to 4.22.0 were MIT, but 4.23.0, the version Bun bundles, is Artistic-2.0, and its own LICENSE.md below governs.",
+  },
+];
+
 /** Dev dependencies whose output ends up in the bundle. They are walked like production dependencies. */
 export const EMBEDDED_DEV_PACKAGES: readonly string[] = [];
 
@@ -114,8 +135,12 @@ function evaluate(
   return { pass: failed.length === 0, failed };
 }
 
-/** Checks one license string against a tier. Anything that is not strict SPDX fails, with no normalising. */
-export function checkExpression(expression: string, tier: Tier): Verdict {
+/** Checks one license string against a tier. Anything that is not strict SPDX fails, with no normalising. `extraIds` are accepted on top of the tier, for a matched runtime entry exception. */
+export function checkExpression(
+  expression: string,
+  tier: Tier,
+  extraIds: readonly string[] = [],
+): Verdict {
   let tree: ReturnType<typeof parseSpdx>;
   try {
     tree = parseSpdx(canonicalCase(expression));
@@ -129,7 +154,7 @@ export function checkExpression(expression: string, tier: Tier): Verdict {
   const ids = tier === "runtime" ? RUNTIME_TIER : PERMISSIVE_TIER;
   const result = evaluate(
     tree,
-    new Set(ids.map((id) => id.toLowerCase())),
+    new Set([...ids, ...extraIds].map((id) => id.toLowerCase())),
     new Set(EXCEPTIONS.map((e) => e.toLowerCase())),
   );
   if (result.pass) return { ok: true };
@@ -156,6 +181,8 @@ export interface NoticeEntry {
   /** Set for Bun runtime components that only some builds include. */
   builds: string | null;
   source: string | null;
+  /** The matched runtime entry exception's note, printed under `Source:`. */
+  note: string | null;
   texts: { file: string; text: string }[];
 }
 
@@ -169,6 +196,8 @@ export interface NoticesOptions {
   /** The directory `Override.text` paths and the manifest's `texts/` resolve against. */
   noticesDir: string;
   embeddedDevPackages: readonly string[];
+  /** Applies to Bun manifest entries only, never to npm packages or overrides. */
+  runtimeEntryExceptions: readonly RuntimeEntryException[];
   lockfilePath: string | null;
   /** `packageManager` from the root `package.json`, for the Bun manifest's version pin. */
   packageManager: string | null;
@@ -465,6 +494,7 @@ function npmEntries(
       origin: "npm",
       builds: null,
       source: null,
+      note: null,
       texts,
     });
   }
@@ -522,9 +552,24 @@ function bunEntries(
   const manifest = readJson<Manifest>(manifestPath);
   problems.push(...bunPinProblems(opts.packageManager, manifest.bunVersion));
   const entries: NoticeEntry[] = [];
+  const manifestKeys = new Set(
+    manifest.components.map((c) => packageKey(c.name, c.version)),
+  );
+  for (const exception of opts.runtimeEntryExceptions) {
+    if (!manifestKeys.has(exception.entry)) {
+      problems.push(
+        `Runtime entry exception ${exception.entry} is stale: that component is not in the Bun manifest.`,
+      );
+    }
+  }
   for (const c of manifest.components) {
     const key = packageKey(c.name, c.version);
-    const verdict = checkExpression(c.spdx, "runtime");
+    const exception = opts.runtimeEntryExceptions.find((e) => e.entry === key);
+    const verdict = checkExpression(
+      c.spdx,
+      "runtime",
+      exception === undefined ? [] : [exception.spdx],
+    );
     if (!verdict.ok) {
       if (c.blockedUntilAmendment) blocked.push(key);
       else problems.push(`Bun runtime component ${key}: ${verdict.reason}.`);
@@ -551,6 +596,7 @@ function bunEntries(
       origin: "bun",
       builds: buildsLabel(c.targets, manifest.targets),
       source: c.source,
+      note: exception?.note ?? null,
       texts,
     });
   }
@@ -604,6 +650,7 @@ export function renderNotices(entries: NoticeEntry[]): string {
     const head = [`${e.name} ${e.version}`, `License: ${e.spdx}`];
     if (e.builds !== null) head.push(`Included in: ${e.builds}`);
     if (e.source !== null) head.push(`Source: ${e.source}`);
+    if (e.note !== null) head.push(e.note);
     const body = e.texts.map(
       (t) => (e.texts.length > 1 ? `--- ${t.file} ---\n` : "") + t.text.trim(),
     );
@@ -634,6 +681,7 @@ export function repoOptions(): NoticesOptions {
       : {},
     noticesDir,
     embeddedDevPackages: EMBEDDED_DEV_PACKAGES,
+    runtimeEntryExceptions: RUNTIME_ENTRY_EXCEPTIONS,
     lockfilePath: join(REPO_ROOT, "bun.lock"),
     packageManager:
       readJson<{ packageManager?: string }>(join(REPO_ROOT, "package.json"))
