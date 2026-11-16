@@ -6,13 +6,15 @@ import type {
   Names,
   SpeciesDataLookup,
 } from "../format/types";
-import type { DataFormatId } from "../profile/schema";
+import type { ArtVersion, DataFormatId } from "../profile/schema";
 import gen3En from "./data/gen3-en.json";
 
 /** Shipped tables for one data format and language: charmap, names, species data and move data. */
 export interface ReferenceData {
   readonly charmap: Charmap;
   readonly names: Omit<Names, "locations">;
+  /** Location names for the profile's `artVersion`. Every ID is null when that art version has no table. */
+  locations(artVersion: ArtVersion): Names["locations"];
   readonly speciesData: SpeciesDataLookup;
   readonly moveData: MoveDataLookup;
 }
@@ -47,6 +49,9 @@ const table =
 
 function gen3English(): ReferenceData {
   const data = gen3En;
+  const locationTables: Readonly<
+    Record<string, ReadonlyArray<string | null> | undefined>
+  > = data.names.locations;
   return {
     charmap: createCharmap(data.charmap),
     names: {
@@ -55,6 +60,7 @@ function gen3English(): ReferenceData {
       items: table(data.names.items),
       abilities: table(data.names.abilities),
     },
+    locations: (artVersion) => table(locationTables[artVersion] ?? []),
     speciesData: {
       info(species) {
         const row = data.speciesData[species];

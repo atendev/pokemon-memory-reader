@@ -159,7 +159,10 @@ describe("tracer API against the fake bridge", () => {
       {
         profile,
         ...reference,
-        names: { ...reference.names, locations: () => null },
+        names: {
+          ...reference.names,
+          locations: reference.locations(profile.artVersion),
+        },
       },
     );
     expect(direct.ok && direct.value).toEqual(parsed);

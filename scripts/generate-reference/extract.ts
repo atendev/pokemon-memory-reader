@@ -35,6 +35,8 @@ export interface Extracted {
   /** Every glyph the charmap gives a byte, in file order. */
   readonly latin: Map<number, string[]>;
   readonly kana: Map<number, string[]>;
+  /** Map-section names by section ID. A section with no name or an empty one is left out. */
+  readonly locations: Map<number, string>;
 }
 
 export type Files = Readonly<Record<SourceRole, string>>;
@@ -225,6 +227,30 @@ function moveData(
   return out;
 }
 
+/**
+ * Map-section names by numeric ID. pret builds the section constants as an enum in this file's order,
+ * so a section's position in the list is the ID that a Gen 3 mon stores as its met location.
+ */
+function mapSections(text: string): Map<number, string> {
+  const parsed = JSON.parse(text) as {
+    map_sections?: Array<{ id?: string; name?: string | null }>;
+  };
+  if (!Array.isArray(parsed.map_sections))
+    throw new Error("region map sections: no map_sections list");
+  const out = new Map<number, string>();
+  const seen = new Set<string>();
+  parsed.map_sections.forEach((section, id) => {
+    if (!section.id?.startsWith("MAPSEC_"))
+      throw new Error(`region map sections: entry ${id} has no MAPSEC id`);
+    if (seen.has(section.id))
+      throw new Error(`region map sections: ${section.id} is listed twice`);
+    seen.add(section.id);
+    const name = section.name ? printCodes(section.name).trim() : "";
+    if (name !== "") out.set(id, name);
+  });
+  return out;
+}
+
 /** Species ID to National Dex number, from the array pret keeps for it. */
 function dexOrder(
   text: string,
@@ -311,6 +337,7 @@ export function extract(layout: Layout, files: Files): Extracted {
     speciesData: speciesData(files.speciesInfo, layout, shared, species),
     dex: dexOrder(files.dexOrder, layout, species, dexNumbers),
     moveData: moveData(files.moveInfo, shared, moves),
+    locations: mapSections(files.mapSections),
     ...charmap(files.charmap),
   };
 }

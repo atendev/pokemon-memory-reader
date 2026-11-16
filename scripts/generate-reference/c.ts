@@ -158,9 +158,18 @@ export function field(body: string, name: string): string | null {
   return match ? (match[1] ?? "").trim() : null;
 }
 
-/** Control codes that print fixed text. `{POKEBLOCK}` is five charmap bytes that the game draws as POKéBLOCK. */
+/**
+ * Control codes that print fixed text. `{POKEBLOCK}` is five charmap bytes that the game draws as POKéBLOCK.
+ * `{AQUA}` and `{MAGMA}` are team-name placeholders. `{EVIL_TEAM}` is Magma in Ruby and Aqua in Sapphire,
+ * and Ruby and Sapphire share one location table, so it prints both. `{NAME_END}` only marks where Ruby
+ * cuts a town or city name short, so the full name drops it.
+ */
 const PRINTED_CODES: Readonly<Record<string, string>> = {
   "{POKEBLOCK}": "POKéBLOCK",
+  "{AQUA}": "AQUA",
+  "{MAGMA}": "MAGMA",
+  "{EVIL_TEAM}": "MAGMA/AQUA",
+  "{NAME_END}": "",
 };
 
 /** Replaces the control codes that print fixed text and fails on any other `{CODE}` or backslash. */
