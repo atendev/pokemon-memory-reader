@@ -21,21 +21,11 @@ Build the game profile Zod schema, the dev-time generator, and the first generat
 - The schema rejects malformed profiles in tests.
 - The Emerald profile passes the schema and records its provenance.
 
-## Handoff
+## Answer
 
-Branch `t3/emerald-profile-generator`, wip commit on its tip. Audit round 0 (no auditor started yet). Auto mode is on: decide yourself, haiku audits.
+Built the profile schemas (file and full), the registry loader with amendment 018's three steps, the `internal/src/memory.ts` address map, and `bun run generate:profiles`. The generator reads pokeemerald `pokeemerald.sym` from the `symbols` branch at `4a73ce73964859d53a2d21e58db2525e8fa4b31b`, checks the SHA-1 against pret's `rom.sha1` at a pinned commit, and writes the committed `server/src/profile/builtin/emerald-us-1.0.json` with provenance. Running it twice gives no diff, the schema tests reject malformed profiles, and tests use a checked-in symbol excerpt. The signature words are gSpeciesInfo 0x1BC, gItems 0x1C8 and gBattleMoves 0x1CC. Every decision is in [the report](../assets/005-emerald-profile-and-generator-report.md).
 
-Done and green locally (lint, typecheck, 53 tests, `bun run generate:profiles` twice with no diff):
-- `internal/src/memory.ts` (+test): address map, `parseAddress`, `parseProfileAddress`, `mapPointerValue` (amendment §17.1). Ticket 006 may also add this file, so expect a merge conflict.
-- `server/src/profile/{address,schema,registry}.ts` (+tests): file schema (JSON Schema export), full schema (translates addresses, hack rules), `loadProfiles` with amendment 018's three steps, `byHash`, `byHeader`. `server/src/format/*/profile.ts` hold the per-format address blocks.
-- `scripts/generate-profiles/` (sym parser, definitions, build, main, excerpt fixture) and the generated `server/src/profile/builtin/` (excluded from Biome). Root `generate:profiles` script and `scripts/tsconfig.json`.
+Why: the offsets are summed from `struct GFRomHeader`, trainer counts are symbol size over entry size, and `moveData` is inherited whole because it describes one table.
 
-Left, in order:
-1. Audit on `haiku` (brief: ticket question, map Notes and Decisions, full diff, scope and 5-call limit).
-2. Decision report `.plan/maps/v2-build/assets/005-emerald-profile-and-generator-report.md`, run unslop, commit with the work.
-3. Push without forcing, open a PR against `wayfinder/v2-build-master`, return PUSHED.
-4. Resolution: `## Answer` in this file, delete this section. Return Decisions line.
+Not done: the decision 026 batch-cap check (no ranges or `BRIDGE_CAPS` yet), loading built-ins at server startup, automated hash lists, and a ROM check of the signature offsets.
 
-Implementer decisions to report: signature words are gSpeciesInfo 0x1BC, gItems 0x1C8, gBattleMoves 0x1CC (header offsets counted from pokeemerald `rom_header_gf.c`); `moveData` is inherited whole like a scalar; trainer-table counts are symbol size over entry size (40, 13, 2); Emerald hashes hand-kept from the 019 hash research and re-checked against pret `rom.sha1` and the libretro No-Intro DAT; the §026 batch-cap check in `loadProfiles` is not built (no ranges or `BRIDGE_CAPS` exist yet); `fixture` is `"none"`; hash generation from pret/No-Intro is not automated (surface a ticket).
-
-Read first: this ticket, `server/src/profile/schema.ts`, `registry.ts`, `scripts/generate-profiles/build.ts`.
