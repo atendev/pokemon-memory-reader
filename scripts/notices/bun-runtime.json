@@ -1,0 +1,3447 @@
+{
+  "bunVersion": "1.4.2",
+  "sourceTag": "bun-v1.4.2",
+  "sourceCommit": "744846f844374847c902b5e7fd59b4342a51ef99",
+  "targets": [
+    "linux-x64",
+    "linux-arm64",
+    "windows-x64",
+    "windows-arm64",
+    "darwin-x64",
+    "darwin-arm64"
+  ],
+  "components": [
+    {
+      "name": "abort-controller",
+      "version": "3.0.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/abort-controller/v/3.0.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/abort-controller_3.0.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "allocator-api2",
+      "version": "0.2.21",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/allocator-api2/0.2.21",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/allocator-api2_0.2.21__LICENSE-APACHE.txt",
+        "texts/allocator-api2_0.2.21__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "arrayref",
+      "version": "0.3.9",
+      "spdx": "BSD-2-Clause",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/arrayref/0.3.9",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/arrayref_0.3.9__LICENSE.txt"]
+    },
+    {
+      "name": "arrayvec",
+      "version": "0.7.6",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/arrayvec/0.7.6",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/arrayvec_0.7.6__LICENSE-APACHE.txt",
+        "texts/arrayvec_0.7.6__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "asn1.js",
+      "version": "4.10.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/asn1.js/v/4.10.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/asn1.js_4.10.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is LICENSE from github.com/indutny/asn1.js (master)."
+    },
+    {
+      "name": "assert",
+      "version": "2.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/assert/v/2.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/assert_2.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "available-typed-arrays",
+      "version": "1.0.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/available-typed-arrays/v/1.0.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/available-typed-arrays_1.0.7__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "base64",
+      "version": "0.22.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/base64/0.22.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/base64_0.22.1__LICENSE-APACHE.txt",
+        "texts/base64_0.22.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/base64-js/v/1.5.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/base64-js_1.5.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "bcrypt",
+      "version": "0.19.0",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/bcrypt/0.19.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bcrypt_0.19.0__LICENSE.txt"]
+    },
+    {
+      "name": "bitflags",
+      "version": "2.11.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/bitflags/2.11.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/bitflags_2.11.1__LICENSE-APACHE.txt",
+        "texts/bitflags_2.11.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "blake2",
+      "version": "0.10.6",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/blake2/0.10.6",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/blake2_0.10.6__LICENSE-APACHE.txt",
+        "texts/blake2_0.10.6__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "blake2b_simd",
+      "version": "1.0.4",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/blake2b_simd/1.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/blake2b_simd_1.0.4__LICENSE.txt"],
+      "notes": "The package ships no license file. The text is LICENSE from github.com/oconnor663/blake2_simd (master)."
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/block-buffer/0.10.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/block-buffer_0.10.4__LICENSE-APACHE.txt",
+        "texts/block-buffer_0.10.4__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "blowfish",
+      "version": "0.9.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/blowfish/0.9.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/blowfish_0.9.1__LICENSE-APACHE.txt",
+        "texts/blowfish_0.9.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "bn.js",
+      "version": "5.2.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/bn.js/v/5.2.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bn.js_5.2.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "boringssl",
+      "version": "git-41bf9b59c2eb",
+      "spdx": "Apache-2.0",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/boringssl/tree/41bf9b59c2ebf277a7aa427e1ecad5cc80dd4d4f",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/boringssl_git-41bf9b59c2eb__LICENSE.txt"],
+      "notes": "Top-level LICENSE is Apache-2.0. Its Go-authors BSD-3-Clause block covers test-only code. Seven source files lack the Apache header and are unreviewed per-file (see open items). third_party/fiat is Apache-2.0."
+    },
+    {
+      "name": "brorand",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/brorand/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/brorand_1.1.0__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "brotli",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/google/brotli/tree/v1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/brotli_1.1.0__LICENSE.txt"]
+    },
+    {
+      "name": "browserify-aes",
+      "version": "1.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-aes/v/1.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-aes_1.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "browserify-cipher",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-cipher/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-cipher_1.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "browserify-des",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-des/v/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-des_1.0.2__license.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "browserify-rsa",
+      "version": "4.1.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-rsa/v/4.1.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-rsa_4.1.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "browserify-sign",
+      "version": "4.2.5",
+      "spdx": "ISC",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-sign/v/4.2.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-sign_4.2.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "browserify-zlib",
+      "version": "0.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/browserify-zlib/v/0.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/browserify-zlib_0.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "bstr",
+      "version": "1.12.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/bstr/1.12.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/bstr_1.12.1__COPYING.txt",
+        "texts/bstr_1.12.1__LICENSE-APACHE.txt",
+        "texts/bstr_1.12.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "buffer",
+      "version": "5.0.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/buffer/v/5.0.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/buffer_5.0.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "buffer-xor",
+      "version": "1.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/buffer-xor/v/1.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/buffer-xor_1.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "builtin-status-codes",
+      "version": "3.0.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/builtin-status-codes/v/3.0.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/builtin-status-codes_3.0.0__license.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "bun",
+      "version": "1.4.2",
+      "spdx": "MIT",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bun_1.4.2__LICENSE.md.txt"],
+      "notes": "Bun and its Rust workspace crates (src/*, 94 crates, none declares a license field). LICENSE.md says \"Bun itself is MIT-licensed\" and carries no copyright line or MIT text, so the shipped text is Bun's own LICENSE.md."
+    },
+    {
+      "name": "bun-usockets",
+      "version": "1.4.2",
+      "spdx": "Apache-2.0",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/packages/bun-usockets",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bun-usockets_1.4.2__LICENSE.txt"],
+      "notes": "Bun fork of uSockets, vendored in packages/bun-usockets."
+    },
+    {
+      "name": "bun-uws",
+      "version": "1.4.2",
+      "spdx": "Apache-2.0",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/packages/bun-uws",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bun-uws_1.4.2__LICENSE.txt"],
+      "notes": "Bun fork of uWebSockets, vendored in packages/bun-uws."
+    },
+    {
+      "name": "bun_clap",
+      "version": "1.4.2",
+      "spdx": "Unlicense",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/clap",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/bun_clap_1.4.2__LICENSE.txt"],
+      "notes": "Port of zig-clap. The LICENSE is the Unlicense, which is not in the runtime tier. NEEDS AMENDMENT: this entry fails the tier check until an amendment accepts it. See the stop-and-amend rule in amendment 027 item 7.",
+      "blockedUntilAmendment": true
+    },
+    {
+      "name": "bytemuck",
+      "version": "1.25.0",
+      "spdx": "Zlib OR Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/bytemuck/1.25.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/bytemuck_1.25.0__LICENSE-APACHE.txt",
+        "texts/bytemuck_1.25.0__LICENSE-MIT.txt",
+        "texts/bytemuck_1.25.0__LICENSE-ZLIB.txt"
+      ]
+    },
+    {
+      "name": "byteorder",
+      "version": "1.5.0",
+      "spdx": "Unlicense OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/byteorder/1.5.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/byteorder_1.5.0__COPYING.txt",
+        "texts/byteorder_1.5.0__LICENSE-MIT.txt",
+        "texts/byteorder_1.5.0__UNLICENSE.txt"
+      ]
+    },
+    {
+      "name": "c-ares",
+      "version": "git-c7a3138dcfe3",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/c-ares/c-ares/tree/c7a3138dcfe3bb0eaaf10c0c24c36dc66dc790ab",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/c-ares_git-c7a3138dcfe3__LICENSE.md.txt"]
+    },
+    {
+      "name": "call-bind",
+      "version": "1.0.8",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/call-bind/v/1.0.8",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/call-bind_1.0.8__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "call-bind-apply-helpers",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/call-bind-apply-helpers/v/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/call-bind-apply-helpers_1.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "call-bound",
+      "version": "1.0.4",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/call-bound/v/1.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/call-bound_1.0.4__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/cfg-if/1.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/cfg-if_1.0.4__LICENSE-APACHE.txt",
+        "texts/cfg-if_1.0.4__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "cipher",
+      "version": "0.4.4",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/cipher/0.4.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/cipher_0.4.4__LICENSE-APACHE.txt",
+        "texts/cipher_0.4.4__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "cipher-base",
+      "version": "1.0.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/cipher-base/v/1.0.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/cipher-base_1.0.7__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "const_format",
+      "version": "0.2.36",
+      "spdx": "Zlib",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/const_format/0.2.36",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/const_format_0.2.36__LICENSE-ZLIB.md.txt"]
+    },
+    {
+      "name": "constant_time_eq",
+      "version": "0.4.2",
+      "spdx": "CC0-1.0 OR MIT-0 OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/constant_time_eq/0.4.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/constant_time_eq_0.4.2__LICENSE-APACHE.txt",
+        "texts/constant_time_eq_0.4.2__LICENSE-CC0.txt",
+        "texts/constant_time_eq_0.4.2__LICENSE-MIT0.txt"
+      ]
+    },
+    {
+      "name": "core-util-is",
+      "version": "1.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/core-util-is/v/1.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/core-util-is_1.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/cpufeatures/0.2.17",
+      "targets": ["linux-arm64", "windows-arm64", "darwin-arm64"],
+      "texts": [
+        "texts/cpufeatures_0.2.17__LICENSE-APACHE.txt",
+        "texts/cpufeatures_0.2.17__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "create-ecdh",
+      "version": "4.0.4",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/create-ecdh/v/4.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/create-ecdh_4.0.4__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "create-hash",
+      "version": "1.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/create-hash/v/1.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/create-hash_1.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "create-hmac",
+      "version": "1.1.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/create-hmac/v/1.1.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/create-hmac_1.1.7__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "crossbeam-utils",
+      "version": "0.8.21",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/crossbeam-utils/0.8.21",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/crossbeam-utils_0.8.21__LICENSE-APACHE.txt",
+        "texts/crossbeam-utils_0.8.21__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "crypto-browserify",
+      "version": "3.12.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/crypto-browserify/v/3.12.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/crypto-browserify_3.12.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/crypto-common/0.1.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/crypto-common_0.1.7__LICENSE-APACHE.txt",
+        "texts/crypto-common_0.1.7__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "cssparser",
+      "version": "0.36.0",
+      "spdx": "MPL-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/cssparser/0.36.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/cssparser_0.36.0__LICENSE.txt"]
+    },
+    {
+      "name": "define-data-property",
+      "version": "1.1.4",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/define-data-property/v/1.1.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/define-data-property_1.1.4__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "define-properties",
+      "version": "1.2.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/define-properties/v/1.2.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/define-properties_1.2.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "derive_more",
+      "version": "2.1.1",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/derive_more/2.1.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/derive_more_2.1.1__LICENSE.txt"]
+    },
+    {
+      "name": "des.js",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/des.js/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/des.js_1.1.0__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "diff-match-patch-derived",
+      "version": "1.4.2",
+      "spdx": "Apache-2.0",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/runtime/test_runner/diff/text_diff.rs",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/diff-match-patch-derived_1.4.2__LICENSE.txt"],
+      "notes": "text_diff.rs ports passes from diff-match-patch (Copyright 2018 The diff-match-patch Authors). Text from upstream master."
+    },
+    {
+      "name": "diffie-hellman",
+      "version": "5.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/diffie-hellman/v/5.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/diffie-hellman_5.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/digest/0.10.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/digest_0.10.7__LICENSE-APACHE.txt",
+        "texts/digest_0.10.7__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "domain-browser",
+      "version": "4.23.0",
+      "spdx": "Artistic-2.0",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/domain-browser/v/4.23.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/domain-browser_4.23.0__LICENSE.md.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). NEEDS AMENDMENT: Artistic-2.0 is not in the runtime tier. See the stop-and-amend rule in amendment 027 item 7.",
+      "blockedUntilAmendment": true
+    },
+    {
+      "name": "dtoa",
+      "version": "1.0.11",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/dtoa/1.0.11",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/dtoa_1.0.11__LICENSE-APACHE.txt",
+        "texts/dtoa_1.0.11__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "dtoa-short",
+      "version": "0.3.5",
+      "spdx": "MPL-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/dtoa-short/0.3.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/dtoa-short_0.3.5__LICENSE.txt"]
+    },
+    {
+      "name": "dunder-proto",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/dunder-proto/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/dunder-proto_1.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "elliptic",
+      "version": "6.6.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/elliptic/v/6.6.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/elliptic_6.6.1__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "encoding_rs",
+      "version": "0.8.35",
+      "spdx": "(Apache-2.0 OR MIT) AND BSD-3-Clause",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/encoding_rs/0.8.35",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/encoding_rs_0.8.35__LICENSE-APACHE.txt",
+        "texts/encoding_rs_0.8.35__LICENSE-MIT.txt",
+        "texts/encoding_rs_0.8.35__LICENSE-WHATWG.txt"
+      ]
+    },
+    {
+      "name": "enum-map",
+      "version": "2.7.3",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/enum-map/2.7.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/enum-map_2.7.3__LICENSES-Apache-2.0.txt.txt",
+        "texts/enum-map_2.7.3__LICENSES-CC0-1.0.txt.txt",
+        "texts/enum-map_2.7.3__LICENSES-MIT.txt.txt"
+      ]
+    },
+    {
+      "name": "enumset",
+      "version": "1.1.10",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/enumset/1.1.10",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/enumset_1.1.10__LICENSE-APACHE.txt",
+        "texts/enumset_1.1.10__LICENSE-MIT.txt"
+      ],
+      "notes": "Declared license \"MIT/Apache-2.0\" rewritten to SPDX."
+    },
+    {
+      "name": "equivalent",
+      "version": "1.0.2",
+      "spdx": "Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/equivalent/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/equivalent_1.0.2__LICENSE-APACHE.txt",
+        "texts/equivalent_1.0.2__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "errno",
+      "version": "0.3.14",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/errno/0.3.14",
+      "targets": ["linux-x64", "linux-arm64"],
+      "texts": [
+        "texts/errno_0.3.14__LICENSE-APACHE.txt",
+        "texts/errno_0.3.14__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "es-define-property",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/es-define-property/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/es-define-property_1.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "es-errors",
+      "version": "1.3.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/es-errors/v/1.3.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/es-errors_1.3.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "es-object-atoms",
+      "version": "1.1.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/es-object-atoms/v/1.1.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/es-object-atoms_1.1.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "event-target-shim",
+      "version": "5.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/event-target-shim/v/5.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/event-target-shim_5.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "events",
+      "version": "3.3.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/events/v/3.3.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/events_3.3.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "evp_bytestokey",
+      "version": "1.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/evp_bytestokey/v/1.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/evp_bytestokey_1.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "foldhash",
+      "version": "0.1.5",
+      "spdx": "Zlib",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/foldhash/0.1.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/foldhash_0.1.5__LICENSE.txt"]
+    },
+    {
+      "name": "foldhash",
+      "version": "0.2.0",
+      "spdx": "Zlib",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/foldhash/0.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/foldhash_0.2.0__LICENSE.txt"]
+    },
+    {
+      "name": "for-each",
+      "version": "0.3.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/for-each/v/0.3.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/for-each_0.3.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "function-bind",
+      "version": "1.1.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/function-bind/v/1.1.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/function-bind_1.1.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "generator-function",
+      "version": "2.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/generator-function/v/2.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/generator-function_2.0.1__LICENSE.md.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/generic-array/0.14.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/generic-array_0.14.7__LICENSE.txt"]
+    },
+    {
+      "name": "get-intrinsic",
+      "version": "1.3.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/get-intrinsic/v/1.3.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/get-intrinsic_1.3.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "get-proto",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/get-proto/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/get-proto_1.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "getrandom",
+      "version": "0.4.2",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/getrandom/0.4.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/getrandom_0.4.2__LICENSE-APACHE.txt",
+        "texts/getrandom_0.4.2__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "glob-match-derived",
+      "version": "1.4.2",
+      "spdx": "MIT",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/glob",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/glob-match-derived_1.4.2__matcher.rs-header.txt"],
+      "notes": "Portions derived from MIT works by Devon Govett, Stephen Gregoratto and shulaoda; the text is the src/glob/matcher.rs header."
+    },
+    {
+      "name": "gopd",
+      "version": "1.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/gopd/v/1.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/gopd_1.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "has-property-descriptors",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/has-property-descriptors/v/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/has-property-descriptors_1.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "has-symbols",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/has-symbols/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/has-symbols_1.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "has-tostringtag",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/has-tostringtag/v/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/has-tostringtag_1.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "hash-base",
+      "version": "3.0.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/hash-base/v/3.0.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/hash-base_3.0.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "hash.js",
+      "version": "1.1.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/hash.js/v/1.1.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/hash.js_1.1.7__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.15.5",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/hashbrown/0.15.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/hashbrown_0.15.5__LICENSE-APACHE.txt",
+        "texts/hashbrown_0.15.5__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.16.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/hashbrown/0.16.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/hashbrown_0.16.1__LICENSE-APACHE.txt",
+        "texts/hashbrown_0.16.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "hasown",
+      "version": "2.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/hasown/v/2.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/hasown_2.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "HdrHistogram_c",
+      "version": "git-be60a9987ee4",
+      "spdx": "CC0-1.0 OR BSD-2-Clause",
+      "kind": "native",
+      "source": "https://github.com/HdrHistogram/HdrHistogram_c/tree/be60a9987ee48d0abf0d7b6a175bad8d6c1585d1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/HdrHistogram_c_git-be60a9987ee4__LICENSE.txt.txt"],
+      "notes": "Compiled from src/hdr_encoding.c, hdr_histogram.c and hdr_histogram_log_no_op.c (scripts/build/deps/hdrhistogram.ts). Passes the tier through BSD-2-Clause only; CC0-1.0 is a non-passing branch."
+    },
+    {
+      "name": "highway",
+      "version": "git-2607d3b5b011",
+      "spdx": "Apache-2.0",
+      "kind": "native",
+      "source": "https://github.com/google/highway/tree/2607d3b5b0113992fe84d3848859eae13b3b52c1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/highway_git-2607d3b5b011__LICENSE.txt"],
+      "notes": "The pinned tree ships only the Apache-2.0 LICENSE. The README calls it dual-licensed Apache-2.0 or BSD-3-Clause; the entry claims the Apache-2.0 grant, which is what the file and Bun both state."
+    },
+    {
+      "name": "hmac-drbg",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/hmac-drbg/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/hmac-drbg_1.0.1__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "https-browserify",
+      "version": "1.0.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/https-browserify/v/1.0.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/https-browserify_1.0.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "icu",
+      "version": "78",
+      "spdx": "Unicode-3.0",
+      "kind": "native",
+      "source": "https://github.com/unicode-org/icu/tree/release-78.1",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64", "windows-arm64"],
+      "texts": ["texts/icu_78__LICENSE.txt"],
+      "notes": "Statically linked on Linux and Windows. macOS uses the system ICU. The LICENSE file also carries notices for bundled BSD-3-Clause, MIT and public-domain data. Tag release-78.1 is assumed to match the prebuilt ICU 78."
+    },
+    {
+      "name": "ieee754",
+      "version": "1.2.1",
+      "spdx": "BSD-3-Clause",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/ieee754/v/1.2.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/ieee754_1.2.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "spdx": "ISC",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/inherits/v/2.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/inherits_2.0.4__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "inout",
+      "version": "0.1.4",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/inout/0.1.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/inout_0.1.4__LICENSE-APACHE.txt",
+        "texts/inout_0.1.4__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "is-arguments",
+      "version": "1.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-arguments/v/1.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-arguments_1.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "is-callable",
+      "version": "1.2.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-callable/v/1.2.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-callable_1.2.7__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "is-generator-function",
+      "version": "1.1.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-generator-function/v/1.1.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-generator-function_1.1.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "is-nan",
+      "version": "1.3.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-nan/v/1.3.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-nan_1.3.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "is-regex",
+      "version": "1.2.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-regex/v/1.2.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-regex_1.2.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "is-typed-array",
+      "version": "1.1.15",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/is-typed-array/v/1.1.15",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/is-typed-array_1.1.15__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "isarray",
+      "version": "1.0.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/isarray/v/1.0.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/isarray_1.0.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is LICENSE from github.com/juliangruber/isarray (master)."
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/itoa/1.0.18",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/itoa_1.0.18__LICENSE-APACHE.txt",
+        "texts/itoa_1.0.18__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "keccak",
+      "version": "0.1.6",
+      "spdx": "Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/keccak/0.1.6",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/keccak_0.1.6__LICENSE-APACHE.txt",
+        "texts/keccak_0.1.6__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "konst",
+      "version": "0.2.20",
+      "spdx": "Zlib",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/konst/0.2.20",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/konst_0.2.20__LICENSE-ZLIB.md.txt"]
+    },
+    {
+      "name": "konst_macro_rules",
+      "version": "0.2.19",
+      "spdx": "Zlib",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/konst_macro_rules/0.2.19",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/konst_macro_rules_0.2.19__LICENSE-ZLIB.md.txt"]
+    },
+    {
+      "name": "libarchive",
+      "version": "git-ded82291ab41",
+      "spdx": "BSD-2-Clause AND BSD-3-Clause AND LicenseRef-PublicDomain",
+      "kind": "native",
+      "source": "https://github.com/libarchive/libarchive/tree/ded82291ab41d5e355831b96b0e1ff49e24d8939",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/libarchive_git-ded82291ab41__COPYING.txt"],
+      "notes": "COPYING lists BSD-2-Clause base files, BSD-3-Clause compress filters and public-domain archive_parse_date.c. The blake2 files are CC0-1.0 OR Apache-2.0 OR OpenSSL and pass through Apache-2.0."
+    },
+    {
+      "name": "libc",
+      "version": "0.2.186",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/libc/0.2.186",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/libc_0.2.186__LICENSE-APACHE.txt",
+        "texts/libc_0.2.186__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "libcxxabi-cxa_thread_atexit",
+      "version": "19.1.0",
+      "spdx": "Apache-2.0 WITH LLVM-exception",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/jsc/bindings/workaround-missing-symbols.cpp",
+      "targets": ["linux-x64", "linux-arm64"],
+      "texts": ["texts/libcxxabi-cxa_thread_atexit_19.1.0__LICENSE.TXT.txt"],
+      "notes": "__cxa_thread_atexit fallback from LLVM libc++abi 19.1.0."
+    },
+    {
+      "name": "libdeflate",
+      "version": "git-c8c56a20f8f6",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/ebiggers/libdeflate/tree/c8c56a20f8f621e6a966b716b31f1dedab6a41e3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/libdeflate_git-c8c56a20f8f6__COPYING.txt"]
+    },
+    {
+      "name": "libjpeg-turbo",
+      "version": "3.1.4",
+      "spdx": "IJG AND BSD-3-Clause AND Zlib",
+      "kind": "native",
+      "source": "https://github.com/libjpeg-turbo/libjpeg-turbo/tree/e352b02f794f701407b39af08576035ba3360d60",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/libjpeg-turbo_3.1.4__LICENSE.md.txt",
+        "texts/libjpeg-turbo_3.1.4__README.ijg.txt"
+      ]
+    },
+    {
+      "name": "libspng",
+      "version": "0.7.4",
+      "spdx": "BSD-2-Clause",
+      "kind": "native",
+      "source": "https://github.com/randy408/libspng/tree/fb768002d4288590083a476af628e51c3f1d47cd",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/libspng_0.7.4__LICENSE.txt"]
+    },
+    {
+      "name": "libuv",
+      "version": "git-8023581113b2",
+      "spdx": "MIT AND BSD-2-Clause AND BSD-3-Clause AND ISC",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/libuv/tree/8023581113b276e7c1aee3f82da57ca0893faab1",
+      "targets": ["windows-x64", "windows-arm64"],
+      "texts": [
+        "texts/libuv_git-8023581113b2__LICENSE.txt",
+        "texts/libuv_git-8023581113b2__LICENSE-extra.txt"
+      ],
+      "notes": "Windows builds only. LICENSE-extra covers externally maintained files (BSD-2-Clause, BSD-3-Clause, ISC)."
+    },
+    {
+      "name": "libwebp",
+      "version": "1.6.0",
+      "spdx": "BSD-3-Clause",
+      "kind": "native",
+      "source": "https://github.com/webmproject/libwebp/tree/v1.6.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/libwebp_1.6.0__COPYING.txt"],
+      "notes": "The pinned commit b7e29b9d75bd31422b00c2a446d49d7af06c328d is not on GitHub (googlesource mirror). Text comes from the v1.6.0 tag. Per-target enablement is unverified."
+    },
+    {
+      "name": "linux-raw-sys",
+      "version": "0.4.15",
+      "spdx": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/linux-raw-sys/0.4.15",
+      "targets": ["linux-x64", "linux-arm64"],
+      "texts": [
+        "texts/linux-raw-sys_0.4.15__LICENSE-APACHE.txt",
+        "texts/linux-raw-sys_0.4.15__LICENSE-Apache-2.0_WITH_LLVM-exception.txt",
+        "texts/linux-raw-sys_0.4.15__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "log",
+      "version": "0.4.29",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/log/0.4.29",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/log_0.4.29__LICENSE-APACHE.txt",
+        "texts/log_0.4.29__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "lol-html",
+      "version": "git-725ce499aa9b",
+      "spdx": "BSD-3-Clause",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/lol-html/tree/725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/lol-html_git-725ce499aa9b__LICENSE.txt"],
+      "notes": "Also built as the lol_html Rust crate (listed separately by crate version)."
+    },
+    {
+      "name": "lol_html",
+      "version": "2.7.2",
+      "spdx": "BSD-3-Clause",
+      "kind": "rust-crate",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/vendor (fetched at build)",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/lol_html_2.7.2__LICENSE.txt"]
+    },
+    {
+      "name": "ls-hpack",
+      "version": "git-8905c024b6d0",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/litespeedtech/ls-hpack/tree/8905c024b6d052f083a3d11d0a169b3c2735c8a1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/ls-hpack_git-8905c024b6d0__LICENSE.txt"]
+    },
+    {
+      "name": "ls-qpack",
+      "version": "git-1e9c5b8e59f8",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/litespeedtech/ls-qpack/tree/1e9c5b8e59f8161c54f168a570c8bfdc59ded0c3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/ls-qpack_git-1e9c5b8e59f8__LICENSE.txt"]
+    },
+    {
+      "name": "lsquic",
+      "version": "git-3181911301b1",
+      "spdx": "MIT AND BSD-3-Clause",
+      "kind": "native",
+      "source": "https://github.com/litespeedtech/lsquic/tree/3181911301b1aa4f54c1ed690901abc674ee08fb",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/lsquic_git-3181911301b1__LICENSE.txt",
+        "texts/lsquic_git-3181911301b1__LICENSE.chrome.txt"
+      ],
+      "notes": "LICENSE.chrome covers files derived from Chromium proto-quic (BSD-3-Clause). Per-target enablement is unverified; listed for every target."
+    },
+    {
+      "name": "math-intrinsics",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/math-intrinsics/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/math-intrinsics_1.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "md5.js",
+      "version": "1.3.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/md5.js/v/1.3.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/md5.js_1.3.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.0",
+      "spdx": "Unlicense OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/memchr/2.8.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/memchr_2.8.0__COPYING.txt",
+        "texts/memchr_2.8.0__LICENSE-MIT.txt",
+        "texts/memchr_2.8.0__UNLICENSE.txt"
+      ]
+    },
+    {
+      "name": "miller-rabin",
+      "version": "4.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/miller-rabin/v/4.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/miller-rabin_4.0.1__README-license-section.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "mimalloc",
+      "version": "git-6a64e1ba7f5b",
+      "spdx": "MIT",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/mimalloc/tree/6a64e1ba7f5b2130d4efccb67ec87fd0003f0f6a",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/mimalloc_git-6a64e1ba7f5b__LICENSE.txt"]
+    },
+    {
+      "name": "mime",
+      "version": "0.3.17",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/mime/0.3.17",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/mime_0.3.17__LICENSE-APACHE.txt",
+        "texts/mime_0.3.17__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "minimalistic-assert",
+      "version": "1.0.1",
+      "spdx": "ISC",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/minimalistic-assert/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/minimalistic-assert_1.0.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "minimalistic-crypto-utils",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/minimalistic-crypto-utils/v/1.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/minimalistic-crypto-utils_1.0.1__README-license-section.txt"
+      ],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure). The package ships no license file. The text is the license section of its README, which carries the copyright line and the full MIT permission text."
+    },
+    {
+      "name": "mozilla-ca-certificates",
+      "version": "1.4.2",
+      "spdx": "MPL-2.0",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/packages/bun-usockets/certdata.txt",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/mozilla-ca-certificates_1.4.2__MPL-2.0.txt"],
+      "notes": "Mozilla root certificate bundle (certdata.txt, compiled into root_certs.h). The text is the MPL-2.0 from the cssparser crate, whose LICENSE is the unmodified license; certdata.txt's own header names the MPL."
+    },
+    {
+      "name": "new_debug_unreachable",
+      "version": "1.0.6",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/new_debug_unreachable/1.0.6",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/new_debug_unreachable_1.0.6__LICENSE-MIT.txt"]
+    },
+    {
+      "name": "node-derived-sources",
+      "version": "26.3.0",
+      "spdx": "MIT",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/js",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/node-derived-sources_26.3.0__LICENSE.txt"],
+      "notes": "Node.js-derived JavaScript (src/js/node, src/js/internal, src/node-fallbacks sources) and C++ (ncrypto, libuv headers under src/jsc/bindings), marked Copyright Joyent and Node.js contributors. The text is Node.js v26.3.0 LICENSE, which also lists the bundled third-party components of Node itself."
+    },
+    {
+      "name": "object-is",
+      "version": "1.1.6",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/object-is/v/1.1.6",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/object-is_1.1.6__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "object-keys",
+      "version": "1.1.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/object-keys/v/1.1.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/object-keys_1.1.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "object.assign",
+      "version": "4.1.7",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/object.assign/v/4.1.7",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/object.assign_4.1.7__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "pako",
+      "version": "1.0.11",
+      "spdx": "(MIT AND Zlib)",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/pako/v/1.0.11",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/pako_1.0.11__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "parse-asn1",
+      "version": "5.1.9",
+      "spdx": "ISC",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/parse-asn1/v/5.1.9",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/parse-asn1_5.1.9__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "pbkdf2",
+      "version": "3.1.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/pbkdf2/v/3.1.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/pbkdf2_3.1.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "phf",
+      "version": "0.13.1",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/phf/0.13.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/phf_0.13.1__LICENSE.txt"]
+    },
+    {
+      "name": "phf_shared",
+      "version": "0.13.1",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/phf_shared/0.13.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/phf_shared_0.13.1__LICENSE.txt"]
+    },
+    {
+      "name": "picohttpparser",
+      "version": "git-066d2b1e9ab8",
+      "spdx": "MIT OR Artistic-1.0-Perl OR GPL-1.0-or-later",
+      "kind": "native",
+      "source": "https://github.com/h2o/picohttpparser/tree/066d2b1e9ab820703db0837a7255d92d30f0c9f5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/picohttpparser__picohttpparser.c-header.txt"],
+      "notes": "No LICENSE file; the text is the picohttpparser.c header. Passes the tier through MIT."
+    },
+    {
+      "name": "possible-typed-array-names",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/possible-typed-array-names/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/possible-typed-array-names_1.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "precomputed-hash",
+      "version": "0.1.1",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/precomputed-hash/0.1.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/precomputed-hash_0.1.1__LICENSE.txt"]
+    },
+    {
+      "name": "process",
+      "version": "0.11.10",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/process/v/0.11.10",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/process_0.11.10__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "process-nextick-args",
+      "version": "2.0.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/process-nextick-args/v/2.0.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/process-nextick-args_2.0.1__license.md.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "public-encrypt",
+      "version": "4.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/public-encrypt/v/4.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/public-encrypt_4.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "punycode",
+      "version": "2.3.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/punycode/v/2.3.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/punycode_2.3.1__LICENSE-MIT.txt.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "querystring-es3",
+      "version": "1.0.0-0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/querystring-es3/v/1.0.0-0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/querystring-es3_1.0.0-0__License.md.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "randombytes",
+      "version": "2.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/randombytes/v/2.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/randombytes_2.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "randomfill",
+      "version": "1.0.4",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/randomfill/v/1.0.4",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/randomfill_1.0.4__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "react-compiler-port",
+      "version": "19.0.0",
+      "spdx": "MIT",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/react_compiler",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/react-compiler-port_19.0.0__LICENSE.txt"],
+      "notes": "Rust port of Meta's React Compiler (68 files marked Copyright (c) Meta Platforms, \"licensed under the MIT license found in the LICENSE file\"). The text is facebook/react LICENSE."
+    },
+    {
+      "name": "react-refresh",
+      "version": "0.17.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/react-refresh/v/0.17.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/react-refresh_0.17.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "readable-stream",
+      "version": "4.7.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/readable-stream/v/4.7.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/readable-stream_4.7.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "ripemd160",
+      "version": "2.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/ripemd160/v/2.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/ripemd160_2.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "rust-argon2",
+      "version": "3.0.0",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/vendor (fetched at build)",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/rust-argon2_3.0.0__LICENSE-APACHE.txt",
+        "texts/rust-argon2_3.0.0__LICENSE-MIT.txt"
+      ],
+      "notes": "Declared license \"MIT/Apache-2.0\" rewritten to SPDX."
+    },
+    {
+      "name": "rustc-hash",
+      "version": "2.1.2",
+      "spdx": "Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/rustc-hash/2.1.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/rustc-hash_2.1.2__LICENSE-APACHE.txt",
+        "texts/rustc-hash_2.1.2__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "rustix",
+      "version": "0.38.44",
+      "spdx": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/rustix/0.38.44",
+      "targets": ["linux-x64", "linux-arm64"],
+      "texts": [
+        "texts/rustix_0.38.44__LICENSE-APACHE.txt",
+        "texts/rustix_0.38.44__LICENSE-Apache-2.0_WITH_LLVM-exception.txt",
+        "texts/rustix_0.38.44__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/safe-buffer/v/5.2.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/safe-buffer_5.2.1__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "safe-regex-test",
+      "version": "1.1.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/safe-regex-test/v/1.1.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/safe-regex-test_1.1.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "scopeguard",
+      "version": "1.2.0",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/scopeguard/1.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/scopeguard_1.2.0__LICENSE-APACHE.txt",
+        "texts/scopeguard_1.2.0__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "selectors",
+      "version": "0.33.0",
+      "spdx": "MPL-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/selectors/0.33.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/selectors_0.33.0__MPL-2.0.txt"],
+      "notes": "The crate ships no license file. The text is the MPL-2.0 from the cssparser crate (same Servo project and license)."
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/serde/1.0.228",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/serde_1.0.228__LICENSE-APACHE.txt",
+        "texts/serde_1.0.228__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/serde_core/1.0.228",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/serde_core_1.0.228__LICENSE-APACHE.txt",
+        "texts/serde_core_1.0.228__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "servo_arc",
+      "version": "0.4.3",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/servo_arc/0.4.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/servo_arc_0.4.3__LICENSE-APACHE.txt",
+        "texts/servo_arc_0.4.3__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "set-function-length",
+      "version": "1.2.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/set-function-length/v/1.2.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/set-function-length_1.2.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "sha.js",
+      "version": "2.4.12",
+      "spdx": "(MIT AND BSD-3-Clause)",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/sha.js/v/2.4.12",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/sha.js_2.4.12__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "sha3",
+      "version": "0.10.9",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/sha3/0.10.9",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/sha3_0.10.9__LICENSE-APACHE.txt",
+        "texts/sha3_0.10.9__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "simdutf",
+      "version": "unversioned",
+      "spdx": "Apache-2.0 OR MIT",
+      "kind": "native",
+      "source": "https://github.com/simdutf/simdutf/tree/master",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/simdutf_unversioned__LICENSE-MIT.txt",
+        "texts/simdutf_unversioned__LICENSE-APACHE.txt"
+      ],
+      "notes": "Compiled in through the prebuilt WebKit archive and src/simdutf_sys. The exact simdutf version is unverified; texts come from upstream master."
+    },
+    {
+      "name": "siphasher",
+      "version": "1.0.3",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/siphasher/1.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/siphasher_1.0.3__COPYING.txt"],
+      "notes": "Declared license \"MIT/Apache-2.0\" rewritten to SPDX."
+    },
+    {
+      "name": "smallvec",
+      "version": "1.15.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/smallvec/1.15.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/smallvec_1.15.1__LICENSE-APACHE.txt",
+        "texts/smallvec_1.15.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "sqlite",
+      "version": "3.53.2",
+      "spdx": "blessing",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/blob/bun-v1.4.2/src/jsc/bindings/sqlite/sqlite3.c",
+      "targets": ["linux-x64", "linux-arm64", "windows-x64", "windows-arm64"],
+      "texts": ["texts/sqlite_3.53.2__sqlite3.c-header.txt"],
+      "notes": "Statically built on Linux and Windows. macOS loads the system libsqlite3. The text is the blessing in the amalgamation header."
+    },
+    {
+      "name": "stable_deref_trait",
+      "version": "1.2.1",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/stable_deref_trait/1.2.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/stable_deref_trait_1.2.1__LICENSE-APACHE.txt",
+        "texts/stable_deref_trait_1.2.1__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "stream-http",
+      "version": "3.2.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/stream-http/v/3.2.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/stream-http_3.2.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "string_decoder",
+      "version": "1.3.0",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/string_decoder/v/1.3.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/string_decoder_1.3.0__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "strum",
+      "version": "0.26.3",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/strum/0.26.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/strum_0.26.3__LICENSE.txt"]
+    },
+    {
+      "name": "subtle",
+      "version": "2.6.1",
+      "spdx": "BSD-3-Clause",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/subtle/2.6.1",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/subtle_2.6.1__LICENSE.txt"]
+    },
+    {
+      "name": "thiserror",
+      "version": "2.0.18",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/thiserror/2.0.18",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/thiserror_2.0.18__LICENSE-APACHE.txt",
+        "texts/thiserror_2.0.18__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "tinycc",
+      "version": "git-05f0fafaa3be",
+      "spdx": "LGPL-2.1-or-later",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/tinycc/tree/05f0fafaa3be31e31d7b4b5c17dc60f62c991171",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/tinycc_git-05f0fafaa3be__COPYING.txt"],
+      "notes": "COPYING is LGPL-2.1; file headers (checked in tcc.c, libtcc.c and tccgen.c at the pinned commit) read \"version 2 of the License, or (at your option) any later version\", so both LGPL-2.0-or-later and LGPL-2.1-or-later hold. Per-target enablement is unverified. LGPL compliance is a separate ticket."
+    },
+    {
+      "name": "to-buffer",
+      "version": "1.2.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/to-buffer/v/1.2.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/to-buffer_1.2.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "typed-arena",
+      "version": "2.0.2",
+      "spdx": "MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/typed-arena/2.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/typed-arena_2.0.2__LICENSE.txt"]
+    },
+    {
+      "name": "typed-array-buffer",
+      "version": "1.0.3",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/typed-array-buffer/v/1.0.3",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/typed-array-buffer_1.0.3__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.0",
+      "spdx": "MIT OR Apache-2.0",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/typenum/1.20.0",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/typenum_1.20.0__LICENSE-APACHE.txt",
+        "texts/typenum_1.20.0__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "util",
+      "version": "0.12.5",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/util/v/0.12.5",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/util_0.12.5__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "util-deprecate",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/util-deprecate/v/1.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/util-deprecate_1.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "WebKit",
+      "version": "git-2e2aa2290fac",
+      "spdx": "LGPL-2.0-or-later AND LGPL-2.1-or-later AND BSD-2-Clause AND BSD-3-Clause AND (MPL-1.1 OR GPL-2.0-or-later OR LGPL-2.1-or-later)",
+      "kind": "native",
+      "source": "https://github.com/oven-sh/WebKit/tree/2e2aa2290fac856d6f451ceacb58f7f5b44dd057",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/WebKit__COPYING.LIB.txt",
+        "texts/WebKit__LICENSE-LGPL-2.txt",
+        "texts/WebKit__LICENSE-LGPL-2.1.txt",
+        "texts/WebKit__LICENSE-APPLE.txt",
+        "texts/WebKit__LICENSE.txt"
+      ],
+      "notes": "JavaScriptCore, WTF, bmalloc/libpas and the WebCore files Bun uses, in the prebuilt oven-sh/WebKit archive. COPYING.LIB is LGPL-2.0; headers mostly read LGPL-2.0-or-later or LGPL-2.1-or-later. Apple files are BSD-2-Clause, double-conversion is BSD-3-Clause, JSDateMath.cpp is MPL-1.1/GPL-2.0-or-later/LGPL-2.1-or-later and passes through LGPL-2.1-or-later. The per-file census is a sample. Bun's own src/jsc/bindings files derived from WebKit (Apple, Google, Sony, Igalia and KDE copyright headers) carry the same terms. LGPL compliance is a separate ticket."
+    },
+    {
+      "name": "which-typed-array",
+      "version": "1.1.19",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/which-typed-array/v/1.1.19",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/which-typed-array_1.1.19__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "xtend",
+      "version": "4.0.2",
+      "spdx": "MIT",
+      "kind": "embedded-js",
+      "source": "https://www.npmjs.com/package/xtend/v/4.0.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/xtend_4.0.2__LICENSE.txt"],
+      "notes": "Node polyfill dependency of src/node-fallbacks (bun.lock closure)."
+    },
+    {
+      "name": "zeroize",
+      "version": "1.8.2",
+      "spdx": "Apache-2.0 OR MIT",
+      "kind": "rust-crate",
+      "source": "https://crates.io/crates/zeroize/1.8.2",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/zeroize_1.8.2__LICENSE-APACHE.txt",
+        "texts/zeroize_1.8.2__LICENSE-MIT.txt"
+      ]
+    },
+    {
+      "name": "zig-threading-derived",
+      "version": "1.4.2",
+      "spdx": "MIT",
+      "kind": "vendored-source",
+      "source": "https://github.com/oven-sh/bun/tree/bun-v1.4.2/src/threading",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/zig-threading-derived_1.4.2__ThreadPool.rs-header.txt",
+        "texts/zig-threading-derived_1.4.2__zig-LICENSE.txt"
+      ],
+      "notes": "Thread-pool and wait-group code derived from kprotty's sync code and the Zig standard library (MIT, Zig Contributors). The header names the license; Zig's LICENSE is vendored here via the Zig repo."
+    },
+    {
+      "name": "zlib-ng",
+      "version": "2.3.3",
+      "spdx": "Zlib",
+      "kind": "native",
+      "source": "https://github.com/zlib-ng/zlib-ng/tree/12731092979c6d07f42da27da673a9f6c7b13586",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": ["texts/zlib-ng_2.3.3__LICENSE.md.txt"]
+    },
+    {
+      "name": "zstd",
+      "version": "git-f8745da6ff1a",
+      "spdx": "BSD-3-Clause OR GPL-2.0-only",
+      "kind": "native",
+      "source": "https://github.com/facebook/zstd/tree/f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+      "targets": [
+        "linux-x64",
+        "linux-arm64",
+        "windows-x64",
+        "windows-arm64",
+        "darwin-x64",
+        "darwin-arm64"
+      ],
+      "texts": [
+        "texts/zstd_git-f8745da6ff1a__LICENSE.txt",
+        "texts/zstd_git-f8745da6ff1a__COPYING.txt"
+      ],
+      "notes": "Passes the tier through BSD-3-Clause."
+    }
+  ]
+}
