@@ -15,3 +15,11 @@ Build what [Does the runtime tier accept `Unlicense` for bun_clap, or is the dep
 
 - The tier test pins the five new IDs, and fixtures under them pass in both tiers.
 - `bun_clap` passes `bun run notices --check --strict`, which then flags only entries other tickets still hold.
+
+---
+
+`PERMISSIVE_TIER` in `scripts/notices.ts` now has `Unlicense`, `CC0-1.0`, `MIT-0`, `BSL-1.0` and `Unicode-DFS-2016`, and the runtime tier includes them. The tier test pins all thirteen IDs, and a new `lax` npm fixture passes with one package per new ID. [Report](../assets/051-lax-ids-permissive-tier-report.md).
+
+- `bun_clap` has no `blockedUntilAmendment` flag and passes the runtime tier. `bun run notices --check --strict` now flags only `domain-browser@4.23.0`, which [ticket 052](./052-runtime-entry-exception-domain-browser.md) holds.
+- The failing-example fixtures use `WTFPL`: `unlicense-pkg` became `wtfpl-pkg` in the disallowed fixture, and the runtime fixture's `odd-clap` keeps its name.
+- Council approved in round 1 (claude 8, gemini 10, gpt 10). CI is green.
