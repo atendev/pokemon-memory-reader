@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { LGPL_COMPONENTS } from "../viewer/src/lgpl";
 import {
   bunPinProblems,
   checkExpression,
@@ -17,9 +18,11 @@ import {
   EMBEDDED_DEV_PACKAGES,
   EXCEPTIONS,
   type NoticesOptions,
+  needsLgplTerm,
   type Overrides,
   PERMISSIVE_TIER,
   RUNTIME_TIER,
+  renderLgplSection,
   renderNotices,
   repoOptions,
   run,
@@ -663,6 +666,7 @@ describe("renderNotices", () => {
       origin: "npm" as const,
       builds: null,
       source: null,
+      lgpl: null,
       texts: [{ file: "LICENSE", text: "t" }],
     });
     const sorted = [entry("10.0.0"), entry("9.0.0"), entry("9.10.0")].sort(
@@ -675,6 +679,178 @@ describe("renderNotices", () => {
     const { entries } = collectNotices(fixtureOptions("allowed"));
     const text = renderNotices(entries);
     expect(text.split("MIT License").length - 1).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("LGPL components", () => {
+  const runtimeOptions = () =>
+    fixtureOptions("runtime", {
+      roots: [],
+      manifestPath: join(FIXTURES, "runtime/bun-runtime.json"),
+      noticesDir: join(FIXTURES, "runtime"),
+    });
+
+  test("a license needs the LGPL term only when it can't pass without it", () => {
+    expect(needsLgplTerm("LGPL-2.1-or-later")).toBe(true);
+    expect(needsLgplTerm("LGPL-2.0-or-later AND BSD-3-Clause")).toBe(true);
+    expect(
+      needsLgplTerm(
+        "LGPL-2.0-or-later AND LGPL-2.1-or-later AND BSD-2-Clause AND BSD-3-Clause AND (MPL-1.1 OR GPL-2.0-or-later OR LGPL-2.1-or-later)",
+      ),
+    ).toBe(true);
+    expect(needsLgplTerm("LGPL-2.1-or-later OR MIT")).toBe(false);
+    expect(needsLgplTerm("MIT")).toBe(false);
+    expect(needsLgplTerm("MPL-2.0")).toBe(false);
+    expect(needsLgplTerm("Unlicense")).toBe(false);
+    expect(needsLgplTerm("not a license")).toBe(false);
+  });
+
+  test("a manifest entry that needs the LGPL term carries its notice fields", () => {
+    const { entries, problems } = collectNotices(runtimeOptions());
+    expect(problems).toEqual([]);
+    expect(entries.find((e) => e.name === "jsc")?.lgpl).toEqual({
+      displayName: "Fixture JSC",
+      copyright: "Copyright the fixture authors",
+      mirror: { repo: "example/jsc", tag: "pmr-bun-v1.4.2" },
+    });
+    expect(entries.filter((e) => e.lgpl !== null)).toHaveLength(1);
+  });
+
+  test("an LGPL entry without displayName, copyright or a mirror fails", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(FIXTURES, "runtime/bun-runtime.json"), "utf8"),
+    );
+    manifest.components[1].displayName = undefined;
+    manifest.components[1].copyright = " ";
+    manifest.components[1].mirror = { repo: "example/jsc" };
+    const dir = mkdtempSync(join(tmpdir(), "notices-manifest-"));
+    try {
+      writeFileSync(join(dir, "bun-runtime.json"), JSON.stringify(manifest));
+      mkdirSync(join(dir, "texts"));
+      writeFileSync(join(dir, "texts/apache.txt"), "text\n");
+      writeFileSync(join(dir, "texts/mit.txt"), "text\n");
+      const { problems, entries } = collectNotices(
+        fixtureOptions("runtime", {
+          roots: [],
+          manifestPath: join(dir, "bun-runtime.json"),
+          noticesDir: dir,
+        }),
+      );
+      expect(problems).toEqual([
+        "Bun runtime component jsc@1.0.0 needs an LGPL notice (amendment 042 §5) but has no displayName, copyright, mirror.tag.",
+      ]);
+      expect(entries.find((e) => e.name === "jsc")?.lgpl).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("the notices file opens with the LGPL section, before every entry", () => {
+    const { entries } = collectNotices(runtimeOptions());
+    const text = renderNotices(entries);
+    const lgpl = text.indexOf("LGPL COMPONENTS");
+    expect(lgpl).toBeGreaterThan(-1);
+    expect(text.slice(0, lgpl)).toBe(
+      "THIRD-PARTY NOTICES\n\nPokemon Memory Reader includes the software below. Each entry gives its license and the license text.\n\n",
+    );
+    expect(lgpl).toBeLessThan(text.indexOf("jsc 1.0.0\nLicense:"));
+    expect(lgpl).toBeLessThan(text.indexOf("libc++abi 19.1.0\nLicense:"));
+  });
+
+  test("the section names the library, copyright, static linking, mirror tag and relinking doc", () => {
+    const { entries } = collectNotices(runtimeOptions());
+    const section = renderLgplSection(entries) ?? "";
+    expect(section).toContain("Fixture JSC\nCopyright the fixture authors");
+    expect(section).toContain("Statically linked into the executable");
+    expect(section).toContain("GNU Lesser General Public License");
+    expect(section).toContain(
+      "Source: https://github.com/example/jsc/tree/pmr-bun-v1.4.2",
+    );
+    expect(section).toContain(
+      "git clone --depth 1 --branch pmr-bun-v1.4.2 https://github.com/example/jsc",
+    );
+    expect(section).toContain("docs/lgpl-relinking.md");
+    expect(section).not.toContain("LGPL-2.0-or-later");
+  });
+
+  test("a build with no LGPL component has no section", () => {
+    const { entries } = collectNotices(fixtureOptions("allowed"));
+    expect(renderLgplSection(entries)).toBeNull();
+    expect(renderNotices(entries)).not.toContain("LGPL COMPONENTS");
+  });
+
+  describe("in the checked-in manifest", () => {
+    const { entries, problems } = collectNotices(repoOptions());
+    const lgpl = entries.filter((e) => e.lgpl !== null);
+    const text = renderNotices(entries);
+
+    test("JavaScriptCore (WebKit) and tinycc are the LGPL components, and nothing fails", () => {
+      expect(problems).toEqual([]);
+      expect(lgpl.map((e) => e.lgpl?.displayName).sort()).toEqual([
+        "JavaScriptCore (WebKit)",
+        "tinycc",
+      ]);
+    });
+
+    test("the file opens with the LGPL section and the section names both libraries", () => {
+      const section = renderLgplSection(entries) ?? "";
+      expect(text.indexOf(section)).toBeGreaterThan(-1);
+      expect(text.indexOf("LGPL COMPONENTS")).toBeLessThan(
+        text.indexOf("\nbun 1.4.2\nLicense:"),
+      );
+      expect(section).toContain(
+        "Copyright Fabrice Bellard and the tinycc contributors",
+      );
+      expect(section).toContain("Copyright the WebKit contributors");
+      expect(section).toContain(
+        "https://github.com/atendev/WebKit/tree/pmr-bun-v1.4.2",
+      );
+      expect(section).toContain(
+        "https://github.com/atendev/tinycc/tree/pmr-bun-v1.4.2",
+      );
+    });
+
+    test("the section says some WebKit files are LGPL-2.0-or-later and points at the 2.0 text", () => {
+      const webkit = renderLgplSection(entries) ?? "";
+      expect(webkit).toContain("LGPL-2.0-or-later");
+      expect(webkit).toContain("texts/WebKit__COPYING.LIB.txt");
+      expect(webkit).toContain("texts/WebKit__LICENSE-LGPL-2.txt");
+      expect(webkit).toContain("texts/tinycc_git-05f0fafaa3be__COPYING.txt");
+      for (const file of [
+        "--- texts/WebKit__COPYING.LIB.txt ---",
+        "--- texts/WebKit__LICENSE-LGPL-2.txt ---",
+        "--- texts/WebKit__LICENSE-LGPL-2.1.txt ---",
+      ]) {
+        expect(text).toContain(file);
+      }
+    });
+
+    test("every mirror tag is pmr-bun-v<Bun version>", () => {
+      const manifest = JSON.parse(
+        readFileSync(join(import.meta.dir, "notices/bun-runtime.json"), "utf8"),
+      ) as { bunVersion: string };
+      for (const e of lgpl)
+        expect(e.lgpl?.mirror.tag).toBe(`pmr-bun-v${manifest.bunVersion}`);
+    });
+
+    test("the viewer's About list is the manifest's LGPL entries", () => {
+      const fromManifest = lgpl
+        .flatMap((e) =>
+          e.lgpl === null
+            ? []
+            : [
+                {
+                  displayName: e.lgpl.displayName,
+                  copyright: e.lgpl.copyright,
+                },
+              ],
+        )
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      const inViewer = [...LGPL_COMPONENTS].sort((a, b) =>
+        a.displayName.localeCompare(b.displayName),
+      );
+      expect(inViewer).toEqual(fromManifest);
+    });
   });
 });
 
