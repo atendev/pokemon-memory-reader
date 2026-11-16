@@ -587,8 +587,7 @@
         "darwin-arm64"
       ],
       "texts": ["texts/bun_clap_1.4.2__LICENSE.txt"],
-      "notes": "Port of zig-clap. The LICENSE is the Unlicense, which is not in the runtime tier. NEEDS AMENDMENT: this entry fails the tier check until an amendment accepts it. See the stop-and-amend rule in amendment 027 item 7.",
-      "blockedUntilAmendment": true
+      "notes": "Port of zig-clap. The LICENSE is the Unlicense, which the permissive tier accepts (amendment 043)."
     },
     {
       "name": "bytemuck",

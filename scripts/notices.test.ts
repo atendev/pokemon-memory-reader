@@ -59,7 +59,7 @@ function capture() {
 }
 
 describe("tiers", () => {
-  test("the permissive tier is exactly the eight IDs of amendment 027", () => {
+  test("the permissive tier is exactly the thirteen IDs of amendments 027 and 043", () => {
     expect([...PERMISSIVE_TIER]).toEqual([
       "MIT",
       "ISC",
@@ -69,6 +69,11 @@ describe("tiers", () => {
       "Apache-2.0",
       "Zlib",
       "Unicode-3.0",
+      "Unlicense",
+      "CC0-1.0",
+      "MIT-0",
+      "BSL-1.0",
+      "Unicode-DFS-2016",
     ]);
   });
 
@@ -99,6 +104,19 @@ describe("checkExpression", () => {
   test("allows each permissive ID", () => {
     for (const id of PERMISSIVE_TIER) {
       expect(checkExpression(id, "permissive")).toEqual({ ok: true });
+    }
+  });
+
+  test("the lax IDs of amendment 043 pass in both tiers", () => {
+    for (const id of [
+      "Unlicense",
+      "CC0-1.0",
+      "MIT-0",
+      "BSL-1.0",
+      "Unicode-DFS-2016",
+    ]) {
+      expect(checkExpression(id, "permissive"), id).toEqual({ ok: true });
+      expect(checkExpression(id, "runtime"), id).toEqual({ ok: true });
     }
   });
 
@@ -185,10 +203,6 @@ describe("checkExpression", () => {
 
   test("excluded IDs fail in both tiers", () => {
     for (const id of [
-      "MIT-0",
-      "BSL-1.0",
-      "Unlicense",
-      "CC0-1.0",
       "Python-2.0",
       "LGPL-3.0-or-later",
       "GPL-3.0-or-later",
@@ -234,6 +248,18 @@ describe("package fixtures", () => {
     expect(mit?.texts[0]?.text).toContain("MIT License");
   });
 
+  test("the lax IDs pass for npm packages", () => {
+    const { entries, problems } = collectNotices(fixtureOptions("lax"));
+    expect(problems).toEqual([]);
+    expect(entries.map((e) => `${e.name}:${e.spdx}`).sort()).toEqual([
+      "boost-pkg:BSL-1.0",
+      "cc0-pkg:CC0-1.0",
+      "mit0-pkg:MIT-0",
+      "unicode-dfs-pkg:Unicode-DFS-2016",
+      "unlicense-pkg:Unlicense",
+    ]);
+  });
+
   test("an Apache-2.0 package's NOTICE file is copied too", () => {
     const { entries } = collectNotices(fixtureOptions("allowed"));
     const files = entries
@@ -262,7 +288,7 @@ describe("package fixtures", () => {
     has("exception-pkg@1.0.0", "Classpath-exception-2.0");
     has("runtime-only-pkg@1.0.0", "outside the permissive tier");
     has("plus-pkg@1.0.0", "LGPL-2.0-or-later");
-    has("unlicense-pkg@1.0.0", "Unlicense");
+    has("wtfpl-pkg@1.0.0", "WTFPL");
   });
 
   test("non-SPDX, missing, legacy and object license fields fail", () => {
@@ -571,7 +597,7 @@ describe("Bun runtime manifest", () => {
       expect(blocked).toEqual([]);
       expect(problems).toHaveLength(1);
       expect(problems[0]).toContain("odd-clap@1.0.0");
-      expect(problems[0]).toContain("Unlicense");
+      expect(problems[0]).toContain("WTFPL");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -682,7 +708,7 @@ describe("the repo", () => {
   test("passes against the installed dependencies and the checked-in Bun manifest", () => {
     const { entries, problems, blocked } = collectNotices(repoOptions());
     expect(problems).toEqual([]);
-    expect(blocked).toEqual(["bun_clap@1.4.2", "domain-browser@4.23.0"]);
+    expect(blocked).toEqual(["domain-browser@4.23.0"]);
     const npm = entries.filter((e) => e.origin === "npm").map((e) => e.name);
     for (const name of ["zod", "hono", "react", "react-dom"])
       expect(npm).toContain(name);
@@ -702,7 +728,8 @@ describe("the command line", () => {
     expect(run(["--check", "--out", target], repoOptions(), out)).toBe(0);
     expect(
       lines.some(
-        (l) => l.level === "warn" && l.message.includes("bun_clap@1.4.2"),
+        (l) =>
+          l.level === "warn" && l.message.includes("domain-browser@4.23.0"),
       ),
     ).toBe(true);
     expect(lines.at(-1)?.message).toContain("Notices check passed");
