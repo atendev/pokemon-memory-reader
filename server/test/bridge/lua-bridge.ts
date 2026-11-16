@@ -23,15 +23,77 @@ export function expectedBytes(
   );
 }
 
+/** Thrown by `next()` when the stream broke and no valid frame is left to deliver. */
+export class BadFrameError extends Error {
+  constructor(readonly reason: string) {
+    super(`bad frame: ${reason}`);
+  }
+}
+
 /** A frame stream read from one TCP client. */
 export interface TestClient {
   readonly closed: Promise<void>;
   send(bytes: Uint8Array): void;
+  /** Frames parsed before a bad frame are delivered first. Then it throws `BadFrameError` at once, not after the timeout. */
   next(timeoutMs?: number): Promise<Frame>;
-  /** Waits for a frame, or returns null if none arrives within the timeout. */
+  /** Waits for a frame, or returns null if none arrives within the timeout or the stream broke. */
   maybeNext(timeoutMs: number): Promise<Frame | null>;
   badFrame(): string | null;
   close(): void;
+}
+
+/** Connects a TCP client that decodes the frames a bridge sends. */
+export async function connectTestClient(port: number): Promise<TestClient> {
+  const decoder = new FrameDecoder();
+  const frames: Frame[] = [];
+  let bad: string | null = null;
+  let wake: (() => void) | null = null;
+  let closedResolve!: () => void;
+  const closed = new Promise<void>((r) => {
+    closedResolve = r;
+  });
+  const socket = await Bun.connect({
+    hostname: "127.0.0.1",
+    port,
+    socket: {
+      data(_s, chunk) {
+        const result = decoder.push(chunk);
+        frames.push(...result.frames);
+        if (result.badFrame !== null) bad = result.badFrame;
+        wake?.();
+      },
+      close() {
+        closedResolve();
+        wake?.();
+      },
+      error() {},
+    },
+  });
+  const maybeNext = async (timeoutMs: number): Promise<Frame | null> => {
+    const deadline = Date.now() + timeoutMs;
+    while (frames.length === 0 && bad === null) {
+      const left = deadline - Date.now();
+      if (left <= 0) return null;
+      await new Promise<void>((r) => {
+        wake = r;
+        setTimeout(r, left);
+      });
+    }
+    return frames.shift() ?? null;
+  };
+  return {
+    closed,
+    send: (bytes) => void socket.write(bytes),
+    maybeNext,
+    next: async (timeoutMs = 2000) => {
+      const frame = await maybeNext(timeoutMs);
+      if (frame) return frame;
+      if (bad !== null) throw new BadFrameError(bad);
+      throw new Error("no frame arrived in time");
+    },
+    badFrame: () => bad,
+    close: () => socket.end(),
+  };
 }
 
 /**
@@ -142,56 +204,8 @@ export class LuaBridge {
   }
 
   /** Connects a real TCP client to the relay. */
-  async connect(): Promise<TestClient> {
-    const decoder = new FrameDecoder();
-    const frames: Frame[] = [];
-    let bad: string | null = null;
-    let wake: (() => void) | null = null;
-    let closedResolve!: () => void;
-    const closed = new Promise<void>((r) => {
-      closedResolve = r;
-    });
-    const socket = await Bun.connect({
-      hostname: "127.0.0.1",
-      port: this.port,
-      socket: {
-        data(_s, chunk) {
-          const result = decoder.push(chunk);
-          frames.push(...result.frames);
-          if (result.badFrame !== null) bad = result.badFrame;
-          wake?.();
-        },
-        close() {
-          closedResolve();
-          wake?.();
-        },
-        error() {},
-      },
-    });
-    const maybeNext = async (timeoutMs: number): Promise<Frame | null> => {
-      const deadline = Date.now() + timeoutMs;
-      while (frames.length === 0) {
-        const left = deadline - Date.now();
-        if (left <= 0) return null;
-        await new Promise<void>((r) => {
-          wake = r;
-          setTimeout(r, left);
-        });
-      }
-      return frames.shift() ?? null;
-    };
-    return {
-      closed,
-      send: (bytes) => void socket.write(bytes),
-      maybeNext,
-      next: async (timeoutMs = 2000) => {
-        const frame = await maybeNext(timeoutMs);
-        if (!frame) throw new Error("no frame arrived in time");
-        return frame;
-      },
-      badFrame: () => bad,
-      close: () => socket.end(),
-    };
+  connect(): Promise<TestClient> {
+    return connectTestClient(this.port);
   }
 
   async stop(): Promise<void> {
