@@ -1,6 +1,8 @@
 ---
 type: grilling
 blocked_by: [041]
+claimed_by: wayfinder-master v2-build-master-1794807670
+claimed_at: 2026-11-16T06:40:24Z
 ---
 
 # How do releases meet the LGPL terms for Bun's statically linked JavaScriptCore and tinycc?
