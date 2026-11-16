@@ -58,6 +58,7 @@ const provenance = z.discriminatedUnion("kind", [
       repo: z.string(),
       commit: z.string().regex(/^[0-9a-f]{40}$/),
       symbolFile: z.string(),
+      signatureEvidence: z.enum(["owner", "chain", "unconfirmed"]).optional(),
     })
     .strict(),
   z

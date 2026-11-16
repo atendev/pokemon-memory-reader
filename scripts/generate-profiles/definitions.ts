@@ -1,4 +1,4 @@
-import type { ProfileDefinition } from "./definition";
+import type { HeldBackDefinition, ProfileDefinition } from "./definition";
 
 /**
  * The GF ROM header starts at 0x08000100. These words point at the species info, item and move
@@ -55,5 +55,24 @@ export const definitions: readonly ProfileDefinition[] = [
       header: { gameCode: "BPEE", revision: 0 },
       signature: EMERALD_SIGNATURE,
     },
+  },
+];
+
+/** Revisions the generator skips. The release gate also checks that none of them is a built-in profile. */
+export const heldBack: readonly HeldBackDefinition[] = [
+  {
+    id: "sapphire-de-1.0",
+    name: "Pokémon Saphir-Edition (DE 1.0)",
+    repo: "pret/pokeruby",
+    sha1: {
+      commit: "5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f",
+      file: "sapphire_de.sha1",
+    },
+    noIntro: {
+      commit: "5e01cef0d4d264e05f8021d89e6b4a193fd50aa7",
+      file: "metadat/no-intro/Nintendo - Game Boy Advance.dat",
+    },
+    reason:
+      "pret's SHA-1 for the build is not No-Intro's SHA-1 for the retail ROM, so the signature and the table addresses are both suspect",
   },
 ];

@@ -40,6 +40,7 @@ describe("the Emerald profile", () => {
       repo: "pret/pokeemerald",
       commit: "4a73ce73964859d53a2d21e58db2525e8fa4b31b",
       symbolFile: "pokeemerald.sym",
+      signatureEvidence: "unconfirmed",
     });
   });
 });

@@ -1,11 +1,13 @@
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { buildProfile, renderIndex, renderProfile } from "./build";
-import { definitions } from "./definitions";
-import { parseNoIntroDat, parsePretSha1, resolveHashes } from "./hashes";
+import { definitions, heldBack } from "./definitions";
+import { parseLedger } from "./evidence";
+import { parseNoIntroDat, parsePretSha1 } from "./hashes";
+import { planGeneration } from "./plan";
 import { parseSymFile } from "./sym";
 
 const OUT = join(import.meta.dir, "../../server/src/profile/builtin");
+const LEDGER = join(import.meta.dir, "signature-ledger.json");
 
 async function fetchText(
   repo: string,
@@ -32,32 +34,42 @@ function noIntroDat(commit: string, file: string) {
   return dat;
 }
 
-// Fetch and render everything first so a failed fetch never leaves the committed output half deleted.
-const rendered = new Map<string, string>();
+const ledger = parseLedger(await readFile(LEDGER, "utf8"));
+
+// Fetch everything first so a failed fetch never leaves the committed output half deleted.
+const held = [];
+for (const entry of heldBack) {
+  held.push({
+    held: entry,
+    pretSha1s: parsePretSha1(
+      await fetchText(entry.repo, entry.sha1.commit, entry.sha1.file),
+      `${entry.repo} ${entry.sha1.file}`,
+    ),
+    noIntro: await noIntroDat(entry.noIntro.commit, entry.noIntro.file),
+  });
+}
+const built = [];
 for (const definition of definitions) {
   const { repo, commit, symbolFile } = definition.source;
-  const sha1s = parsePretSha1(
-    await fetchText(repo, definition.sha1.commit, definition.sha1.file),
-    `${repo} ${definition.sha1.file}`,
-  );
-  const hashes = resolveHashes(
-    sha1s,
-    await noIntroDat(definition.noIntro.commit, definition.noIntro.file),
-    {
-      pret: `${repo} ${definition.sha1.file}`,
-      noIntro: definition.noIntro.file,
-    },
-  );
-  const symbols = parseSymFile(await fetchText(repo, commit, symbolFile));
-  rendered.set(
-    `${definition.id}.json`,
-    renderProfile(buildProfile(definition, symbols, hashes)),
-  );
+  built.push({
+    definition,
+    pretSha1s: parsePretSha1(
+      await fetchText(repo, definition.sha1.commit, definition.sha1.file),
+      `${repo} ${definition.sha1.file}`,
+    ),
+    noIntro: await noIntroDat(
+      definition.noIntro.commit,
+      definition.noIntro.file,
+    ),
+    symbols: parseSymFile(await fetchText(repo, commit, symbolFile)),
+  });
 }
-rendered.set("index.ts", renderIndex(definitions.map((d) => d.id)));
+
+const { files, messages } = planGeneration({ built, held, ledger });
+for (const message of messages) console.log(message);
 
 await mkdir(OUT, { recursive: true });
 for (const stale of await readdir(OUT)) {
   if (stale.endsWith(".json")) await rm(join(OUT, stale));
 }
-for (const [name, text] of rendered) await writeFile(join(OUT, name), text);
+for (const [name, text] of files) await writeFile(join(OUT, name), text);

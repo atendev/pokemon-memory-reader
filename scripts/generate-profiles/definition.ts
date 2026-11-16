@@ -39,3 +39,17 @@ export interface ProfileDefinition {
     }>;
   };
 }
+
+/**
+ * A revision the generator skips because its pret SHA-1 matches no No-Intro entry (amendment 022 item 4).
+ * Taking it out of `heldBack` is the one-line change that re-enters it, once its chain is repaired or the
+ * owner's ROM has passed `test:local`.
+ */
+export interface HeldBackDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly repo: string;
+  readonly sha1: ProfileDefinition["sha1"];
+  readonly noIntro: ProfileDefinition["noIntro"];
+  readonly reason: string;
+}

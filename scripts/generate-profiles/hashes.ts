@@ -29,6 +29,14 @@ export function parseNoIntroDat(text: string): Map<string, Set<string>> {
   return bySha1;
 }
 
+/** The pret SHA-1 values with no No-Intro entry. A non-empty result is a broken chain (amendment 022 item 2). */
+export function brokenChain(
+  sha1s: readonly string[],
+  noIntro: ReadonlyMap<string, ReadonlySet<string>>,
+): string[] {
+  return sha1s.filter((sha1) => !noIntro.has(sha1));
+}
+
 /**
  * Pairs each pret SHA-1 with the CRC32 of the No-Intro entry that has the same SHA-1 (amendment 019 §7).
  * A SHA-1 with no entry, or with entries that disagree on the CRC32, fails the generator.
@@ -43,7 +51,7 @@ export function resolveHashes(
     const [only] = crcs;
     if (only === undefined)
       throw new Error(
-        `No-Intro ${source.noIntro} has no entry with SHA-1 ${sha1} (listed in ${source.pret}). Move the pinned DAT commit forward, or take the definition out until No-Intro lists the revision.`,
+        `No-Intro ${source.noIntro} has no entry with SHA-1 ${sha1} (listed in ${source.pret}). Move the pinned DAT commit forward, or hold the revision back in heldBack in definitions.ts until the chain is repaired or the owner's ROM passes (amendment 022 item 4).`,
       );
     if (crcs.length > 1)
       throw new Error(

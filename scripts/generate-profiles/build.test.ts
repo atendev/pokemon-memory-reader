@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildProfile, renderIndex, renderProfile } from "./build";
 import { definitions } from "./definitions";
+import { parseLedger, rateSignatureEvidence } from "./evidence";
 import { parseNoIntroDat, parsePretSha1, resolveHashes } from "./hashes";
 import { parseSymFile } from "./sym";
 
@@ -28,6 +29,21 @@ const hashes = resolveHashes(
   source,
 );
 
+const ledger = parseLedger(
+  readFileSync(join(import.meta.dir, "signature-ledger.json"), "utf8"),
+);
+const evidence =
+  rateSignatureEvidence(
+    [
+      {
+        id: definition.id,
+        repo: definition.source.repo,
+        sha1: hashes.sha1,
+      },
+    ],
+    ledger,
+  ).get(definition.id) ?? "unconfirmed";
+
 describe("parseSymFile", () => {
   test("keeps global symbols with address and size", () => {
     const symbols = parseSymFile(
@@ -51,9 +67,11 @@ describe("the Emerald profile", () => {
   const symbols = parseSymFile(excerpt);
 
   test("is a pure function of the definition and the symbol excerpt", () => {
-    const first = renderProfile(buildProfile(definition, symbols, hashes));
+    const first = renderProfile(
+      buildProfile(definition, symbols, hashes, evidence),
+    );
     const second = renderProfile(
-      buildProfile(definition, parseSymFile(excerpt), hashes),
+      buildProfile(definition, parseSymFile(excerpt), hashes, evidence),
     );
     expect(second).toBe(first);
   });
@@ -66,9 +84,9 @@ describe("the Emerald profile", () => {
       ),
       "utf8",
     );
-    expect(renderProfile(buildProfile(definition, symbols, hashes))).toBe(
-      committed,
-    );
+    expect(
+      renderProfile(buildProfile(definition, symbols, hashes, evidence)),
+    ).toBe(committed);
   });
 
   test("matches the committed index", () => {
@@ -80,7 +98,7 @@ describe("the Emerald profile", () => {
   });
 
   test("records pointers as pointer entries and the signature as little-endian words", () => {
-    const built = buildProfile(definition, symbols, hashes) as {
+    const built = buildProfile(definition, symbols, hashes, evidence) as {
       addresses: Record<string, unknown>;
       identify: { signature: Array<{ address: string; bytes: string }> };
     };
@@ -98,12 +116,14 @@ describe("the Emerald profile", () => {
   test("a missing symbol or a size that isn't a whole number of entries fails", () => {
     const without = new Map(symbols);
     without.delete("gPlayerParty");
-    expect(() => buildProfile(definition, without, hashes)).toThrow(
+    expect(() => buildProfile(definition, without, hashes, evidence)).toThrow(
       "gPlayerParty",
     );
     const odd = new Map(symbols);
     odd.set("gTrainers", { address: 0x08310030, size: 41 });
-    expect(() => buildProfile(definition, odd, hashes)).toThrow("multiple");
+    expect(() => buildProfile(definition, odd, hashes, evidence)).toThrow(
+      "multiple",
+    );
   });
 });
 
@@ -126,7 +146,7 @@ describe("hash lists", () => {
 
   test("parseNoIntroDat lowercases hashes and ignores entries it cannot read", () => {
     const dat = parseNoIntroDat(noIntroDat);
-    expect(dat.size).toBe(2);
+    expect(dat.size).toBe(3);
     expect([
       ...(dat.get("f3ae088181bf583e55daf962a92bb46f4f1d07b7") ?? []),
     ]).toEqual(["1f1c08fb"]);
