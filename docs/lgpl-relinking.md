@@ -2,7 +2,7 @@
 
 The compiled program is a copy of Bun with the app's JavaScript attached. Bun statically links two libraries under the GNU Lesser General Public License (LGPL): JavaScriptCore, which is part of WebKit, and tinycc. This page gives the source and the steps to change either library and build a working program from your change. The steps here are for Bun 1.4.2. Every release tag carries the copy of this page that matches it.
 
-This is an engineering reading of LGPL-2.1 section 6, not legal advice. The program's own GPL-3.0-or-later terms let you modify it for your own use and reverse engineer it to debug your modifications.
+This is an engineering reading of LGPL-2.1 section 6, not legal advice. LGPL-2.1 section 6 requires the program's terms to let you modify it for your own use and reverse engineer it to debug your modifications. Its GPL-3.0-or-later terms allow modification and put no limit on reverse engineering, and no text in this repository adds one.
 
 Last verified: not yet verified. The end-to-end run on linux-x64 gates `v2.0.0-beta.1`, and this line then records its date and the Bun version. The steps below come from reading Bun's build scripts at `bun-v1.4.2` and have not been run.
 
@@ -59,7 +59,7 @@ The Bun tag's `scripts/bootstrap.sh` installs the full set on Linux.
    bun scripts/build.ts --profile=release-local --build-dir=build/release-local
    ```
 
-   `release-local` is a release build with a local WebKit. If you changed only tinycc, `--profile=release` uses Bun's prebuilt WebKit. The package script `bun run build:local` is a debug build, so don't use it. The build prints where it wrote the Bun executable.
+   `release-local` is Bun's release profile with `webkit: "local"` (`scripts/build/profiles.ts` at the Bun tag), the same as passing `--webkit=local` to the release profile. If you changed only tinycc, `--profile=release` uses Bun's prebuilt WebKit. The package script `bun run build:local` is a debug build, so don't use it. The build prints where it wrote the Bun executable.
 
 4. Clone this program at the release tag and install its dependencies. The npm registry serves them at the lockfile's versions, and `THIRD-PARTY-NOTICES.txt` lists them:
 

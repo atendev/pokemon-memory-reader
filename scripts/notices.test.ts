@@ -699,6 +699,9 @@ describe("LGPL components", () => {
       ),
     ).toBe(true);
     expect(needsLgplTerm("LGPL-2.1-or-later OR MIT")).toBe(false);
+    expect(needsLgplTerm("LGPL-2.1-or-later OR MPL-2.0")).toBe(false);
+    expect(needsLgplTerm("MPL-2.0 OR MIT")).toBe(false);
+    expect(needsLgplTerm("LGPL-2.1-or-later AND MPL-2.0")).toBe(true);
     expect(needsLgplTerm("MIT")).toBe(false);
     expect(needsLgplTerm("MPL-2.0")).toBe(false);
     expect(needsLgplTerm("Unlicense")).toBe(false);

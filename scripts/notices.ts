@@ -137,20 +137,21 @@ export function checkExpression(expression: string, tier: Tier): Verdict {
 const LGPL_IDS: readonly string[] = ["LGPL-2.0-or-later", "LGPL-2.1-or-later"];
 
 /**
- * True when the expression only passes the allowlist because an LGPL term is allowed (amendment 042 §1).
- * `LGPL-2.1-or-later OR MIT` passes without it, so it doesn't count.
+ * True when the expression only passes the runtime tier because an LGPL term is allowed (amendment 042 §1).
+ * `LGPL-2.1-or-later OR MIT` and `LGPL-2.1-or-later OR MPL-2.0` pass without it, so they don't count.
  */
 export function needsLgplTerm(expression: string): boolean {
-  if (checkExpression(expression, "permissive").ok) return false;
+  if (!checkExpression(expression, "runtime").ok) return false;
   let tree: ReturnType<typeof parseSpdx>;
   try {
     tree = parseSpdx(canonicalCase(expression));
   } catch {
     return false;
   }
-  return evaluate(
+  const withoutLgpl = RUNTIME_TIER.filter((id) => !LGPL_IDS.includes(id));
+  return !evaluate(
     tree,
-    new Set([...PERMISSIVE_TIER, ...LGPL_IDS].map((id) => id.toLowerCase())),
+    new Set(withoutLgpl.map((id) => id.toLowerCase())),
     new Set(EXCEPTIONS.map((e) => e.toLowerCase())),
   ).pass;
 }
