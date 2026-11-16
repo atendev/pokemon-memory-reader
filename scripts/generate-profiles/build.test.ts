@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildProfile, checkSha1, renderIndex, renderProfile } from "./build";
+import { buildProfile, renderIndex, renderProfile } from "./build";
 import { definitions } from "./definitions";
+import { parseNoIntroDat, parsePretSha1, resolveHashes } from "./hashes";
 import { parseSymFile } from "./sym";
 
 const excerpt = readFileSync(
@@ -11,6 +12,21 @@ const excerpt = readFileSync(
 );
 const definition = definitions[0];
 if (!definition) throw new Error("no definitions");
+
+const pretSha1 = readFileSync(
+  join(import.meta.dir, "fixtures/pokeemerald.rom.sha1"),
+  "utf8",
+);
+const noIntroDat = readFileSync(
+  join(import.meta.dir, "fixtures/no-intro-gba.excerpt.dat"),
+  "utf8",
+);
+const source = { pret: "pret/pokeemerald rom.sha1", noIntro: "excerpt.dat" };
+const hashes = resolveHashes(
+  parsePretSha1(pretSha1, "rom.sha1"),
+  parseNoIntroDat(noIntroDat),
+  source,
+);
 
 describe("parseSymFile", () => {
   test("keeps global symbols with address and size", () => {
@@ -35,9 +51,9 @@ describe("the Emerald profile", () => {
   const symbols = parseSymFile(excerpt);
 
   test("is a pure function of the definition and the symbol excerpt", () => {
-    const first = renderProfile(buildProfile(definition, symbols));
+    const first = renderProfile(buildProfile(definition, symbols, hashes));
     const second = renderProfile(
-      buildProfile(definition, parseSymFile(excerpt)),
+      buildProfile(definition, parseSymFile(excerpt), hashes),
     );
     expect(second).toBe(first);
   });
@@ -50,7 +66,9 @@ describe("the Emerald profile", () => {
       ),
       "utf8",
     );
-    expect(renderProfile(buildProfile(definition, symbols))).toBe(committed);
+    expect(renderProfile(buildProfile(definition, symbols, hashes))).toBe(
+      committed,
+    );
   });
 
   test("matches the committed index", () => {
@@ -62,7 +80,7 @@ describe("the Emerald profile", () => {
   });
 
   test("records pointers as pointer entries and the signature as little-endian words", () => {
-    const built = buildProfile(definition, symbols) as {
+    const built = buildProfile(definition, symbols, hashes) as {
       addresses: Record<string, unknown>;
       identify: { signature: Array<{ address: string; bytes: string }> };
     };
@@ -80,26 +98,54 @@ describe("the Emerald profile", () => {
   test("a missing symbol or a size that isn't a whole number of entries fails", () => {
     const without = new Map(symbols);
     without.delete("gPlayerParty");
-    expect(() => buildProfile(definition, without)).toThrow("gPlayerParty");
+    expect(() => buildProfile(definition, without, hashes)).toThrow(
+      "gPlayerParty",
+    );
     const odd = new Map(symbols);
     odd.set("gTrainers", { address: 0x08310030, size: 41 });
-    expect(() => buildProfile(definition, odd)).toThrow("multiple");
+    expect(() => buildProfile(definition, odd, hashes)).toThrow("multiple");
   });
 });
 
-describe("checkSha1", () => {
-  const hash = "f3ae088181bf583e55daf962a92bb46f4f1d07b7";
-  test("accepts pret's line format", () => {
-    expect(() =>
-      checkSha1(`${hash}  pokeemerald.gba\n`, [hash], "rom.sha1"),
-    ).not.toThrow();
+describe("hash lists", () => {
+  test("take SHA-1 from pret and CRC32 from the No-Intro entry with that SHA-1", () => {
+    expect(hashes).toEqual({
+      sha1: ["f3ae088181bf583e55daf962a92bb46f4f1d07b7"],
+      crc32: ["1f1c08fb"],
+    });
   });
-  test("rejects a different hash", () => {
-    expect(() =>
-      checkSha1(`${"0".repeat(40)}  pokeemerald.gba\n`, [hash], "rom.sha1"),
-    ).toThrow("rom.sha1");
+
+  test("parsePretSha1 reads pret's line format and rejects a file with no hash", () => {
+    expect(parsePretSha1(`${"A".repeat(40)}  pokeemerald.gba\n`, "f")).toEqual([
+      "a".repeat(40),
+    ]);
+    expect(() => parsePretSha1("<html>", "rom.sha1")).toThrow(
+      "rom.sha1 lists no SHA-1",
+    );
   });
-  test("rejects a file with no hash", () => {
-    expect(() => checkSha1("<html>", [hash], "rom.sha1")).toThrow("no SHA-1");
+
+  test("parseNoIntroDat lowercases hashes and ignores entries it cannot read", () => {
+    const dat = parseNoIntroDat(noIntroDat);
+    expect(dat.size).toBe(2);
+    expect([
+      ...(dat.get("f3ae088181bf583e55daf962a92bb46f4f1d07b7") ?? []),
+    ]).toEqual(["1f1c08fb"]);
+  });
+
+  test("a SHA-1 with no No-Intro entry fails and names the SHA-1 and both sources", () => {
+    const missing = "0".repeat(40);
+    expect(() =>
+      resolveHashes([missing], parseNoIntroDat(noIntroDat), source),
+    ).toThrow(
+      `No-Intro excerpt.dat has no entry with SHA-1 ${missing} (listed in pret/pokeemerald rom.sha1)`,
+    );
+  });
+
+  test("entries with one SHA-1 and different CRC32 values fail", () => {
+    const sha1 = "f3ae088181bf583e55daf962a92bb46f4f1d07b7";
+    const clash = `${noIntroDat}\ngame (\n\trom ( name "x.gba" size 1 crc 00000001 md5 ${"A".repeat(32)} sha1 ${sha1.toUpperCase()} )\n)\n`;
+    expect(() => resolveHashes([sha1], parseNoIntroDat(clash), source)).toThrow(
+      "different CRC32",
+    );
   });
 });
