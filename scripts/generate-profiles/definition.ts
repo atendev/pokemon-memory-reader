@@ -11,8 +11,10 @@ export interface ProfileDefinition {
     readonly commit: string;
     readonly symbolFile: string;
   };
-  /** The pret file that holds the build's SHA-1, at a pinned commit on the repo's main branch. The generator fails if `identify.sha1` disagrees. */
+  /** The pret file that lists the build's SHA-1, at a pinned commit on the repo's main branch. Every SHA-1 in it goes into `identify.sha1`. */
   readonly sha1: { readonly commit: string; readonly file: string };
+  /** The No-Intro DAT in libretro-database that holds the CRC32 for each SHA-1, at a pinned commit. */
+  readonly noIntro: { readonly commit: string; readonly file: string };
   /** Profile key to symbol. A pointer symbol becomes a pointer entry that reads the target at offset 0. */
   readonly addresses: ReadonlyArray<{
     readonly key: string;
@@ -29,8 +31,6 @@ export interface ProfileDefinition {
     readonly money: { readonly symbol: string; readonly entrySize: number };
   };
   readonly identify: {
-    readonly sha1: readonly string[];
-    readonly crc32: readonly string[];
     readonly header: { readonly gameCode: string; readonly revision: number };
     /** GF ROM header words that must point at the symbol's address (spec §5.4). */
     readonly signature: ReadonlyArray<{

@@ -1,4 +1,5 @@
 import type { ProfileDefinition } from "./definition";
+import type { RomHashes } from "./hashes";
 import { requireSymbol, type SymbolInfo } from "./sym";
 
 const hex = (value: number, digits = 8) =>
@@ -27,10 +28,11 @@ function tableOf(
   return { base: hex(symbol.address), count: symbol.size / table.entrySize };
 }
 
-/** Builds one profile file as plain JSON. A pure function of the definition and the symbol file. */
+/** Builds one profile file as plain JSON. A pure function of the definition, the symbol file and the hashes. */
 export function buildProfile(
   definition: ProfileDefinition,
   symbols: ReadonlyMap<string, SymbolInfo>,
+  hashes: RomHashes,
 ): Record<string, unknown> {
   const addresses: Record<string, unknown> = {};
   for (const entry of definition.addresses) {
@@ -47,8 +49,8 @@ export function buildProfile(
     addresses,
     constants: {},
     identify: {
-      sha1: definition.identify.sha1,
-      crc32: definition.identify.crc32,
+      sha1: hashes.sha1,
+      crc32: hashes.crc32,
       header: definition.identify.header,
       signature: definition.identify.signature.map((word) => ({
         address: hex(word.address),
@@ -88,20 +90,4 @@ export function renderIndex(ids: readonly string[]): string {
     `export const builtinProfiles: readonly unknown[] = [${names.map((n) => n.name).join(", ")}];`,
     "",
   ].join("\n");
-}
-
-/** Fails unless pret's `<sha1>  <file>` line lists exactly the definition's SHA-1. */
-export function checkSha1(
-  text: string,
-  expected: readonly string[],
-  file: string,
-): void {
-  const found = text
-    .split("\n")
-    .map((line) => line.trim().split(/\s+/)[0]?.toLowerCase() ?? "")
-    .filter((hash) => /^[0-9a-f]{40}$/.test(hash));
-  if (found.length === 0 || found.some((hash) => !expected.includes(hash)))
-    throw new Error(
-      `${file} lists ${found.join(", ") || "no SHA-1"} but the definition has ${expected.join(", ")}`,
-    );
 }

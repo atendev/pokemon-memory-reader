@@ -1,0 +1,21 @@
+clrmamepro (
+	name "Nintendo - Game Boy Advance"
+	description "Nintendo - Game Boy Advance"
+	version "2026.10.07"
+	extensions "gba"
+	homepage "http://github.com/robloach/libretro-dats"
+)
+
+game (
+	name "Pokemon - Edicion Zafiro (Spain) (Rev 1)"
+	region "Spain"
+	serial "AXPS"
+	rom ( name "Pokemon - Edicion Zafiro (Spain) (Rev 1).gba" size 16777216 crc F2C88931 md5 A40E90F68309AD1FD0B9EFE33DCC6BA8 sha1 0FE9AD1E602E2FAFA090AEE25E43D6980625173C serial "AXPS" )
+)
+game (
+	name "Pokemon - Emerald Version (USA, Europe)"
+	region "USA"
+	serial "BPEE"
+	rom ( name "Pokemon - Emerald Version (USA, Europe).gba" size 16777216 crc 1F1C08FB md5 605B89B67018ABCEA91E693A4DD25BE3 sha1 F3AE088181BF583E55DAF962A92BB46F4F1D07B7 serial "BPEE" )
+)
+
