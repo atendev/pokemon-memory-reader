@@ -1,4 +1,5 @@
 import type { ProfileDefinition } from "./definition";
+import type { SignatureEvidence } from "./evidence";
 import type { RomHashes } from "./hashes";
 import { requireSymbol, type SymbolInfo } from "./sym";
 
@@ -28,11 +29,12 @@ function tableOf(
   return { base: hex(symbol.address), count: symbol.size / table.entrySize };
 }
 
-/** Builds one profile file as plain JSON. A pure function of the definition, the symbol file and the hashes. */
+/** Builds one profile file as plain JSON. A pure function of the definition, the symbol file, the hashes and the signature evidence level. */
 export function buildProfile(
   definition: ProfileDefinition,
   symbols: ReadonlyMap<string, SymbolInfo>,
   hashes: RomHashes,
+  evidence: SignatureEvidence,
 ): Record<string, unknown> {
   const addresses: Record<string, unknown> = {};
   for (const entry of definition.addresses) {
@@ -63,7 +65,11 @@ export function buildProfile(
       money: tableOf(symbols, definition.trainerTables.money),
     },
     fixture: definition.fixture,
-    provenance: { kind: "pret", ...definition.source },
+    provenance: {
+      kind: "pret",
+      ...definition.source,
+      signatureEvidence: evidence,
+    },
   };
 }
 

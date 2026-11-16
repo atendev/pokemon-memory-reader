@@ -19,3 +19,9 @@ game (
 	rom ( name "Pokemon - Emerald Version (USA, Europe).gba" size 16777216 crc 1F1C08FB md5 605B89B67018ABCEA91E693A4DD25BE3 sha1 F3AE088181BF583E55DAF962A92BB46F4F1D07B7 serial "BPEE" )
 )
 
+game (
+	name "Pokemon - Saphir-Edition (Germany)"
+	region "Germany"
+	serial "AXPD"
+	rom ( name "Pokemon - Saphir-Edition (Germany).gba" size 16777216 crc 6FCD7A98 md5 43906C58AFAF0760F62EC698EF10EAFC sha1 5A087835009D552D4C5C1F96BE3BE3206E378153 serial "AXPD" )
+)
