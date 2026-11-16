@@ -1,0 +1,16 @@
+---
+type: task
+blocked_by: [044]
+---
+
+# Runtime entry exception for domain-browser
+
+## Question
+
+Build what [Does the runtime tier accept `Artistic-2.0` for domain-browser, or is the dependency replaced?](./044-artistic-2-domain-browser.md) decided, per [amendment 044](../assets/027-third-party-license-allowlist.md#amendment-044-artistic-20-for-buns-domain-browser) items 3 and 4. Add the `RUNTIME_ENTRY_EXCEPTIONS` constant to `scripts/notices.ts` with its pinning test. It matches Bun manifest entries only, on exact `name@version`, and fails on stale exceptions. Print each matched exception's `note` under the entry's `Source:` line. Update the domain-browser manifest entry: drop `blockedUntilAmendment`, and set `source` to the npm tarball URL with the upstream tag in `notes`. The `v2.0.0-beta.1` prerelease waits on it.
+
+## Acceptance
+
+- `domain-browser@4.23.0` passes under `Artistic-2.0`. Another version, an npm closure entry or an override with the same `name@version` fails.
+- A stale exception fails `notices --check`, and the generated notices print the exception note.
+- Together with [Add the lax IDs to the permissive tier and clear bun_clap's flag](./051-lax-ids-permissive-tier.md), `bun run notices --check --strict` passes with no `blockedUntilAmendment` entries.
