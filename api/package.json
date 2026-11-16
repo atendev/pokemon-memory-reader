@@ -1,10 +1,31 @@
 {
   "name": "@pokemon-memory-reader/api",
   "version": "0.0.0",
+  "description": "Types, Zod schemas and a client for the Pokemon Memory Reader API v2.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
+  "exports": {
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas.d.ts",
+      "default": "./dist/schemas.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
