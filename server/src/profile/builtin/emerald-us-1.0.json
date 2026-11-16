@@ -1,0 +1,84 @@
+{
+  "id": "emerald-us-1.0",
+  "kind": "official",
+  "name": "Pokémon Emerald (US 1.0)",
+  "dataFormat": "gen3",
+  "language": "en",
+  "artVersion": "emerald",
+  "addresses": {
+    "gPlayerParty": "0x020244ec",
+    "gPlayerPartyCount": "0x020244e9",
+    "gEnemyParty": "0x02024744",
+    "gEnemyPartyCount": "0x020244ea",
+    "gSaveBlock1": {
+      "ptr": "0x03005d8c",
+      "offset": "0x0"
+    },
+    "gSaveBlock2": {
+      "ptr": "0x03005d90",
+      "offset": "0x0"
+    },
+    "gPokemonStorage": {
+      "ptr": "0x03005d94",
+      "offset": "0x0"
+    },
+    "gBattleTypeFlags": "0x02022fec",
+    "gBattleMons": "0x02024084",
+    "gBattleStruct": {
+      "ptr": "0x0202449c",
+      "offset": "0x0"
+    },
+    "gBattleResources": {
+      "ptr": "0x020244a8",
+      "offset": "0x0"
+    }
+  },
+  "constants": {},
+  "identify": {
+    "sha1": [
+      "f3ae088181bf583e55daf962a92bb46f4f1d07b7"
+    ],
+    "crc32": [
+      "1f1c08fb"
+    ],
+    "header": {
+      "gameCode": "BPEE",
+      "revision": 0
+    },
+    "signature": [
+      {
+        "address": "0x080001bc",
+        "bytes": "cc033208"
+      },
+      {
+        "address": "0x080001c8",
+        "bytes": "a0395808"
+      },
+      {
+        "address": "0x080001cc",
+        "bytes": "98c83108"
+      }
+    ]
+  },
+  "trainerTables": {
+    "trainers": {
+      "base": "0x08310030",
+      "count": 855
+    },
+    "classNames": {
+      "base": "0x0830fcd4",
+      "count": 66
+    },
+    "money": {
+      "base": "0x0831aeb8",
+      "count": 112
+    }
+  },
+  "fixture": "none",
+  "provenance": {
+    "kind": "pret",
+    "repo": "pret/pokeemerald",
+    "commit": "4a73ce73964859d53a2d21e58db2525e8fa4b31b",
+    "symbolFile": "pokeemerald.sym"
+  }
+}

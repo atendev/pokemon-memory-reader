@@ -16,7 +16,8 @@
     "skipLibCheck": true,
     "types": ["bun"],
     "paths": {
-      "@pokemon-memory-reader/api/*": ["./api/src/*.ts"]
+      "@pokemon-memory-reader/api/*": ["./api/src/*.ts"],
+      "@pokemon-memory-reader/internal/*": ["./internal/src/*.ts"]
     }
   },
   "files": []

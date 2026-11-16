@@ -6,7 +6,13 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!.plan", "!.vscode"]
+    "includes": [
+      "**",
+      "!.plan",
+      "!.vscode",
+      "!server/src/profile/builtin/index.ts",
+      "!server/src/profile/builtin/*.json"
+    ]
   },
   "formatter": {
     "indentStyle": "space"
