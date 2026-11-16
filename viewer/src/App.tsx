@@ -1,8 +1,9 @@
 import type { StatusResource } from "@pokemon-memory-reader/api/schemas";
+import { About } from "./About";
 import { connectionLabel } from "./display";
 import { EmptyState } from "./EmptyState";
 import { PartyScreen } from "./PartyScreen";
-import { useParty, useStatus } from "./useResource";
+import { useHash, useParty, useStatus } from "./useResource";
 
 export function StatusBlock({ status }: { status: StatusResource | null }) {
   const adapter =
@@ -36,6 +37,7 @@ export function Screen({
 }
 
 export function App() {
+  const hash = useHash();
   const status = useStatus();
   const known = status.kind === "ready" ? status.value : null;
   const party = useParty(known?.state === "game");
@@ -44,9 +46,14 @@ export function App() {
       <header className="bar">
         <h1 className="app-title">Pokémon Memory Reader</h1>
         <StatusBlock status={known} />
+        <a className="nav-link" href={hash === "#/about" ? "#/" : "#/about"}>
+          {hash === "#/about" ? "Back" : "About"}
+        </a>
       </header>
       <main>
-        {status.kind === "loading" ? null : (
+        {hash === "#/about" ? (
+          <About />
+        ) : status.kind === "loading" ? null : (
           <Screen status={known} party={party} />
         )}
       </main>

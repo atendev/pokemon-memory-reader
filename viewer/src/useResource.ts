@@ -4,7 +4,7 @@ import {
   PmrApiError,
 } from "@pokemon-memory-reader/api/client";
 import type { Party, StatusResource } from "@pokemon-memory-reader/api/schemas";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 /** Until the SSE stream lands, the viewer polls the snapshot routes. */
 export const POLL_MS = 1000;
@@ -54,4 +54,18 @@ export function useStatus(): Loaded<StatusResource> {
 /** The party is only requested while a game is identified, so no request holds demand otherwise. */
 export function useParty(enabled: boolean): Loaded<Party> {
   return usePolled(loadParty, enabled);
+}
+
+function subscribeHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+/** The current `location.hash`, for the viewer's hash routes. */
+export function useHash(): string {
+  return useSyncExternalStore(
+    subscribeHash,
+    () => window.location.hash,
+    () => "",
+  );
 }

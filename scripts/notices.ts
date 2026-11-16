@@ -164,6 +164,28 @@ export function checkExpression(
   };
 }
 
+const LGPL_IDS: readonly string[] = ["LGPL-2.0-or-later", "LGPL-2.1-or-later"];
+
+/**
+ * True when the expression only passes the runtime tier because an LGPL term is allowed (amendment 042 §1).
+ * `LGPL-2.1-or-later OR MIT` and `LGPL-2.1-or-later OR MPL-2.0` pass without it, so they don't count.
+ */
+export function needsLgplTerm(expression: string): boolean {
+  if (!checkExpression(expression, "runtime").ok) return false;
+  let tree: ReturnType<typeof parseSpdx>;
+  try {
+    tree = parseSpdx(canonicalCase(expression));
+  } catch {
+    return false;
+  }
+  const withoutLgpl = RUNTIME_TIER.filter((id) => !LGPL_IDS.includes(id));
+  return !evaluate(
+    tree,
+    new Set(withoutLgpl.map((id) => id.toLowerCase())),
+    new Set(EXCEPTIONS.map((e) => e.toLowerCase())),
+  ).pass;
+}
+
 /** An override for one `name@version`: the SPDX expression to use, why, and where its license text lives. */
 export interface Override {
   spdx: string;
@@ -172,6 +194,13 @@ export interface Override {
   text: string;
 }
 export type Overrides = Record<string, Override>;
+
+/** What amendment 042 §5 asks of an LGPL component: how to name it, who holds the copyright and where its source is mirrored. */
+export interface LgplInfo {
+  displayName: string;
+  copyright: string;
+  mirror: { repo: string; tag: string };
+}
 
 export interface NoticeEntry {
   name: string;
@@ -183,6 +212,8 @@ export interface NoticeEntry {
   source: string | null;
   /** The matched runtime entry exception's note, printed under `Source:`. */
   note: string | null;
+  /** Set for Bun runtime components that need an LGPL term to pass the allowlist (amendment 042 §1). */
+  lgpl: LgplInfo | null;
   texts: { file: string; text: string }[];
 }
 
@@ -220,6 +251,9 @@ interface ManifestComponent {
   targets: string[];
   texts: string[];
   blockedUntilAmendment?: boolean;
+  displayName?: string;
+  copyright?: string;
+  mirror?: { repo?: string; tag?: string };
 }
 interface Manifest {
   bunVersion: string;
@@ -495,6 +529,7 @@ function npmEntries(
       builds: null,
       source: null,
       note: null,
+      lgpl: null,
       texts,
     });
   }
@@ -543,6 +578,33 @@ export function bunPinProblems(
   return [];
 }
 
+/** Reads the LGPL fields of a manifest entry. Each missing one is a problem, so a release can't go out without its notice. */
+function lgplInfo(
+  c: ManifestComponent,
+  key: string,
+  problems: string[],
+): LgplInfo | null {
+  const missing = [
+    ["displayName", c.displayName],
+    ["copyright", c.copyright],
+    ["mirror.repo", c.mirror?.repo],
+    ["mirror.tag", c.mirror?.tag],
+  ]
+    .filter(([, value]) => value === undefined || value.trim() === "")
+    .map(([field]) => field);
+  if (missing.length > 0) {
+    problems.push(
+      `Bun runtime component ${key} needs an LGPL notice (amendment 042 §5) but has no ${missing.join(", ")}.`,
+    );
+    return null;
+  }
+  return {
+    displayName: c.displayName ?? "",
+    copyright: c.copyright ?? "",
+    mirror: { repo: c.mirror?.repo ?? "", tag: c.mirror?.tag ?? "" },
+  };
+}
+
 function bunEntries(
   opts: NoticesOptions,
   manifestPath: string,
@@ -589,6 +651,7 @@ function bunEntries(
     }
     if (c.texts.length === 0)
       problems.push(`Bun runtime component ${key} lists no license text.`);
+    const lgpl = needsLgplTerm(c.spdx) ? lgplInfo(c, key, problems) : null;
     entries.push({
       name: c.name,
       version: c.version,
@@ -597,6 +660,7 @@ function bunEntries(
       builds: buildsLabel(c.targets, manifest.targets),
       source: c.source,
       note: exception?.note ?? null,
+      lgpl,
       texts,
     });
   }
@@ -644,7 +708,53 @@ export function collectNotices(opts: NoticesOptions): NoticesResult {
 
 const RULE = "=".repeat(78);
 
-/** The text of `THIRD-PARTY-NOTICES.txt`: one section per entry, sorted by name then version. */
+const REPO_URL = "https://github.com/atendev/pokemon-memory-reader";
+
+/** The files of an entry that carry an LGPL or COPYING text, so the LGPL section can point at them. */
+function lgplTextNames(entry: NoticeEntry): string[] {
+  return entry.texts
+    .map((t) => t.file)
+    .filter((file) => /copying|lgpl/i.test(file));
+}
+
+function lgplBlock(entry: NoticeEntry, lgpl: LgplInfo): string {
+  const url = `https://github.com/${lgpl.mirror.repo}`;
+  const lines = [
+    lgpl.displayName,
+    lgpl.copyright,
+    "Statically linked into the executable and covered by the GNU Lesser General Public License (LGPL).",
+    `License texts: the "${entry.name} ${entry.version}" entry later in this file (${lgplTextNames(entry).join(", ")}).`,
+  ];
+  if (/\bLGPL-2\.0-or-later\b/.test(entry.spdx)) {
+    lines.push(
+      "Some of these files are under LGPL-2.0-or-later, so the LGPL 2.0 text is included as well as the LGPL 2.1 text.",
+    );
+  }
+  lines.push(
+    `Source: ${url}/tree/${lgpl.mirror.tag}`,
+    `  git clone --depth 1 --branch ${lgpl.mirror.tag} ${url}`,
+  );
+  return lines.join("\n");
+}
+
+/** The opening section for LGPL components, or null when the build has none (amendment 042 §5). */
+export function renderLgplSection(entries: NoticeEntry[]): string | null {
+  const blocks = entries.flatMap((e) =>
+    e.lgpl === null ? [] : [lgplBlock(e, e.lgpl)],
+  );
+  if (blocks.length === 0) return null;
+  return [
+    "LGPL COMPONENTS",
+    "",
+    "The executable statically links the libraries below. They are covered by the GNU Lesser General Public License. This program's own GPL-3.0-or-later terms let you modify it for your own use and reverse engineer it to debug your modifications.",
+    "",
+    blocks.join("\n\n"),
+    "",
+    `Steps to rebuild Bun with a modified library and relink this program: docs/lgpl-relinking.md in the source of this release (${REPO_URL}, at this release's tag).`,
+  ].join("\n");
+}
+
+/** The text of `THIRD-PARTY-NOTICES.txt`: the LGPL section first, then one section per entry, sorted by name then version. */
 export function renderNotices(entries: NoticeEntry[]): string {
   const sections = entries.map((e) => {
     const head = [`${e.name} ${e.version}`, `License: ${e.spdx}`];
@@ -656,11 +766,13 @@ export function renderNotices(entries: NoticeEntry[]): string {
     );
     return [head.join("\n"), ...body].join("\n\n");
   });
+  const lgpl = renderLgplSection(entries);
   return [
     "THIRD-PARTY NOTICES",
     "",
     "Pokemon Memory Reader includes the software below. Each entry gives its license and the license text.",
     "",
+    ...(lgpl === null ? [] : [lgpl, "", RULE, ""]),
     sections.join(`\n\n${RULE}\n\n`),
     "",
   ].join("\n");
