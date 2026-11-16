@@ -19,3 +19,7 @@ Build the Gen 3 data format's party decoder and the Gen 3 English reference data
 
 - Tests build party bytes synthetically by encrypting known mons, round-trip them, and cover a bad checksum, an empty slot, an egg and a shiny.
 - No ROM bytes are committed.
+
+## Resolution
+
+Built the Gen 3 party decoder, the dev-time reference generator with `server/src/reference/data/gen3-en.json` (412 species, 355 moves, 377 items, 77 abilities, with provenance), and the `Pokemon` and `Party` schemas in `api/`. Tests build parties from a synthetic encoder and cover a bad checksum, an empty slot, an egg and a shiny, and the output validates against `Party`. Audit approved in round 3, CI green on 5bf77d7 (PR 8). The decision report is `../assets/008-gen3-party-decoder-report.md`. Met location names stay null until a follow-up ticket ships Gen 3 location names.
