@@ -14,3 +14,7 @@ Build what [What happens to signatures for revisions the owner doesn't own?](./0
 - Generator tests on checked-in excerpts produce each of the three ratings and hold back a revision with a broken chain.
 - The CI gate test fails when a shipped profile lacks a rating the amendment requires.
 - No ROM bytes are committed.
+
+## Note from 029
+
+`generate:profiles` now stops the whole run when a pret SHA-1 has no matching No-Intro entry. [Where does reference data come from?](./019-reference-data-source.md) says a disagreement leaves that revision without hashes instead. Holding back Sapphire German 1.0 needs a hold-back path that skips the revision rather than failing the run.
