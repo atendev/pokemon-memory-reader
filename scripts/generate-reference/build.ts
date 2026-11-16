@@ -1,3 +1,4 @@
+import type { LocationKey } from "./definition";
 import type { Extracted, MoveRow, SpeciesRow } from "./extract";
 
 export interface ReferenceFile {
@@ -19,6 +20,10 @@ export interface ReferenceFile {
     readonly moves: ReadonlyArray<string | null>;
     readonly items: ReadonlyArray<string | null>;
     readonly abilities: ReadonlyArray<string | null>;
+    /** Map-section names by section ID, one table per art version (amendment 019 §4). */
+    readonly locations: Readonly<
+      Record<LocationKey, ReadonlyArray<string | null>>
+    >;
   };
   /** Index is the species ID. `dex` is the National Dex number. */
   readonly speciesData: ReadonlyArray<
@@ -29,6 +34,7 @@ export interface ReferenceFile {
 
 export interface Source {
   readonly repo: string;
+  readonly locationKey: LocationKey;
   readonly commit: string;
   readonly files: readonly string[];
   readonly extracted: Extracted;
@@ -110,6 +116,29 @@ function table<T>(merged: Map<number, T>): Array<T | null> {
   return Array.from({ length: size }, (_, id) => merged.get(id) ?? null);
 }
 
+const LOCATION_KEYS: readonly LocationKey[] = [
+  "ruby-sapphire",
+  "emerald",
+  "firered-leafgreen",
+];
+
+/** Location tables differ by game, so each repo keeps its own and none are merged. */
+function locationTables(
+  sources: readonly Source[],
+): Record<LocationKey, Array<string | null>> {
+  const out = {} as Record<LocationKey, Array<string | null>>;
+  for (const key of LOCATION_KEYS) {
+    const owners = sources.filter((source) => source.locationKey === key);
+    const [owner] = owners;
+    if (owners.length !== 1 || !owner)
+      throw new Error(
+        `location names: expected one source for ${key}, found ${owners.length}`,
+      );
+    out[key] = table(owner.extracted.locations);
+  }
+  return out;
+}
+
 export function buildReference(sources: readonly Source[]): ReferenceFile {
   const species = agree("species name", sources, (x) => x.species);
   const speciesData = agree(
@@ -141,6 +170,7 @@ export function buildReference(sources: readonly Source[]): ReferenceFile {
       moves: table(agree("move name", sources, (x) => x.moves)),
       items: table(agree("item name", sources, (x) => x.items)),
       abilities: table(agree("ability name", sources, (x) => x.abilities)),
+      locations: locationTables(sources),
     },
     speciesData: table(rows),
     moveData: table(
@@ -172,7 +202,13 @@ export function renderReference(file: ReferenceFile): string {
     `    "species": ${JSON.stringify(names.species)},`,
     `    "moves": ${JSON.stringify(names.moves)},`,
     `    "items": ${JSON.stringify(names.items)},`,
-    `    "abilities": ${JSON.stringify(names.abilities)}`,
+    `    "abilities": ${JSON.stringify(names.abilities)},`,
+    `    "locations": {`,
+    ...LOCATION_KEYS.map(
+      (key, index) =>
+        `      ${JSON.stringify(key)}: ${JSON.stringify(names.locations[key])}${index < LOCATION_KEYS.length - 1 ? "," : ""}`,
+    ),
+    "    }",
     "  },",
     `  "speciesData": ${rows(file.speciesData)},`,
     `  "moveData": ${rows(file.moveData)}`,

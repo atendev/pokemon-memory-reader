@@ -34,6 +34,7 @@ for (const definition of sources) {
   ) as Files;
   read.push({
     repo: definition.repo,
+    locationKey: definition.locationKey,
     commit: definition.commit,
     files: [...new Set(Object.values(definition.files))].sort(),
     extracted: extract(definition.layout, files),

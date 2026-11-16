@@ -1,7 +1,34 @@
 import { describe, expect, test } from "bun:test";
 import { buildReference, renderReference, type Source } from "./build";
 import { evaluate, readConstants, readEntries, stringLiteral } from "./c";
+import type { LocationKey } from "./definition";
 import { extract, type Files } from "./extract";
+
+/** Hand-written map-section lists in the three repos' shapes. None of it is copied from a pret file. */
+const emeraldSections = JSON.stringify({
+  map_sections: [
+    { id: "MAPSEC_LITTLEROOT_TOWN", name: "LITTLEROOT TOWN", x: 4, y: 11 },
+    { id: "MAPSEC_ROUTE_101", name: "ROUTE 101", x: 4, y: 10 },
+    { id: "MAPSEC_AQUA_HIDEOUT_OLD", name: "{AQUA} HIDEOUT" },
+    { id: "MAPSEC_PALLET_TOWN", name: "PALLET TOWN" },
+  ],
+});
+const fireredSections = JSON.stringify({
+  map_sections: [
+    { id: "MAPSEC_LITTLEROOT_TOWN" },
+    { id: "MAPSEC_ROUTE_101" },
+    { id: "MAPSEC_PALLET_TOWN", name: "PALLET TOWN", x: 4, y: 11 },
+    { id: "MAPSEC_SPECIAL_AREA", name: "CELADON DEPT." },
+  ],
+});
+const rubySections = JSON.stringify({
+  map_sections: [
+    { id: "MAPSEC_LITTLEROOT_TOWN", name: "LITTLEROOT{NAME_END} TOWN" },
+    { id: "MAPSEC_ROUTE_101", name: "ROUTE 101" },
+    { id: "MAPSEC_EVIL_TEAM_HIDEOUT", name: "{EVIL_TEAM} HIDEOUT" },
+    { id: "MAPSEC_DYNAMIC", name: "" },
+  ],
+});
 
 /** Hand-written inputs in pret's syntax. None of it is copied from a pret file. */
 const emeraldFiles: Files = {
@@ -55,6 +82,7 @@ const emeraldFiles: Files = {
     "[MOVE_HIT] =\n{\n .effect = 0,\n .type = TYPE_FIRE,\n .pp = 25,\n},\n",
   dexOrder:
     "const u16 gSpeciesToNationalPokedexNum[] = {\n SPECIES_TO_NATIONAL(FOO),\n SPECIES_TO_NATIONAL(BAR),\n};\n",
+  mapSections: emeraldSections,
   charmap:
     "@ Latin\n'A' = BB\n'\\'' = B4\n'’' = B4\n'…' = B0\nPKMN = 53 54\n@ Hiragana\n'あ' = 01\n'‥' = B0\n@ string placeholders\n'Z' = D4\n",
 };
@@ -64,12 +92,25 @@ const withFiles = (changes: Partial<Files>): Files => ({
   ...changes,
 });
 
-const source = (repo: string, files: Files): Source => ({
+const source = (
+  repo: string,
+  files: Files,
+  locationKey: LocationKey = "emerald",
+): Source => ({
   repo,
+  locationKey,
   commit: "0".repeat(40),
   files: ["a"],
   extracted: extract("emerald", files),
 });
+
+/** One source per location key, as the real run has. `second` replaces the Ruby and Sapphire source's files. */
+const buildAll = (first: Files, second: Files = first) =>
+  buildReference([
+    source("pret/a", first, "emerald"),
+    source("pret/b", second, "ruby-sapphire"),
+    source("pret/c", first, "firered-leafgreen"),
+  ]);
 
 describe("string readers", () => {
   test("a pret string literal gives its text", () => {
@@ -174,6 +215,54 @@ describe("extract", () => {
     expect(out.kana.has(0xd4)).toBe(false);
   });
 
+  test("location names are keyed by list position and skip unnamed sections", () => {
+    expect([...out.locations]).toEqual([
+      [0, "LITTLEROOT TOWN"],
+      [1, "ROUTE 101"],
+      [2, "AQUA HIDEOUT"],
+      [3, "PALLET TOWN"],
+    ]);
+    const unnamed = extract(
+      "emerald",
+      withFiles({ mapSections: fireredSections }),
+    );
+    expect([...unnamed.locations]).toEqual([
+      [2, "PALLET TOWN"],
+      [3, "CELADON DEPT."],
+    ]);
+  });
+
+  test("Ruby's name-end marker drops out, a team placeholder prints both teams, an empty name is unnamed", () => {
+    const ruby = extract("emerald", withFiles({ mapSections: rubySections }));
+    expect([...ruby.locations]).toEqual([
+      [0, "LITTLEROOT TOWN"],
+      [1, "ROUTE 101"],
+      [2, "MAGMA/AQUA HIDEOUT"],
+    ]);
+  });
+
+  test("a section list with a repeated or missing ID fails", () => {
+    const twice = JSON.stringify({
+      map_sections: [{ id: "MAPSEC_A", name: "A" }, { id: "MAPSEC_A" }],
+    });
+    expect(() => extract("emerald", withFiles({ mapSections: twice }))).toThrow(
+      "listed twice",
+    );
+    const missing = JSON.stringify({ map_sections: [{ name: "A" }] });
+    expect(() =>
+      extract("emerald", withFiles({ mapSections: missing })),
+    ).toThrow("no MAPSEC id");
+  });
+
+  test("an unknown control code in a section name fails", () => {
+    const text = JSON.stringify({
+      map_sections: [{ id: "MAPSEC_A", name: "{PLAYER} HOUSE" }],
+    });
+    expect(() => extract("emerald", withFiles({ mapSections: text }))).toThrow(
+      "unhandled control code",
+    );
+  });
+
   test("an item at the wrong list position fails", () => {
     const text =
       '{"items":[{"english":"A","itemId":"ITEM_NONE"},{"english":"B","itemId":"ITEM_034"},{"english":"C","itemId":"ITEM_BALL"}]}';
@@ -185,10 +274,7 @@ describe("extract", () => {
 
 describe("buildReference", () => {
   test("merges agreeing repos and renders one table row per line", () => {
-    const file = buildReference([
-      source("pret/a", emeraldFiles),
-      source("pret/b", emeraldFiles),
-    ]);
+    const file = buildAll(emeraldFiles);
     expect(file.names.species).toEqual([null, "FOO", "BAR"]);
     expect(file.speciesData[1]).toMatchObject({ dex: 7, growthRate: 3 });
     expect(file.charmap.latin[0xb4]).toBe("'");
@@ -197,31 +283,81 @@ describe("buildReference", () => {
     expect(JSON.parse(renderReference(file))).toEqual(file);
   });
 
+  test("location tables stay per art version for Emerald, FireRed and LeafGreen, and Ruby and Sapphire", () => {
+    const file = buildAll(
+      emeraldFiles,
+      withFiles({ mapSections: rubySections }),
+    );
+    const withFirered = buildReference([
+      source("pret/a", emeraldFiles, "emerald"),
+      source(
+        "pret/b",
+        withFiles({ mapSections: rubySections }),
+        "ruby-sapphire",
+      ),
+      source(
+        "pret/c",
+        withFiles({ mapSections: fireredSections }),
+        "firered-leafgreen",
+      ),
+    ]);
+    expect(file.names.locations.emerald).toEqual([
+      "LITTLEROOT TOWN",
+      "ROUTE 101",
+      "AQUA HIDEOUT",
+      "PALLET TOWN",
+    ]);
+    expect(withFirered.names.locations["ruby-sapphire"]).toEqual([
+      "LITTLEROOT TOWN",
+      "ROUTE 101",
+      "MAGMA/AQUA HIDEOUT",
+    ]);
+    expect(withFirered.names.locations["firered-leafgreen"]).toEqual([
+      null,
+      null,
+      "PALLET TOWN",
+      "CELADON DEPT.",
+    ]);
+    expect(JSON.parse(renderReference(withFirered))).toEqual(withFirered);
+  });
+
+  test("a missing or doubled location source fails", () => {
+    expect(() =>
+      buildReference([
+        source("pret/a", emeraldFiles, "emerald"),
+        source("pret/b", emeraldFiles, "ruby-sapphire"),
+      ]),
+    ).toThrow("expected one source for firered-leafgreen, found 0");
+    expect(() =>
+      buildReference([
+        source("pret/a", emeraldFiles, "emerald"),
+        source("pret/b", emeraldFiles, "emerald"),
+        source("pret/c", emeraldFiles, "ruby-sapphire"),
+        source("pret/d", emeraldFiles, "firered-leafgreen"),
+      ]),
+    ).toThrow("expected one source for emerald, found 2");
+  });
+
   test("a name that differs between repos fails and names both repos", () => {
     const other = withFiles({
       speciesNames: '[SPECIES_FOO] = _("OOF"),\n[SPECIES_BAR] = _("BAR"),\n',
     });
-    expect(() =>
-      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)]),
-    ).toThrow(/species name 1: pret\/a "FOO" vs pret\/b "OOF"/);
+    expect(() => buildAll(emeraldFiles, other)).toThrow(
+      /species name 1: pret\/a "FOO" vs pret\/b "OOF"/,
+    );
   });
 
   test("the same kana glyph spelled two ways agrees", () => {
     const other = withFiles({
       charmap: emeraldFiles.charmap.replace("'‥' = B0", "'⋯' = B0"),
     });
-    expect(
-      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)])
-        .charmap.kana[0xb0],
-    ).toBe("‥");
+    expect(buildAll(emeraldFiles, other).charmap.kana[0xb0]).toBe("‥");
   });
 
   test("a byte that two repos map to different glyphs fails", () => {
     const other = withFiles({
       charmap: emeraldFiles.charmap.replace("'A' = BB", "'B' = BB"),
     });
-    expect(() =>
-      buildReference([source("pret/a", emeraldFiles), source("pret/b", other)]),
-    ).toThrow("charmap byte 0xbb");
+    expect(() => buildAll(emeraldFiles, other)).toThrow("charmap byte 0xbb");
   });
 });

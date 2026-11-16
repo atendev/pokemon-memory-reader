@@ -1,8 +1,13 @@
 /** The pret repos the Gen 3 English reference data comes from, pinned (amendment 019 §1). */
 export type Layout = "ruby" | "emerald" | "firered";
 
+/** The art versions with a Gen 3 location table. Ruby and Sapphire share one, as do FireRed and LeafGreen (amendment 019 §4). */
+export type LocationKey = "ruby-sapphire" | "emerald" | "firered-leafgreen";
+
 export interface SourceDefinition {
   readonly repo: string;
+  /** Which `artVersion` this repo's map-section names are keyed under. */
+  readonly locationKey: LocationKey;
   readonly commit: string;
   readonly layout: Layout;
   /** Role to the file path inside the repo. Every path is read at `commit`. */
@@ -24,11 +29,13 @@ export type SourceRole =
   | "speciesInfo"
   | "moveInfo"
   | "dexOrder"
-  | "charmap";
+  | "charmap"
+  | "mapSections";
 
 export const sources: readonly SourceDefinition[] = [
   {
     repo: "pret/pokeemerald",
+    locationKey: "emerald",
     commit: "731ad5bfd6e6f265508d0efcca0ba42f9dcf5881",
     layout: "emerald",
     files: {
@@ -47,10 +54,12 @@ export const sources: readonly SourceDefinition[] = [
       moveInfo: "src/data/battle_moves.h",
       dexOrder: "src/pokemon.c",
       charmap: "charmap.txt",
+      mapSections: "src/data/region_map/region_map_sections.json",
     },
   },
   {
     repo: "pret/pokefirered",
+    locationKey: "firered-leafgreen",
     commit: "ce6406d8c2eaf46d543c8a2606de0c3cb1951982",
     layout: "firered",
     files: {
@@ -69,10 +78,12 @@ export const sources: readonly SourceDefinition[] = [
       moveInfo: "src/data/battle_moves.h",
       dexOrder: "src/pokemon.c",
       charmap: "charmap.txt",
+      mapSections: "src/data/region_map/region_map_sections.json",
     },
   },
   {
     repo: "pret/pokeruby",
+    locationKey: "ruby-sapphire",
     commit: "5784633ce4ef7ade1a7f2d2d0c288e3d5e6cdd7f",
     layout: "ruby",
     files: {
@@ -91,6 +102,7 @@ export const sources: readonly SourceDefinition[] = [
       moveInfo: "src/data/battle_moves.c",
       dexOrder: "src/pokemon_1.c",
       charmap: "charmap.txt",
+      mapSections: "src/data/region_map/region_map_sections.json",
     },
   },
 ];

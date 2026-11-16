@@ -25,6 +25,7 @@ export const ART_VERSIONS = [
   "emerald",
   "firered-leafgreen",
 ] as const;
+export type ArtVersion = (typeof ART_VERSIONS)[number];
 
 const platformOf: Record<DataFormatId, Platform> = {
   gen1: "gb",

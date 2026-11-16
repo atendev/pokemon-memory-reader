@@ -73,8 +73,10 @@ export function bindGame(profile: Profile): BoundGame {
       const ctx: DecodeContext<Profile<"gen3">> = {
         profile,
         ...reference,
-        // Location names come with the location reference data ticket; the field stays null until then.
-        names: { ...reference.names, locations: () => null },
+        names: {
+          ...reference.names,
+          locations: reference.locations(profile.artVersion),
+        },
       };
       return gen3Decoder.party
         ? { party: bind(gen3Decoder.party, profile, ctx) }

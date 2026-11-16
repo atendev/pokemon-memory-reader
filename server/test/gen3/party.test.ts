@@ -25,10 +25,7 @@ if (!reference) throw new Error("Gen 3 English reference data missing");
 const ctx: DecodeContext<Profile<"gen3">> = {
   profile,
   ...reference,
-  names: {
-    ...reference.names,
-    locations: (id) => (id === 9 ? "PETALBURG CITY" : null),
-  },
+  names: { ...reference.names, locations: reference.locations("emerald") },
 };
 
 const TREECKO = 277;
@@ -179,7 +176,7 @@ describe("a known mon round-trips", () => {
 
   test("met data", () => {
     expect(mon.met).toEqual({
-      location: { id: 9, name: "PETALBURG CITY" },
+      location: { id: 9, name: "MAUVILLE CITY" },
       level: 5,
       game: "emerald",
       timeOfDay: null,
