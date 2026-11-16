@@ -22,19 +22,20 @@ Build the Gen 3 data format's party decoder and the Gen 3 English reference data
 
 ## Handoff
 
-Branch `t3/gen3-party-decoder`. Last audit round: 0 (no auditor started yet). Context hit 152k, so the first thread stopped mid-implementation.
+Branch `t3/gen3-party-decoder-1` (cut from `t3/gen3-party-decoder` at f636689). Last audit round: 0, no auditor started. Second thread hit the 150k limit.
 
-Done (uncommitted before the wip commit, untested, never run):
-- `scripts/generate-reference/{c,definition,extract,build,main}.ts`: the reference-data generator. Pins pokeemerald 731ad5b, pokefirered ce6406d, pokeruby 5784633 (same commits as assets/019-reference-data-pret-gba.md). Writes `server/src/reference/data/gen3-en.json` (names, species data with dex, move data, Latin and kana charmaps) and fails when repos disagree on a shared ID.
+Done and committed:
+- Generator runs. `bun run generate:reference` writes `server/src/reference/data/gen3-en.json` (412 species, 355 moves, 377 items, 77 abilities, dex, types, charmaps). The agreement check passes across the three pret repos. `scripts/generate-reference/build.test.ts` has 16 passing tests on hand-written inputs.
+- Fixes made: `{POKEBLOCK}` prints `POKéBLOCK`; Ruby growth constants come from `include/pokemon.h` (new `growthConstants` role); Emerald items key by constant, with TM keys taking their own ID; Ruby and FireRed items go by list position; charmap alias U+22EF to U+2025 (kana 0xB0 differs between repos); a byte with several glyphs takes its ASCII one. Report these as decisions.
 
-Left, in order:
-1. Run `bun scripts/generate-reference/main.ts`. Fix extractor bugs (untested). Expect trouble in Emerald's items enum, `OLD_UNOWN` macros, Ruby Latin-1 text and `NATIONAL_DEX_*` constants. Add `generate:reference` to root package.json. Add `build.test.ts` with hand-written pret-syntax inputs only, never pret excerpts.
-2. `server/src/reference/index.ts`: `referenceData("gen3","en")` loads the JSON. The `Charmap.decode` signature gains an optional third argument `"latin" | "kana"`; note this in the report as a sketch change.
-3. `api/`: add zod (optional peer plus devDependency, run `bun install`), `api/src/schemas.ts` with `Pokemon` (amendment 016 §1 verbatim) and the party schema. Interfaces doc leaves party's top-level shape to this ticket. Plan: `{ pokemon: Pokemon[] }`, because published schemas are loose objects (spec §7.11). Record this as an owner-reviewable decision.
-4. `server/src/format/{bytes,regions,types}.ts` copied from interfaces 004 sketch (lines 355-500). `server/src/format/gen3/` layouts and party decoder: 100-byte party mon, PID/OT xor key, 24 substructure orders (PID % 24), checksum, egg bit 30 of the IV word, nature `personality % 25`, shiny `(tid^sid^pidHi^pidLo) < 8`, met and ball from the origins word, status Toxic bit, `null` rules per amendment 016 §2.
-5. Tests: synthetic encrypt, round-trip, bad checksum, empty slot, egg, shiny; validate output against the api schema. No ROM bytes.
-6. Surface a ticket for location names (met.location name stays null until then).
-7. Audit (haiku, up to 5 rounds), decision report to `assets/008-gen3-party-decoder-report.md` with unslop, commit, push, PR against `wayfinder/v2-build-master`.
+Left, in order (steps 2-7 of the older plan still stand):
+1. `server/src/reference/index.ts` with `referenceData("gen3","en")`; `Charmap.decode(bytes, maxLength?, set?)`. 0xFF terminates. Unmapped byte gives U+FFFD.
+2. `api/`: zod optional peer plus devDependency, `bun install`, `api/src/schemas.ts` with `Pokemon` (amendment 016 §1) and party `{ pokemon: Pokemon[] }`.
+3. `server/src/format/{bytes,regions,types}.ts` from the sketch (skip `measureBatch`; `Decoder` holds only `party`), then `format/gen3/` party decoder.
+4. Tests, then surface a location-names ticket, audit, report, push, PR.
 
-Files to read first: `.plan/maps/v2-build/assets/016-pokemon-schema-amendment.md` §1-2, `004-core-module-interfaces.sketch.ts` lines 355-500, `019-reference-data-amendment.md`, `server/src/profile/schema.ts`, `scripts/generate-reference/*.ts`.
-Pret files fetched for inspection live in /tmp/pret-e, /tmp/pret-f and /tmp/pret-r, which may be gone.
+Verified from pokeemerald 731ad5b: party mon is 100 bytes; substructs at 0x20 (48 bytes), status u32 at 0x50, level 0x54, hp 0x56, maxHp 0x58, then atk, def, spe, spa, spd. Order table: type positions per `PID % 24` are (0,1,2,3) (0,1,3,2) (0,2,1,3) (0,3,1,2) (0,2,3,1) (0,3,2,1) (1,0,2,3) (1,0,3,2) (2,0,1,3) (3,0,1,2) (2,0,3,1) (3,0,2,1) (1,2,0,3) (1,3,0,2) (2,1,0,3) (3,1,0,2) (2,3,0,1) (3,2,0,1) (1,2,3,0) (1,3,2,0) (2,1,3,0) (3,1,2,0) (2,3,1,0) (3,2,1,0), where type 0 growth, 1 attacks, 2 EVs, 3 misc sits at that position. Checksum is the u16 sum of the 24 words, stored at 0x1C. Status bits: sleep 0-2, poison 3, burn 4, freeze 5, paralysis 6, toxic 7. Flags byte at 0x13: bit0 badEgg, bit1 hasSpecies. EV order hp, atk, def, spe, spa, spd. Egg OT name is in the game's language, not Japanese, so eggs decode OT with kana only when the profile language is `ja`.
+
+Decisions to report: bad checksum or bad egg fails the whole party (sketch); empty slot is a slot beyond the count, and species 0 inside the count fails; ability id 0 gives null; ball outside 1-12 gives null.
+
+Files to read first: this ticket, `scripts/generate-reference/{extract,build}.ts`, amendment 016 §1-2.
