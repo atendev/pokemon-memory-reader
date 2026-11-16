@@ -123,12 +123,17 @@ export function createBridgeAdapter(
     update({ game, gameEpoch: state.gameEpoch + 1 });
   }
 
-  function logLimited(code: string, message: string): void {
+  function logLimited(
+    code: string,
+    message: string,
+    level: "warn" | "error" = "warn",
+    fields: Record<string, unknown> = {},
+  ): void {
     const now = clock.now();
     const last = lastErrorLog.get(code);
     if (last !== undefined && now - last < ERROR_LOG_INTERVAL_MS) return;
     lastErrorLog.set(code, now);
-    log.warn(message, { code });
+    log[level](message, { code, ...fields });
   }
 
   // --- connecting ---
@@ -338,7 +343,6 @@ export function createBridgeAdapter(
       });
       return;
     }
-    backoffMs = baseBackoffMs;
     log.info("bridge hello", { bridge: hello.bridge, build: hello.build });
     // bridge_error from an earlier connection stays until a valid game message (spec §4.7).
     update({
@@ -346,6 +350,8 @@ export function createBridgeAdapter(
       bridge: hello,
       problem: state.problem === "bridge_error" ? "bridge_error" : null,
     });
+    // Only a live connection earns a quick reconnect. Probes keep backing off (spec §4.7).
+    if (mode === "live") backoffMs = baseBackoffMs;
   }
 
   function onFrame(connection: Connection, frame: Frame): void {
@@ -606,8 +612,10 @@ export function createBridgeAdapter(
     const valid = ranges.map((range) => inBounds(range, game));
     const parts = plan(ranges, valid);
     if (parts === null) {
-      log.error("a RAM read is over the bridge caps", {
+      // A bug, not a stall cause: the program logs it once a minute (amendment 026).
+      logLimited("over_caps", "a RAM read is over the bridge caps", "error", {
         ranges: ranges.length,
+        bytes: ranges.reduce((sum, range) => sum + range.length, 0),
       });
       return { kind: "timeout" };
     }
@@ -656,6 +664,9 @@ export function createBridgeAdapter(
     setMode(next) {
       if (shutDown || next === mode) return;
       mode = next;
+      if (next === "live" && current?.helloDone && state.problem === null) {
+        backoffMs = baseBackoffMs;
+      }
       if (current === null) {
         // Don't wait out a long backoff once someone wants the adapter.
         if (next !== "probe" && cancelRetry !== null) {

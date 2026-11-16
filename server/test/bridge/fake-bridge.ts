@@ -45,6 +45,8 @@ export class FakeBridge {
   hello: unknown = HELLO;
   /** What the next connection hears right after the hello. Undefined sends nothing. */
   game: unknown = GBA_GAME;
+  /** Bytes written in the same chunk as the hello, before any game message. */
+  afterHello: Uint8Array | null = null;
   /** Every READ that arrived, in order. */
   readonly reads: SeenRead[] = [];
   /** How to answer a READ. A test replaces it to stay silent, answer late or answer wrongly. */
@@ -78,9 +80,14 @@ export class FakeBridge {
           this.connections++;
           this.#sockets.add(socket);
           decoders.set(socket, new FrameDecoder());
-          if (this.hello !== null)
-            socket.write(encodeFrame(FRAME_KIND.HELLO, 0, json(this.hello)));
-          if (this.hello !== null && this.game !== undefined)
+          if (this.hello === null) return;
+          const hello = encodeFrame(FRAME_KIND.HELLO, 0, json(this.hello));
+          const tail = this.afterHello ?? new Uint8Array(0);
+          const chunk = new Uint8Array(hello.length + tail.length);
+          chunk.set(hello);
+          chunk.set(tail, hello.length);
+          socket.write(chunk);
+          if (this.game !== undefined)
             socket.write(encodeFrame(FRAME_KIND.GAME, 0, json(this.game)));
         },
         data: (socket, chunk) => {

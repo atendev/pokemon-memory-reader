@@ -25,12 +25,21 @@ describe("build settings", () => {
   test("accept an IPv4 or IPv6 literal and a plain version", () => {
     expect(() => checkSettings(SETTINGS)).not.toThrow();
     expect(() => checkSettings({ ...SETTINGS, host: "::1" })).not.toThrow();
+    expect(() =>
+      checkSettings({ ...SETTINGS, host: "::ffff:7f00:1" }),
+    ).not.toThrow();
   });
 
   test.each([
     ["a hostname", { host: "localhost" }],
     ["the IPv4 wildcard", { host: "0.0.0.0" }],
     ["the IPv6 wildcard", { host: "::" }],
+    ["the IPv6 wildcard as ::0", { host: "::0" }],
+    ["the IPv6 wildcard written out with a gap", { host: "0:0::0" }],
+    ["the IPv6 wildcard written out", { host: "0:0:0:0:0:0:0:0" }],
+    ["the IPv6 wildcard as 0::", { host: "0::" }],
+    ["the IPv4-mapped wildcard", { host: "::ffff:0.0.0.0" }],
+    ["the wildcard with a zone", { host: "::%lo" }],
     ["a port of zero", { port: 0 }],
     ["a port above 65535", { port: 65536 }],
     ["a fractional port", { port: 7426.5 }],
@@ -167,7 +176,7 @@ describe("the generated mgba.lua", () => {
         {
           stdout: "pipe",
           stderr: "pipe",
-          env: { ...process.env, STUB_BIND_FAILURES: "1" },
+          env: { ...process.env, STUB_BIND_FAILURES: "1", STUB_TICK: "1" },
         },
       );
       const out = await new Response(proc.stdout).text();
@@ -175,8 +184,10 @@ describe("the generated mgba.lua", () => {
       expect(out).toContain(
         "log PMR bridge: bind failed: address in use (port 7426, adapters.mgba.port)",
       );
-      // The retry waits 2 s on os.time, which the stub does not advance, so no second bind in five frames.
-      expect(out.match(/^bind /gm)).toHaveLength(1);
+      // The stub's clock moves 1 s a frame: the first bind is at load, so frame 1 waits and frame 2 retries.
+      const binds = [...out.matchAll(/^(bind |step )/gm)].map((m) => m[1]);
+      expect(binds.slice(0, 4)).toEqual(["bind ", "step ", "bind ", "step "]);
+      expect(out.match(/^bind /gm)).toHaveLength(2);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

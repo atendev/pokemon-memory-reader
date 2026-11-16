@@ -42,6 +42,10 @@ local inbox, peer_open = "", true
 local sent = {}
 local accepted = false
 local bind_failures = tonumber(os.getenv("STUB_BIND_FAILURES") or "0")
+-- The shim's clock reads os.time. It moves only by STUB_TICK seconds per frame, so tests control it.
+local fake_now = 1000
+local tick = tonumber(os.getenv("STUB_TICK") or "0")
+os.time = function() return fake_now end
 
 local client = {}
 function client:receive()
@@ -107,6 +111,7 @@ if not ok then
 end
 
 local function frame(n)
+  fake_now = fake_now + tick
   hooks.frame()
   for _, data in ipairs(sent) do print("send " .. to_hex(data)) end
   sent = {}

@@ -11,12 +11,23 @@ export interface BridgeSettings {
 
 const SOURCE = resolve(import.meta.dir);
 
-const WILDCARDS = new Set(["0.0.0.0", "::", "0:0:0:0:0:0:0:0"]);
+/** The URL parser puts every IPv6 spelling into one form, so `::0`, `0:0::0` and `::ffff:0.0.0.0` meet the entries here. */
+const WILDCARDS = new Set(["0.0.0.0", "[::]", "[::ffff:0:0]"]);
+
+function isWildcard(host: string): boolean {
+  if (WILDCARDS.has(host)) return true;
+  if (isIP(host) !== 6) return false;
+  try {
+    return WILDCARDS.has(new URL(`http://[${host.split("%")[0]}]`).hostname);
+  } catch {
+    return false;
+  }
+}
 
 /** Throws on settings that would not survive being written into Lua source. */
 export function checkSettings(settings: BridgeSettings): void {
   const { host, port, build } = settings;
-  if (isIP(host) === 0 || WILDCARDS.has(host)) {
+  if (isIP(host) === 0 || isWildcard(host)) {
     throw new Error(
       `bridge host must be an IPv4 or IPv6 literal, not a name or a wildcard: ${host}`,
     );

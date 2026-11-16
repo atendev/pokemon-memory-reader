@@ -126,6 +126,42 @@ describe("connect", () => {
     expect(adapter.state.connection).toBe("disconnected");
   });
 
+  test("a probe still sees a busy that arrives in the same chunk as the hello", async () => {
+    const fake = startFake();
+    fake.game = undefined;
+    fake.afterHello = encodeFrame(
+      FRAME_KIND.ERROR,
+      0,
+      new TextEncoder().encode(JSON.stringify({ code: "busy", message: "x" })),
+    );
+    const { adapter } = makeAdapter(fake.port, "probe");
+    await until(() => adapter.state.problem === "busy");
+    expect(adapter.state.bridge?.build).toBe("test-build");
+    await until(() => fake.open === 0, "the probe to close");
+  });
+
+  test("probes that succeed keep backing off", async () => {
+    const fake = startFake();
+    const { adapter, clock } = makeAdapter(fake.port, "probe");
+    const closed = (n: number) =>
+      until(
+        () => fake.connections === n && fake.open === 0,
+        `probe ${n} to close`,
+      );
+    await closed(1);
+    clock.advance(500);
+    await closed(2);
+    clock.advance(999);
+    await sleep(30);
+    expect(fake.connections).toBe(2);
+    clock.advance(1);
+    await closed(3);
+    clock.advance(1999);
+    await sleep(30);
+    expect(fake.connections).toBe(3);
+    expect(adapter.state.problem).toBeNull();
+  });
+
   test("a selector that goes live inside the listener keeps the connection", async () => {
     const fake = startFake();
     const { adapter } = makeAdapter(fake.port, "probe");
@@ -553,6 +589,38 @@ describe("close and reconnect", () => {
     }
     expect(adapter.state.game).not.toBeNull();
     expect(adapter.state.problem).toBeNull();
+  });
+
+  test("a refused connect clears a problem and the bridge from the last connection", async () => {
+    const fake = startFake();
+    fake.hello = { bridge: "mgba", protocol: 2 };
+    const { adapter, clock } = makeAdapter(fake.port);
+    await until(() => adapter.state.problem === "protocol_mismatch");
+    await until(() => adapter.state.connection === "disconnected");
+    expect(adapter.state.bridge).not.toBeNull();
+    fake.stop();
+    clock.advance(500);
+    await until(() => adapter.state.problem === null, "the problem to clear");
+    expect(adapter.state.bridge).toBeNull();
+    expect(adapter.state.connection).toBe("disconnected");
+  });
+
+  test("bridge_error survives a reconnect until a valid game message", async () => {
+    const { adapter, fake, clock } = await live();
+    fake.sendGame({ platform: "nds" });
+    await until(() => adapter.state.problem === "bridge_error");
+    fake.game = undefined;
+    fake.dropClients();
+    await until(() => adapter.state.connection === "disconnected");
+    expect(adapter.state.problem).toBe("bridge_error");
+    clock.advance(500);
+    await until(() => adapter.state.connection === "connected");
+    expect(adapter.state.bridge?.build).toBe("test-build");
+    expect(adapter.state.problem).toBe("bridge_error");
+    expect(fake.open).toBe(1);
+    fake.sendGame(GBA_GAME);
+    await until(() => adapter.state.problem === null);
+    expect(adapter.state.game).not.toBeNull();
   });
 
   test("garbage after a valid hello is bridge_error and a reconnect", async () => {
