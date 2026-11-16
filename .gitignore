@@ -24,3 +24,6 @@ THIRD-PARTY-NOTICES.txt
 *.[sS][tT][aA][tT][eE][0-9]
 *.[sS][tT][aA][tT][eE].[aA][uU][tT][oO]
 *.[dD][mM][pP]
+
+# Owner-only local test inputs (spec 12.9). Never committed.
+fixtures-local/
