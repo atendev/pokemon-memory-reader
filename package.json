@@ -22,9 +22,11 @@
     "test:local": "bun scripts/test-local.ts"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@biomejs/biome": "2.6.7",
     "@types/bun": "1.4.2",
     "@types/spdx-expression-parse": "4.0.0",
+    "publint": "0.3.25",
     "spdx-exceptions": "2.5.0",
     "spdx-expression-parse": "4.0.0",
     "spdx-license-ids": "3.0.24",

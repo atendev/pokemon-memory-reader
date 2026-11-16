@@ -53,10 +53,9 @@ jobs:
         env:
           EXPECT_LUA_VERSION: "5.3"
 
-  # Off until the "API package build and check" ticket adds the api/ build and pins publint and attw.
+  # Builds api/ to dist, packs it, and lints the tarball. publint and attw are pinned in the root package.json.
   api-package:
     name: API package check
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

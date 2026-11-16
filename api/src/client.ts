@@ -1,4 +1,9 @@
-import type { ErrorBody, ResourceMap, StatusResource, Topic } from "./schemas";
+import type {
+  ErrorBody,
+  ResourceMap,
+  StatusResource,
+  Topic,
+} from "./schemas.js";
 
 export const API_VERSION = 2;
 export const API_BASE_PATH = `/api/v${API_VERSION}`;
