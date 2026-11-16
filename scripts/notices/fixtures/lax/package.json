@@ -1,0 +1,11 @@
+{
+  "name": "fixture-lax",
+  "private": true,
+  "dependencies": {
+    "unlicense-pkg": "1.0.0",
+    "cc0-pkg": "1.0.0",
+    "mit0-pkg": "1.0.0",
+    "boost-pkg": "1.0.0",
+    "unicode-dfs-pkg": "1.0.0"
+  }
+}

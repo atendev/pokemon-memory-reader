@@ -17,7 +17,7 @@ const deprecatedLicenseIds: string[] = require("spdx-license-ids/deprecated");
 const exceptionIds: string[] = require("spdx-exceptions");
 const deprecatedExceptionIds: string[] = require("spdx-exceptions/deprecated");
 
-/** Accepted for every entry: npm packages, Bun runtime components and bundled assets (amendment 027 item 1). */
+/** Accepted for every entry: npm packages, Bun runtime components and bundled assets (amendments 027 item 1 and 043 item 1). */
 export const PERMISSIVE_TIER: readonly string[] = [
   "MIT",
   "ISC",
@@ -27,6 +27,11 @@ export const PERMISSIVE_TIER: readonly string[] = [
   "Apache-2.0",
   "Zlib",
   "Unicode-3.0",
+  "Unlicense",
+  "CC0-1.0",
+  "MIT-0",
+  "BSL-1.0",
+  "Unicode-DFS-2016",
 ];
 
 /** Accepted only for entries in the Bun runtime manifest: the permissive tier plus what Bun's binary needs. */

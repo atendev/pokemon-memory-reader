@@ -173,6 +173,6 @@ describe("bun-runtime.json components", () => {
     const blocked = manifest.components
       .filter((c) => c.blockedUntilAmendment)
       .map((c) => c.name);
-    expect(blocked.sort()).toEqual(["bun_clap", "domain-browser"]);
+    expect(blocked.sort()).toEqual(["domain-browser"]);
   });
 });
