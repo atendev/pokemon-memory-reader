@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794843940
+claimed_at: 2026-11-16T16:21:08Z
 ---
 
 # Persist a failed owner check so the release gate blocks the repo
