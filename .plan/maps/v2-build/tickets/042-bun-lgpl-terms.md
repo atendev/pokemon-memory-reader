@@ -26,3 +26,5 @@ Record the answer as an amendment that the spec section can cite. Don't edit `sp
 - **Unblocks.** `v2.0.0-beta.1` waits on four new tasks and ticket 045.
 
 Report: [042-bun-lgpl-terms-report.md](../assets/042-bun-lgpl-terms-report.md).
+
+CI green on 94c2f77 (PR #27). Audit approved in round 4.
