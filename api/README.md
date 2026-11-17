@@ -2,11 +2,11 @@
 
 Types, Zod schemas and a small client for the Pokemon Memory Reader API v2. The package is ESM only and MIT licensed. Semver major equals the API path version, so 2.x targets `/api/v2`.
 
-`zod` 4 is an optional peer dependency. Every declaration file imports Zod's types, so a TypeScript project that skips `zod` needs `skipLibCheck` until the declarations stop depending on it.
+`zod` 4 is an optional peer dependency. Install it only to use `/schemas`. The `/types` and `/client` declarations never import `zod`, so a TypeScript project without it typechecks with `skipLibCheck` off.
 
 Three subpaths:
 
-- `/types`: the TypeScript types for every resource. No runtime code.
+- `/types`: hand-written TypeScript types for every resource, checked equal to the `/schemas` inferred types. No runtime code.
 - `/schemas`: Zod schemas for every resource and the error body, plus `TOPICS`, `ResourceMap` and `resourceSchemas`.
 - `/client`: `get`, `getStatus` and `getParty`, `PmrApiError`, `API_VERSION` and the default host, port and base URL.
 
