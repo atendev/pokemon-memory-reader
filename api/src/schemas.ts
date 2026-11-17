@@ -1,4 +1,21 @@
 import { z } from "zod";
+import type {
+  AdapterInfo as AdapterInfoType,
+  ErrorBody as ErrorBodyType,
+  Game as GameType,
+  Move as MoveType,
+  Nature as NatureType,
+  Party as PartyType,
+  Pokemon as PokemonType,
+  Ref as RefType,
+  ResourceMap as ResourceMapType,
+  Rom as RomType,
+  Stats as StatsType,
+  StatusResource as StatusResourceType,
+  Status as StatusType,
+  Topic as TopicType,
+  Type as TypeType,
+} from "./types.js";
 
 export const TYPES = [
   "normal",
@@ -20,7 +37,7 @@ export const TYPES = [
   "dragon",
   "dark",
   "fairy",
-] as const;
+] as const satisfies readonly TypeType[];
 
 /** The 25 natures in Gen 3 ID order, so `personality % 25` indexes this list. */
 export const NATURES = [
@@ -49,7 +66,7 @@ export const NATURES = [
   "sassy",
   "careful",
   "quirky",
-] as const;
+] as const satisfies readonly NatureType[];
 
 export const STATUSES = [
   "none",
@@ -59,22 +76,22 @@ export const STATUSES = [
   "burn",
   "freeze",
   "paralysis",
-] as const;
+] as const satisfies readonly StatusType[];
 
 export const Type = z.enum(TYPES);
-export type Type = z.infer<typeof Type>;
+export type Type = TypeType;
 
 export const Nature = z.enum(NATURES);
-export type Nature = z.infer<typeof Nature>;
+export type Nature = NatureType;
 
 export const Status = z.enum(STATUSES);
-export type Status = z.infer<typeof Status>;
+export type Status = StatusType;
 
 export const Ref = z.looseObject({
   id: z.int(),
   name: z.string().nullable(),
 });
-export type Ref = z.infer<typeof Ref>;
+export type Ref = RefType;
 
 export const Stats = z.looseObject({
   hp: z.int(),
@@ -84,7 +101,7 @@ export const Stats = z.looseObject({
   spd: z.int(),
   spe: z.int(),
 });
-export type Stats = z.infer<typeof Stats>;
+export type Stats = StatsType;
 
 export const Move = z.looseObject({
   id: z.int(),
@@ -94,7 +111,7 @@ export const Move = z.looseObject({
   maxPp: z.int().nullable(),
   ppUps: z.int().min(0).max(3),
 });
-export type Move = z.infer<typeof Move>;
+export type Move = MoveType;
 
 export const Pokemon = z.looseObject({
   species: z.looseObject({
@@ -152,11 +169,11 @@ export const Pokemon = z.looseObject({
   gender: z.enum(["male", "female", "genderless"]).nullable(),
   hiddenPower: z.looseObject({ type: Type, power: z.int() }).nullable(),
 });
-export type Pokemon = z.infer<typeof Pokemon>;
+export type Pokemon = PokemonType;
 
 /** The player's party, in slot order. */
 export const Party = z.looseObject({ pokemon: z.array(Pokemon) });
-export type Party = z.infer<typeof Party>;
+export type Party = PartyType;
 
 const Hash = z.string().nullable();
 
@@ -174,7 +191,7 @@ export const Rom = z.looseObject({
     .looseObject({ version: z.string(), tagged: z.boolean() })
     .nullable(),
 });
-export type Rom = z.infer<typeof Rom>;
+export type Rom = RomType;
 
 /** Where a table came from: shipped reference data, the ROM, or neither. null when the format has none. */
 const NameSource = z.enum(["builtin", "rom", "unavailable"]).nullable();
@@ -201,7 +218,7 @@ export const Game = z.looseObject({
     exp: NameSource,
   }),
 });
-export type Game = z.infer<typeof Game>;
+export type Game = GameType;
 
 /**
  * The adapter in use, or the highest-priority one with a problem while none is usable.
@@ -223,7 +240,7 @@ export const AdapterInfo = z.looseObject({
     .nullable(),
   problem: z.string().nullable(),
 });
-export type AdapterInfo = z.infer<typeof AdapterInfo>;
+export type AdapterInfo = AdapterInfoType;
 
 /** The `status` resource. Always served with 200 (spec §7.2). Named apart from the `Status` condition enum. */
 export const StatusResource = z.looseObject({
@@ -232,7 +249,7 @@ export const StatusResource = z.looseObject({
   rom: Rom.nullable(),
   game: Game.nullable(),
 });
-export type StatusResource = z.infer<typeof StatusResource>;
+export type StatusResource = StatusResourceType;
 
 /**
  * Every 503 and 404 body (amendment 020 §1). `code` is an open enum, so clients branch on it and
@@ -242,20 +259,21 @@ export const ErrorBody = z.looseObject({
   error: z.looseObject({ code: z.string(), message: z.string() }),
   status: StatusResource,
 });
-export type ErrorBody = z.infer<typeof ErrorBody>;
+export type ErrorBody = ErrorBodyType;
 
 /**
  * The resources the server serves so far. `player`, `bag`, `battle` and `boxes` join this tuple
  * and `resourceSchemas` as their decoders land, which is an additive change inside `/api/v2`.
  */
-export const TOPICS = ["status", "party"] as const;
-export type Topic = (typeof TOPICS)[number];
+export const TOPICS = [
+  "status",
+  "party",
+] as const satisfies readonly TopicType[];
+export type Topic = TopicType;
 
 export const resourceSchemas = {
   status: StatusResource,
   party: Party,
 } satisfies Record<Topic, z.ZodType>;
 
-export type ResourceMap = {
-  [T in Topic]: z.infer<(typeof resourceSchemas)[T]>;
-};
+export type ResourceMap = ResourceMapType;
