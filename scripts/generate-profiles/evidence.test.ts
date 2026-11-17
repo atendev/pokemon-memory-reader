@@ -4,8 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { heldBack } from "./definitions";
 import {
+  appendFailure,
   appendLedgerEntry,
+  clearFailures,
   ledgerProblems,
+  parseFailures,
   parseLedger,
   rateSignatureEvidence,
   renderEvidenceNotes,
@@ -175,5 +178,30 @@ describe("release notes", () => {
     expect(
       renderEvidenceNotes([{ id: "c", name: "C", level: "owner" }]),
     ).toContain("Every shipped profile");
+  });
+});
+
+describe("the failure record", () => {
+  const failure = { profileId: "a", repo: "pret/x", sha1: sha("a"), date: day };
+
+  test("parses exact entries and rejects anything else", () => {
+    expect(parseFailures(JSON.stringify([failure]))).toEqual([failure]);
+    expect(() => parseFailures("{}")).toThrow("not a list");
+    expect(() =>
+      parseFailures(JSON.stringify([{ ...failure, repo: undefined }])),
+    ).toThrow("no repo");
+    expect(() =>
+      parseFailures(JSON.stringify([{ ...failure, extra: 1 }])),
+    ).toThrow("exactly");
+  });
+
+  test("a repeat failure keeps the first entry, and a pass clears only its own profile and ROM", () => {
+    const one = appendFailure([], failure);
+    expect(appendFailure(one, { ...failure, date: "2026-12-01" })).toEqual(one);
+    const two = appendFailure(one, { ...failure, sha1: sha("b") });
+    expect(clearFailures(two, { profileId: "a", sha1: sha("a") })).toEqual([
+      { ...failure, sha1: sha("b") },
+    ]);
+    expect(clearFailures(two, { profileId: "z", sha1: sha("a") })).toEqual(two);
   });
 });

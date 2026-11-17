@@ -8,6 +8,19 @@ export interface LedgerEntry {
   readonly date: string;
 }
 
+/**
+ * One failed owner check: the owner's retail ROM, a revision the profile lists, didn't match the profile's
+ * signature words. It blocks every profile from `repo` until a later pass for the same profile and ROM clears it.
+ */
+export interface FailureEntry {
+  readonly profileId: string;
+  /** The pret repo the profile's symbols come from, so the block reaches every revision from it. */
+  readonly repo: string;
+  readonly sha1: string;
+  /** `YYYY-MM-DD`, UTC, of the first failure. */
+  readonly date: string;
+}
+
 /** The parts of a shipped official profile that decide its evidence level. */
 export interface RatedProfile {
   readonly id: string;
@@ -56,6 +69,79 @@ export function renderLedger(entries: readonly LedgerEntry[]): string {
     ),
   );
   return `${JSON.stringify(sorted, null, 2)}\n`;
+}
+
+function checkFailure(value: unknown, where: string): FailureEntry {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new Error(`${where} is not an object`);
+  const { repo, ...rest } = value as Record<string, unknown>;
+  if (typeof repo !== "string") throw new Error(`${where} has no repo`);
+  return { ...checkEntry(rest, where), repo };
+}
+
+/** Reads the committed failure record with the same strictness as the ledger. */
+export function parseFailures(text: string): FailureEntry[] {
+  const parsed: unknown = JSON.parse(text);
+  if (!Array.isArray(parsed))
+    throw new Error("the failure record is not a list");
+  return parsed.map((entry, i) => checkFailure(entry, `failure entry ${i}`));
+}
+
+/** Sorted, like the ledger, so a recorded run and a hand merge give the same file. */
+export function renderFailures(entries: readonly FailureEntry[]): string {
+  const sorted = [...entries].sort((a, b) =>
+    `${a.profileId} ${a.date} ${a.sha1}`.localeCompare(
+      `${b.profileId} ${b.date} ${b.sha1}`,
+    ),
+  );
+  return `${JSON.stringify(sorted, null, 2)}\n`;
+}
+
+/** A repeat failure of the same profile and ROM keeps the first entry, so a second identical run gives no diff. */
+export function appendFailure(
+  entries: readonly FailureEntry[],
+  entry: FailureEntry,
+): FailureEntry[] {
+  const checked = checkFailure(entry, "the new failure");
+  const known = entries.some(
+    (e) => e.profileId === checked.profileId && e.sha1 === checked.sha1,
+  );
+  return known ? [...entries] : [...entries, checked];
+}
+
+/** A pass for a profile and ROM resolves the failures recorded for that same profile and ROM. */
+export function clearFailures(
+  entries: readonly FailureEntry[],
+  pass: { readonly profileId: string; readonly sha1: string },
+): FailureEntry[] {
+  return entries.filter(
+    (e) => !(e.profileId === pass.profileId && e.sha1 === pass.sha1),
+  );
+}
+
+/**
+ * Amendment 022 item 7: one message per shipped profile, signed or not, whose pret repo has an unresolved failed owner
+ * check, naming the profiles that failed. The failure's own profile is blocked too, since it is in the repo.
+ */
+export function failureProblems(
+  profiles: readonly RatedProfile[],
+  failures: readonly FailureEntry[],
+): string[] {
+  const problems: string[] = [];
+  for (const profile of profiles) {
+    const failed = failures.filter(
+      (f) =>
+        f.profileId === profile.id ||
+        (profile.repo !== "" && f.repo === profile.repo),
+    );
+    if (failed.length > 0)
+      problems.push(
+        `${profile.id} is blocked: the owner check failed for ${[
+          ...new Set(failed.map((f) => f.profileId)),
+        ].join(", ")} and no later pass has cleared it`,
+      );
+  }
+  return problems;
 }
 
 /** What `test:local --record` calls after a passing signature check. A repeat check of the same profile and ROM keeps the first entry. */

@@ -16,3 +16,11 @@ claimed_at: 2026-11-16T16:21:08Z
 - A failed owner check under `--record` writes a failure record, and `release-gate.test.ts` then fails for that repo's profiles.
 - A later pass for the same profile and SHA-1 clears the block, and a second identical run gives no diff.
 - Tests use synthetic ROM-shaped buffers. No ROM bytes are committed.
+
+## Answer
+
+`test:local --record` writes a failure row `{ profileId, repo, sha1, date }` to the new committed file `scripts/generate-profiles/signature-failures.json` when a ROM the profile lists misses its signature words. A later pass for the same profile and ROM removes the row, and repeat runs of either kind give no diff. `releaseGateProblems` takes the failures as a required argument and blocks every shipped profile of a repo with an open row, signed or not. A repo-less failure blocks only its own profile. The ledger stays append-only.
+
+A wrong or unreadable file still fails the run and blocks the run's own repo as in ticket 038, but writes no row, because no pass could ever name that ROM's SHA-1. A pass clears its own row even when a sibling in the repo fails in the same run.
+
+Audit APPROVE in round 3 (gemini 10, gpt 9, claude 8). CI green on [PR 37](https://github.com/atendev/pokemon-memory-reader/pull/37). See [the decision report](../assets/055-persist-failed-owner-check-report.md).

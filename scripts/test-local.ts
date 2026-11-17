@@ -3,10 +3,18 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ShippedProfile } from "./generate-profiles/gate";
-import { recordSignatureCheck } from "./generate-profiles/record";
+import {
+  clearSignatureFailure,
+  recordSignatureCheck,
+  recordSignatureFailure,
+} from "./generate-profiles/record";
 
 const BUILTIN = join(import.meta.dir, "../server/src/profile/builtin");
 const LEDGER = join(import.meta.dir, "generate-profiles/signature-ledger.json");
+const FAILURES = join(
+  import.meta.dir,
+  "generate-profiles/signature-failures.json",
+);
 const GBA_ROM_BASE = 0x08000000;
 const GBA_ROM_END = 0x0e000000;
 
@@ -89,6 +97,8 @@ export type CheckResult =
       readonly repo: string;
       readonly status: "fail";
       readonly problems: string[];
+      /** Set only when the ROM is a revision the profile lists, so the failure is a mapping fault. A wrong or unreadable file has none. */
+      readonly sha1?: string;
     };
 
 /**
@@ -105,28 +115,29 @@ export async function checkProfile(
   const path = env[name];
   if (path === undefined || path === "")
     return { profileId: profile.id, repo, status: "not-run", env: name };
-  const fail = (...problems: string[]): CheckResult => ({
+  const fail = (problems: string[], sha1?: string): CheckResult => ({
     profileId: profile.id,
     repo,
     status: "fail",
     problems,
+    ...(sha1 === undefined ? {} : { sha1 }),
   });
   let rom: Uint8Array;
   try {
     rom = await read(path);
   } catch (error) {
-    return fail(
+    return fail([
       `${name} is set but ${path} can't be read: ${(error as Error).message}`,
-    );
+    ]);
   }
   const sha1 = createHash("sha1").update(rom).digest("hex");
   if (!profile.identify.sha1.includes(sha1))
-    return fail(
+    return fail([
       `the ROM's SHA-1 ${sha1} is not one of the profile's identify.sha1 values, so it is not this retail revision`,
-    );
+    ]);
   const problems = signatureProblems(profile, rom);
   return problems.length > 0
-    ? fail(...problems)
+    ? fail(problems, sha1)
     : { profileId: profile.id, repo, status: "pass", sha1 };
 }
 
@@ -134,6 +145,7 @@ export interface RunOptions {
   readonly profiles: readonly ShippedProfile[];
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly ledgerPath: string;
+  readonly failuresPath: string;
   readonly now?: Date;
   readonly read?: (path: string) => Promise<Uint8Array>;
 }
@@ -142,9 +154,11 @@ export interface RunOptions {
  * Runs the signature check for every signed official profile. Returns the exit code: 0 when nothing failed
  * (profiles with no ROM are "not run"), 1 when any check failed, 2 on a bad argument.
  *
- * `--record` writes passing checks to the ledger through `recordSignatureCheck` and touches nothing else.
- * One failed check blocks its whole pret repo (amendment 022 item 7), so no entry is recorded for that repo
- * on the run. Other repos still record.
+ * `--record` writes passing checks to the ledger through `recordSignatureCheck`. One failed check blocks its
+ * whole pret repo (amendment 022 item 7), so no pass is recorded in the ledger for that repo on the run and other
+ * repos still record. A pass always clears its own failure row. A failure on a listed revision is also written to the failure record, which the release gate
+ * reads, and stays there until a later run passes that profile and ROM. A wrong or unreadable file blocks only
+ * its own run: it says nothing about the generator's mapping, and no pass could ever name that ROM.
  */
 export async function run(
   args: readonly string[],
@@ -183,19 +197,41 @@ export async function run(
     );
 
   if (record) {
-    const before = existsSync(options.ledgerPath)
-      ? readFileSync(options.ledgerPath, "utf8")
-      : "";
-    for (const r of results)
-      if (r.status === "pass" && !failedRepos.has(r.repo))
-        await recordSignatureCheck(
-          options.ledgerPath,
-          { profileId: r.profileId, sha1: r.sha1 },
-          options.now,
-        );
-    const after = existsSync(options.ledgerPath)
-      ? readFileSync(options.ledgerPath, "utf8")
-      : "";
+    const read = (path: string) =>
+      existsSync(path) ? readFileSync(path, "utf8") : "";
+    const before = read(options.ledgerPath);
+    const failuresBefore = read(options.failuresPath);
+    for (const r of results) {
+      if (r.status === "fail") {
+        if (r.sha1 === undefined)
+          log(
+            `not recorded  ${r.profileId}: the ROM is not a listed revision, so the release gate is not told`,
+          );
+        else
+          await recordSignatureFailure(
+            options.failuresPath,
+            { profileId: r.profileId, repo: r.repo, sha1: r.sha1 },
+            options.now,
+          );
+      } else if (r.status === "pass") {
+        // A pass resolves its own failure row even in a repo that failed again this run, which stays blocked by that new failure.
+        await clearSignatureFailure(options.failuresPath, {
+          profileId: r.profileId,
+          sha1: r.sha1,
+        });
+        if (!failedRepos.has(r.repo))
+          await recordSignatureCheck(
+            options.ledgerPath,
+            { profileId: r.profileId, sha1: r.sha1 },
+            options.now,
+          );
+      }
+    }
+    if (read(options.failuresPath) !== failuresBefore)
+      log(
+        "failure record updated. Commit scripts/generate-profiles/signature-failures.json.",
+      );
+    const after = read(options.ledgerPath);
     log(
       after === before
         ? "ledger unchanged"
@@ -219,7 +255,12 @@ if (import.meta.main) {
   process.exit(
     await run(
       process.argv.slice(2),
-      { profiles: readBuiltinProfiles(), env: process.env, ledgerPath: LEDGER },
+      {
+        profiles: readBuiltinProfiles(),
+        env: process.env,
+        ledgerPath: LEDGER,
+        failuresPath: FAILURES,
+      },
       console.log,
     ),
   );

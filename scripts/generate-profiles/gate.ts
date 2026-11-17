@@ -1,4 +1,6 @@
 import {
+  type FailureEntry,
+  failureProblems,
   type LedgerEntry,
   ledgerProblems,
   rateSignatureEvidence,
@@ -25,14 +27,15 @@ export interface ShippedProfile {
 const LEVELS: readonly string[] = ["owner", "chain", "unconfirmed"];
 
 /**
- * Amendment 022 item 8. Returns every reason the release candidate or `v2.0.0` must not ship: a shipped
- * official profile with signature words and a missing or wrong `signatureEvidence`, a stale ledger entry,
+ * Amendment 022 items 7 and 8. Returns every reason the release candidate or `v2.0.0` must not ship: an
+ * unresolved failed owner check in a shipped profile's repo, a shipped official profile with signature words and a missing or wrong `signatureEvidence`, a stale ledger entry,
  * an official built-in with no No-Intro CRC32 beside each SHA-1 (a broken chain), a held-back revision in
  * the built-in set, or release notes text that leaves out a profile that isn't `owner`.
  */
 export function releaseGateProblems(
   shipped: readonly ShippedProfile[],
   ledger: readonly LedgerEntry[],
+  failures: readonly FailureEntry[],
   heldBackIds: readonly string[],
   notesText: string,
 ): string[] {
@@ -49,6 +52,16 @@ export function releaseGateProblems(
     sha1: p.identify?.sha1 ?? [],
   }));
   problems.push(...ledgerProblems(rated, ledger));
+  problems.push(
+    ...failureProblems(
+      shipped.map((p) => ({
+        id: p.id,
+        repo: p.provenance?.repo ?? "",
+        sha1: p.identify?.sha1 ?? [],
+      })),
+      failures,
+    ),
+  );
   const expected = rateSignatureEvidence(rated, ledger);
 
   for (const p of signed) {
