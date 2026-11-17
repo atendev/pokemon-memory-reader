@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [054]
+claimed_by: wayfinder-master v2-build-master-1794843940
+claimed_at: 2026-11-17T14:11:18Z
 ---
 
 # Zod-free `/types` and `/client` declarations
