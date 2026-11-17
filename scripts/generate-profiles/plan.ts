@@ -8,6 +8,7 @@ import {
 } from "./evidence";
 import { resolveHashes } from "./hashes";
 import { describeHoldBack } from "./holdback";
+import { checkSpeciesInfoStride } from "./stride";
 import type { SymbolInfo } from "./sym";
 
 type NoIntro = ReadonlyMap<string, ReadonlySet<string>>;
@@ -41,6 +42,13 @@ export function planGeneration(input: GeneratorInput): {
   const messages = input.held.map(
     (h) => describeHoldBack(h.held, h.pretSha1s, h.noIntro).message,
   );
+  for (const { definition, symbols } of input.built) {
+    checkSpeciesInfoStride(
+      definition.source.repo,
+      symbols,
+      definition.speciesInfo,
+    );
+  }
   const resolved = input.built.map((b) => ({
     ...b,
     hashes: resolveHashes(b.pretSha1s, b.noIntro, {

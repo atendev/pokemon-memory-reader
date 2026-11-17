@@ -1,3 +1,5 @@
+import type { SpeciesInfoTable } from "./stride";
+
 /** What the generator knows about one official profile. Symbols come from pret. Everything else is hand-written. */
 export interface ProfileDefinition {
   readonly id: string;
@@ -21,6 +23,8 @@ export interface ProfileDefinition {
     readonly symbol: string;
     readonly pointer?: true;
   }>;
+  /** The species table the generator checks for the vanilla stride. The count is the species count of this data format's reference data. */
+  readonly speciesInfo: SpeciesInfoTable;
   /** Table symbol to its entry size in bytes. The count is the symbol's size divided by it. */
   readonly trainerTables: {
     readonly trainers: { readonly symbol: string; readonly entrySize: number };
