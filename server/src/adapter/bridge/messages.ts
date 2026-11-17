@@ -38,7 +38,7 @@ export function decodeJsonBody(body: Uint8Array): unknown {
 /** Step 1 of the hello check (spec §4.7): enough to tell a protocol difference from a bad hello. */
 const helloStep1 = z.object({ bridge: z.string(), protocol: z.number().int() });
 
-const helloStrict = z.object({
+export const helloStrict = z.object({
   bridge: z.enum(["mgba", "bizhawk"]),
   protocol: z.literal(PROTOCOL),
   build: z.string(),

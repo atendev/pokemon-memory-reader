@@ -1,7 +1,13 @@
 import { z } from "zod";
+import { TOPIC_NAMES } from "./meanings.js";
 import type {
+  AdapterId,
   AdapterInfo as AdapterInfoType,
+  AdapterProblem,
+  BridgeId,
+  DataFormat,
   ErrorBody as ErrorBodyType,
+  ErrorCode,
   Game as GameType,
   Move as MoveType,
   Nature as NatureType,
@@ -16,6 +22,11 @@ import type {
   Topic as TopicType,
   Type as TypeType,
 } from "./types.js";
+
+/** Validated as a string and typed as the open union, so an unknown name from a newer server still parses. */
+function openEnum<T extends string>() {
+  return z.custom<T>((value) => typeof value === "string");
+}
 
 export const TYPES = [
   "normal",
@@ -202,7 +213,7 @@ export const Game = z.looseObject({
   name: z.string(),
   generation: z.int(),
   language: z.string(),
-  dataFormat: z.string(),
+  dataFormat: openEnum<DataFormat>(),
   match: z.enum(["exact", "header", "manual"]),
   signature: z.enum(["match", "mismatch", "unchecked"]).nullable(),
   features: z.looseObject({ boxes: z.boolean() }),
@@ -225,12 +236,12 @@ export type Game = GameType;
  * `problem` is an open enum, as are `id` and `bridge.bridge` (spec §7.11).
  */
 export const AdapterInfo = z.looseObject({
-  id: z.string(),
+  id: openEnum<AdapterId>(),
   /** True after 1 s of consecutive read timeouts (spec §8.6). Always false until the stall check lands. */
   stalled: z.boolean(),
   bridge: z
     .looseObject({
-      bridge: z.string(),
+      bridge: openEnum<BridgeId>(),
       protocol: z.int(),
       build: z.string().nullable(),
       emulator: z
@@ -238,7 +249,7 @@ export const AdapterInfo = z.looseObject({
         .nullable(),
     })
     .nullable(),
-  problem: z.string().nullable(),
+  problem: openEnum<AdapterProblem>().nullable(),
 });
 export type AdapterInfo = AdapterInfoType;
 
@@ -256,19 +267,17 @@ export type StatusResource = StatusResourceType;
  * never on `message`, which is English text without a stability promise.
  */
 export const ErrorBody = z.looseObject({
-  error: z.looseObject({ code: z.string(), message: z.string() }),
+  error: z.looseObject({ code: openEnum<ErrorCode>(), message: z.string() }),
   status: StatusResource,
 });
 export type ErrorBody = ErrorBodyType;
 
 /**
- * The resources the server serves so far. `player`, `bag`, `battle` and `boxes` join this tuple
- * and `resourceSchemas` as their decoders land, which is an additive change inside `/api/v2`.
+ * The resources the server serves so far, in the order of the topic record. `player`, `bag`, `battle`
+ * and `boxes` join the record and `resourceSchemas` as their decoders land, which is an additive
+ * change inside `/api/v2`.
  */
-export const TOPICS = [
-  "status",
-  "party",
-] as const satisfies readonly TopicType[];
+export const TOPICS = Object.keys(TOPIC_NAMES) as readonly TopicType[];
 export type Topic = TopicType;
 
 export const resourceSchemas = {

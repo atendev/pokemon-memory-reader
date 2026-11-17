@@ -1,4 +1,10 @@
-import type { ErrorBody, ResourceMap, StatusResource, Topic } from "./types.js";
+import type {
+  ErrorBody,
+  ErrorCode,
+  ResourceMap,
+  StatusResource,
+  Topic,
+} from "./types.js";
 
 export const API_VERSION = 2;
 export const API_BASE_PATH = `/api/v${API_VERSION}`;
@@ -28,7 +34,7 @@ export class PmrApiError extends Error {
   /** The HTTP status, or null for a network failure. */
   readonly httpStatus: number | null;
   /** The 503 body's `error.code`. Null for the other kinds. */
-  readonly code: string | null;
+  readonly code: ErrorCode | null;
   /** The `status` resource a 503 body carries. Null for the other kinds. */
   readonly status: StatusResource | null;
 
@@ -37,7 +43,7 @@ export class PmrApiError extends Error {
     message: string,
     details: {
       readonly httpStatus?: number | null;
-      readonly code?: string | null;
+      readonly code?: ErrorCode | null;
       readonly status?: StatusResource | null;
       readonly cause?: unknown;
     } = {},

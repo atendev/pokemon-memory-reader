@@ -6,7 +6,7 @@ Types, Zod schemas and a small client for the Pokemon Memory Reader API v2. The 
 
 Three subpaths:
 
-- `/types`: hand-written TypeScript types for every resource, checked equal to the `/schemas` inferred types. No runtime code.
+- `/types`: hand-written TypeScript types for every resource, checked equal to the `/schemas` inferred types. No runtime code. Open enums such as `ErrorCode` are a known union plus `(string & {})`, so a client tolerates names a newer server adds. Known names are never removed within 2.x. The meanings are in [docs/open-enums.md](../docs/open-enums.md).
 - `/schemas`: Zod schemas for every resource and the error body, plus `TOPICS`, `ResourceMap` and `resourceSchemas`.
 - `/client`: `get`, `getStatus` and `getParty`, `PmrApiError`, `API_VERSION` and the default host, port and base URL.
 
