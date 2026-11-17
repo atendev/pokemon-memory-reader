@@ -45,6 +45,8 @@ export const definitions: readonly ProfileDefinition[] = [
       { key: "gBattleStruct", symbol: "gBattleStruct", pointer: true },
       { key: "gBattleResources", symbol: "gBattleResources", pointer: true },
     ],
+    // 412 species is the length of `speciesData` in `gen3-en.json`, which a test pins.
+    speciesInfo: { symbol: "gSpeciesInfo", speciesCount: 412 },
     // pokeemerald: sizeof(struct Trainer) 40, trainer class names 13 bytes, struct TrainerMoney 2 bytes.
     trainerTables: {
       trainers: { symbol: "gTrainers", entrySize: 40 },
