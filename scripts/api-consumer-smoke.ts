@@ -16,15 +16,17 @@ const RESOLUTIONS = [
 ];
 
 const CONSUMER = `import { getParty, getStatus, type ClientOptions } from "@pokemon-memory-reader/api/client";
-import type { ErrorBody, Pokemon, ResourceMap, Topic } from "@pokemon-memory-reader/api/types";
+import type { ErrorBody, ErrorCode, KnownErrorCode, Pokemon, ResourceMap, Topic } from "@pokemon-memory-reader/api/types";
 
 const options: ClientOptions = {};
 const status: Promise<ResourceMap["status"]> = getStatus(options);
 const party: Promise<ResourceMap["party"]> = getParty(options);
 const topic: Topic = "party";
+const known: KnownErrorCode = "no_game";
+const open: ErrorCode = "a_code_a_newer_server_adds";
 declare const body: ErrorBody;
 declare const pokemon: Pokemon;
-export { body, party, pokemon, status, topic };
+export { body, known, open, party, pokemon, status, topic };
 `;
 
 const tarballArg = process.argv[2];

@@ -1,9 +1,35 @@
 /**
  * The hand-written TypeScript types for every resource. Type-only, so the compiled module is empty.
- * This file imports nothing, least of all `zod` or `./schemas.js`, so `/types` and `/client`
- * users never install Zod (spec §10, amendment 054). `sync.test.ts` checks each type equal
- * to its schema's inferred type. Each loose object carries an index signature, like `z.looseObject`.
+ * This file imports only types from `./meanings.js`, which holds the open-enum records and imports
+ * nothing, and never `zod` or `./schemas.js`, so `/types` and `/client` users never install Zod
+ * (spec §10, amendment 054). `sync.test.ts` checks each type equal to its schema's inferred type.
+ * Each loose object carries an index signature, like `z.looseObject`.
  */
+
+import type {
+  ADAPTER_IDS,
+  ADAPTER_PROBLEMS,
+  BRIDGE_IDS,
+  DATA_FORMATS,
+  ERROR_CODES,
+  TOPIC_NAMES,
+} from "./meanings.js";
+
+/**
+ * Each open enum (spec §7.11) is its known union, derived from the keys of its meaning record
+ * (amendment 035), plus `(string & {})` so a client tolerates names a newer server adds.
+ * The `(string & {})` keeps editor completion for the known names.
+ */
+export type KnownErrorCode = keyof typeof ERROR_CODES;
+export type ErrorCode = KnownErrorCode | (string & {});
+export type KnownDataFormat = keyof typeof DATA_FORMATS;
+export type DataFormat = KnownDataFormat | (string & {});
+export type KnownAdapterId = keyof typeof ADAPTER_IDS;
+export type AdapterId = KnownAdapterId | (string & {});
+export type KnownBridgeId = keyof typeof BRIDGE_IDS;
+export type BridgeId = KnownBridgeId | (string & {});
+export type KnownAdapterProblem = keyof typeof ADAPTER_PROBLEMS;
+export type AdapterProblem = KnownAdapterProblem | (string & {});
 
 export type Type =
   | "normal"
@@ -182,7 +208,7 @@ export type Game = {
   name: string;
   generation: number;
   language: string;
-  dataFormat: string;
+  dataFormat: DataFormat;
   match: "exact" | "header" | "manual";
   signature: "match" | "mismatch" | "unchecked" | null;
   features: {
@@ -210,11 +236,11 @@ export type Game = {
  * `problem` is an open enum, as are `id` and `bridge.bridge` (spec §7.11).
  */
 export type AdapterInfo = {
-  id: string;
+  id: AdapterId;
   /** True after 1 s of consecutive read timeouts (spec §8.6). Always false until the stall check lands. */
   stalled: boolean;
   bridge: {
-    bridge: string;
+    bridge: BridgeId;
     protocol: number;
     build: string | null;
     emulator: {
@@ -224,7 +250,7 @@ export type AdapterInfo = {
     } | null;
     [key: string]: unknown;
   } | null;
-  problem: string | null;
+  problem: AdapterProblem | null;
   [key: string]: unknown;
 };
 
@@ -243,7 +269,7 @@ export type StatusResource = {
  */
 export type ErrorBody = {
   error: {
-    code: string;
+    code: ErrorCode;
     message: string;
     [key: string]: unknown;
   };
@@ -252,10 +278,11 @@ export type ErrorBody = {
 };
 
 /**
- * The resources the server serves so far. `player`, `bag`, `battle` and `boxes` join this union
- * and `ResourceMap` as their decoders land, which is an additive change inside `/api/v2`.
+ * The resources the server serves so far, derived from the topic record. `player`, `bag`, `battle`
+ * and `boxes` join the record and `ResourceMap` as their decoders land, which is an additive change
+ * inside `/api/v2`. Topic names are an open enum, but a topic you can fetch is always a known one.
  */
-export type Topic = "status" | "party";
+export type Topic = keyof typeof TOPIC_NAMES;
 
 export type ResourceMap = {
   status: StatusResource;
