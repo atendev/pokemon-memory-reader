@@ -21,6 +21,6 @@ bun test
 
 v2 is licensed under GPL-3.0-or-later. See `LICENSE` and `NOTICE`. The `@pokemon-memory-reader/api` package in `api/` is MIT licensed. See `api/LICENSE`.
 
-The compiled program statically links JavaScriptCore (WebKit) and tinycc, which are under the GNU LGPL. Their source is mirrored at the [`pmr-bun-v1.4.2`](https://github.com/atendev/WebKit/tree/pmr-bun-v1.4.2) tags of [`atendev/WebKit`](https://github.com/atendev/WebKit) and [`atendev/tinycc`](https://github.com/atendev/tinycc/tree/pmr-bun-v1.4.2), and the steps to rebuild with your own changes are in [`docs/lgpl-relinking.md`](docs/lgpl-relinking.md).
+The compiled program statically links JavaScriptCore (WebKit) and tinycc, which are under the GNU LGPL. Their source is attached to every release and comes from [`oven-sh/WebKit`](https://github.com/oven-sh/WebKit/tree/2e2aa2290fac856d6f451ceacb58f7f5b44dd057) and [`oven-sh/tinycc`](https://github.com/oven-sh/tinycc/tree/05f0fafaa3be31e31d7b4b5c17dc60f62c991171), and the steps to rebuild with your own changes are in [`docs/lgpl-relinking.md`](docs/lgpl-relinking.md).
 
 This project is not affiliated with Nintendo, Game Freak or The Pokémon Company.

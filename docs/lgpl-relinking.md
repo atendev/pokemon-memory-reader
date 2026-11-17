@@ -8,16 +8,16 @@ Last verified: not yet verified. The end-to-end run on linux-x64 gates `v2.0.0-b
 
 ## Where the source is
 
-Each release carries these as assets, listed in `SHA256SUMS`, and the same sources sit at tags on forks:
+Each release carries these as assets, listed in `SHA256SUMS`. The release workflow builds them from the upstream sources below:
 
-| Material                 | Release asset                                                | Fork tag                             |
-| ------------------------ | ------------------------------------------------------------ | ------------------------------------ |
-| Bun 1.4.2                | `bun-1.4.2-source.tar.gz`                                    | `atendev/bun` at `pmr-bun-v1.4.2`    |
-| WebKit at `2e2aa2290fac` | `webkit-2e2aa2290fac-source.tar.xz`, or numbered parts of it | `atendev/WebKit` at `pmr-bun-v1.4.2` |
-| tinycc at `05f0fafaa3be` | `tinycc-05f0fafaa3be-source.tar.gz`                          | `atendev/tinycc` at `pmr-bun-v1.4.2` |
-| This program             | the tag's own source                                         | this repository at the release tag   |
+| Material                 | Release asset                                                | Upstream source                                                       |
+| ------------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Bun 1.4.2                | `bun-1.4.2-source.tar.gz`                                    | `oven-sh/bun` at tag `bun-v1.4.2`                                     |
+| WebKit at `2e2aa2290fac` | `webkit-2e2aa2290fac-source.tar.xz`, or numbered parts of it | `oven-sh/WebKit` at commit `2e2aa2290fac856d6f451ceacb58f7f5b44dd057` |
+| tinycc at `05f0fafaa3be` | `tinycc-05f0fafaa3be-source.tar.gz`                          | `oven-sh/tinycc` at commit `05f0fafaa3be31e31d7b4b5c17dc60f62c991171` |
+| This program             | the tag's own source                                         | this repository at the release tag                                    |
 
-The release assets are the primary copy. A tag stays on its fork for as long as any published release cites it.
+The release assets are the copy to use. Use the upstream sources only if an asset is missing.
 
 If the WebKit archive was split into parts, join and unpack them with `cat webkit-2e2aa2290fac-source.tar.xz.* | tar -xJ`.
 
@@ -41,12 +41,12 @@ The Bun tag's `scripts/bootstrap.sh` installs the full set on Linux.
 
 ## Steps
 
-1. Get the sources. Unpack the three source archives, or clone the fork tags:
+1. Get the sources. Unpack the three source archives, or fetch them from upstream:
 
    ```sh
-   git clone --depth 1 --branch pmr-bun-v1.4.2 https://github.com/atendev/bun
-   git clone --depth 1 --branch pmr-bun-v1.4.2 https://github.com/atendev/WebKit
-   git clone --depth 1 --branch pmr-bun-v1.4.2 https://github.com/atendev/tinycc
+   git clone --depth 1 --branch bun-v1.4.2 https://github.com/oven-sh/bun
+   git init WebKit && git -C WebKit fetch --depth 1 https://github.com/oven-sh/WebKit 2e2aa2290fac856d6f451ceacb58f7f5b44dd057 && git -C WebKit checkout FETCH_HEAD
+   git init tinycc && git -C tinycc fetch --depth 1 https://github.com/oven-sh/tinycc 05f0fafaa3be31e31d7b4b5c17dc60f62c991171 && git -C tinycc checkout FETCH_HEAD
    ```
 
 2. Change the library.

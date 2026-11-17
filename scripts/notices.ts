@@ -195,11 +195,11 @@ export interface Override {
 }
 export type Overrides = Record<string, Override>;
 
-/** What amendment 042 §5 asks of an LGPL component: how to name it, who holds the copyright and where its source is mirrored. */
+/** What amendment 042 §5 asks of an LGPL component: how to name it, who holds the copyright and which upstream commit its source comes from. */
 export interface LgplInfo {
   displayName: string;
   copyright: string;
-  mirror: { repo: string; tag: string };
+  upstream: { repo: string; commit: string };
 }
 
 export interface NoticeEntry {
@@ -253,7 +253,7 @@ interface ManifestComponent {
   blockedUntilAmendment?: boolean;
   displayName?: string;
   copyright?: string;
-  mirror?: { repo?: string; tag?: string };
+  upstream?: { repo?: string; commit?: string };
 }
 interface Manifest {
   bunVersion: string;
@@ -587,8 +587,8 @@ function lgplInfo(
   const missing = [
     ["displayName", c.displayName],
     ["copyright", c.copyright],
-    ["mirror.repo", c.mirror?.repo],
-    ["mirror.tag", c.mirror?.tag],
+    ["upstream.repo", c.upstream?.repo],
+    ["upstream.commit", c.upstream?.commit],
   ]
     .filter(([, value]) => value === undefined || value.trim() === "")
     .map(([field]) => field);
@@ -601,7 +601,10 @@ function lgplInfo(
   return {
     displayName: c.displayName ?? "",
     copyright: c.copyright ?? "",
-    mirror: { repo: c.mirror?.repo ?? "", tag: c.mirror?.tag ?? "" },
+    upstream: {
+      repo: c.upstream?.repo ?? "",
+      commit: c.upstream?.commit ?? "",
+    },
   };
 }
 
@@ -718,7 +721,7 @@ function lgplTextNames(entry: NoticeEntry): string[] {
 }
 
 function lgplBlock(entry: NoticeEntry, lgpl: LgplInfo): string {
-  const url = `https://github.com/${lgpl.mirror.repo}`;
+  const url = `https://github.com/${lgpl.upstream.repo}`;
   const lines = [
     lgpl.displayName,
     lgpl.copyright,
@@ -731,8 +734,8 @@ function lgplBlock(entry: NoticeEntry, lgpl: LgplInfo): string {
     );
   }
   lines.push(
-    `Source: ${url}/tree/${lgpl.mirror.tag}`,
-    `  git clone --depth 1 --branch ${lgpl.mirror.tag} ${url}`,
+    `Source: ${url}/tree/${lgpl.upstream.commit}`,
+    "The same source is attached to every release as a source archive.",
   );
   return lines.join("\n");
 }

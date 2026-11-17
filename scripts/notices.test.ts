@@ -963,18 +963,21 @@ describe("LGPL components", () => {
     expect(entries.find((e) => e.name === "jsc")?.lgpl).toEqual({
       displayName: "Fixture JSC",
       copyright: "Copyright the fixture authors",
-      mirror: { repo: "example/jsc", tag: "pmr-bun-v1.4.2" },
+      upstream: {
+        repo: "example/jsc",
+        commit: "0123456789abcdef0123456789abcdef01234567",
+      },
     });
     expect(entries.filter((e) => e.lgpl !== null)).toHaveLength(1);
   });
 
-  test("an LGPL entry without displayName, copyright or a mirror fails", () => {
+  test("an LGPL entry without displayName, copyright or an upstream commit fails", () => {
     const manifest = JSON.parse(
       readFileSync(join(FIXTURES, "runtime/bun-runtime.json"), "utf8"),
     );
     manifest.components[1].displayName = undefined;
     manifest.components[1].copyright = " ";
-    manifest.components[1].mirror = { repo: "example/jsc" };
+    manifest.components[1].upstream = { repo: "example/jsc" };
     const dir = mkdtempSync(join(tmpdir(), "notices-manifest-"));
     try {
       writeFileSync(join(dir, "bun-runtime.json"), JSON.stringify(manifest));
@@ -989,7 +992,7 @@ describe("LGPL components", () => {
         }),
       );
       expect(problems).toEqual([
-        "Bun runtime component jsc@1.0.0 needs an LGPL notice (amendment 042 §5) but has no displayName, copyright, mirror.tag.",
+        "Bun runtime component jsc@1.0.0 needs an LGPL notice (amendment 042 §5) but has no displayName, copyright, upstream.commit.",
       ]);
       expect(entries.find((e) => e.name === "jsc")?.lgpl).toBeNull();
     } finally {
@@ -1009,18 +1012,16 @@ describe("LGPL components", () => {
     expect(lgpl).toBeLessThan(text.indexOf("libc++abi 19.1.0\nLicense:"));
   });
 
-  test("the section names the library, copyright, static linking, mirror tag and relinking doc", () => {
+  test("the section names the library, copyright, static linking, upstream commit and relinking doc", () => {
     const { entries } = collectNotices(runtimeOptions());
     const section = renderLgplSection(entries) ?? "";
     expect(section).toContain("Fixture JSC\nCopyright the fixture authors");
     expect(section).toContain("Statically linked into the executable");
     expect(section).toContain("GNU Lesser General Public License");
     expect(section).toContain(
-      "Source: https://github.com/example/jsc/tree/pmr-bun-v1.4.2",
+      "Source: https://github.com/example/jsc/tree/0123456789abcdef0123456789abcdef01234567",
     );
-    expect(section).toContain(
-      "git clone --depth 1 --branch pmr-bun-v1.4.2 https://github.com/example/jsc",
-    );
+    expect(section).toContain("attached to every release");
     expect(section).toContain("docs/lgpl-relinking.md");
     expect(section).not.toContain("LGPL-2.0-or-later");
   });
@@ -1055,10 +1056,10 @@ describe("LGPL components", () => {
       );
       expect(section).toContain("Copyright the WebKit contributors");
       expect(section).toContain(
-        "https://github.com/atendev/WebKit/tree/pmr-bun-v1.4.2",
+        "https://github.com/oven-sh/WebKit/tree/2e2aa2290fac856d6f451ceacb58f7f5b44dd057",
       );
       expect(section).toContain(
-        "https://github.com/atendev/tinycc/tree/pmr-bun-v1.4.2",
+        "https://github.com/oven-sh/tinycc/tree/05f0fafaa3be31e31d7b4b5c17dc60f62c991171",
       );
     });
 
@@ -1077,12 +1078,21 @@ describe("LGPL components", () => {
       }
     });
 
-    test("every mirror tag is pmr-bun-v<Bun version>", () => {
+    test("every upstream commit is the one its source URL pins", () => {
       const manifest = JSON.parse(
         readFileSync(join(import.meta.dir, "notices/bun-runtime.json"), "utf8"),
-      ) as { bunVersion: string };
-      for (const e of lgpl)
-        expect(e.lgpl?.mirror.tag).toBe(`pmr-bun-v${manifest.bunVersion}`);
+      ) as {
+        components: {
+          source?: string;
+          upstream?: { repo: string; commit: string };
+        }[];
+      };
+      const withUpstream = manifest.components.flatMap((c) =>
+        c.upstream === undefined ? [] : [{ source: c.source, ...c.upstream }],
+      );
+      expect(withUpstream).toHaveLength(2);
+      for (const c of withUpstream)
+        expect(c.source).toBe(`https://github.com/${c.repo}/tree/${c.commit}`);
     });
 
     test("the viewer's About list is the manifest's LGPL entries", () => {
