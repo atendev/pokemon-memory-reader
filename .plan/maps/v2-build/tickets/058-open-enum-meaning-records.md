@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [035, 057]
+claimed_by: wayfinder-master v2-build-master-1794938032
+claimed_at: 2026-11-17T17:54:38Z
 ---
 
 # Open-enum meaning records and append-only test

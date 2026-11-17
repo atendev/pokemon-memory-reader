@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wayfinder-master v2-build-master-1794938032
+claimed_at: 2026-11-17T17:54:38Z
 ---
 
 # Check the species-info stride in the profile generator
