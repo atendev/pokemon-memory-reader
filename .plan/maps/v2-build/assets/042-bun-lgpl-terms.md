@@ -4,6 +4,8 @@ Spec §13.4 and §13.5 cite this as "amendment 042". It is the project's enginee
 
 **Revised 2026-11-17 (lighter route).** Releases no longer depend on owner forks or protected tags. The release workflow fetches Bun, WebKit and tinycc from upstream at the pinned versions, attaches the archives itself and fails the release if it can't. Ticket 047 (fork and tag wizard) is dropped. The sections below already reflect this.
 
+**Revised 2026-11-18 (verified by ticket 050).** The two linux-x64 relink runs showed that editing the tinycc pin in `scripts/build/deps/tinycc.ts` (§4 Patches, §6 step 2 and Verification) is not needed. Bun's supported `--local-deps=tinycc=<path>` redirects tinycc to a local checkout. Bun applies `patches/tinycc/tcc.h.patch` only to the pinned download, so a local tinycc needs the patch applied by hand. `docs/lgpl-relinking.md` carries the corrected steps and the extra tools (Ruby with `erb`, make, libtool, gcc). Where this amendment says "edit the pin", read the doc.
+
 Evidence: [relink path research](./042-bun-relink-path-research.md) and [source archive sizes research](./042-source-archive-sizes-research.md), both at Bun 1.4.2 (tag `bun-v1.4.2`, commit `744846f8`).
 
 ## 1. What triggers the rule

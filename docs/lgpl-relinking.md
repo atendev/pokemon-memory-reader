@@ -4,7 +4,7 @@ The compiled program is a copy of Bun with the app's JavaScript attached. Bun st
 
 This is an engineering reading of LGPL-2.1 section 6, not legal advice. LGPL-2.1 section 6 requires the program's terms to let you modify it for your own use and reverse engineer it to debug your modifications. Its GPL-3.0-or-later terms allow modification and put no limit on reverse engineering, and no text in this repository adds one.
 
-Last verified: not yet verified. The end-to-end run on linux-x64 gates `v2.0.0-beta.1`, and this line then records its date and the Bun version. The steps below come from reading Bun's build scripts at `bun-v1.4.2` and have not been run.
+Last verified: 2026-11-18 for Bun 1.4.2 on linux-x64 (Arch Linux, clang 21.1.8). Two runs: Bun rebuilt with a changed tinycc against the prebuilt WebKit (318 seconds on 20 cores), and Bun rebuilt with a changed local WebKit (about 33 minutes of compiling in all: one build was cut off after about 19 minutes and the finished work was reused by a second build that took 14). Each result has the change in it. The sources came from the upstream fetches in step 1, not from the release archives, which are not built yet. The program compiled onto each result and passed `scripts/smoke.ts`. Rerun this when the Bun, WebKit or tinycc pin or the compile command changes.
 
 ## Where the source is
 
@@ -36,8 +36,12 @@ The versions below are the ones Bun's scripts pin at `bun-v1.4.2`. Check `script
 | Node.js            | 25 or later, or run Bun's build with Bun              | <https://nodejs.org/en/download>                         |
 | Bun                | 1.4.2, to run Bun's build scripts and this repository | <https://github.com/oven-sh/bun/releases/tag/bun-v1.4.2> |
 | CMake, Ninja, nasm | as your distribution ships them                       | your package manager                                     |
+| Ruby with `erb`    | 2.5 or later, as your distribution ships it           | your package manager                                     |
+| make, libtool, gcc | as your distribution ships them                       | your package manager                                     |
 
-The Bun tag's `scripts/bootstrap.sh` installs the full set on Linux.
+Ruby is only needed for a local WebKit build, where WebKit's generator scripts use it. Some distributions ship `erb` as a separate package (`ruby-erb` on Arch). The Bun tag's `scripts/bootstrap.sh` installs the full set on Linux.
+
+Bun's build looks for LLVM 21.1.x and reports `Could not find ld.lld (version >=21.1.0 <21.1.99)` otherwise. If you use the prebuilt LLVM tarball, put its `bin` first on `PATH`. That tarball's `ld.lld` needs `libxml2.so.2`. A distribution with a newer libxml2 must supply the old one (`libxml2-legacy` on Arch). Without it Bun reports that it can't find `ld.lld` and shows the load error under "Found but rejected".
 
 ## Steps
 
@@ -50,21 +54,30 @@ The Bun tag's `scripts/bootstrap.sh` installs the full set on Linux.
    ```
 
 2. Change the library.
-   - To change WebKit, edit your WebKit clone and put it at `vendor/WebKit` inside the Bun clone, or point `BUN_WEBKIT_PATH` at it.
-   - To change tinycc, edit your tinycc clone. Then edit Bun's `scripts/build/deps/tinycc.ts` so its `source` is `{ kind: "local", path: "/absolute/path/to/your/tinycc" }` instead of the `github-archive` pin. This edits Bun's own build script and is not a supported override. Bun's build applies `patches/tinycc/tcc.h.patch` from the Bun tag to the pinned tinycc source. Check that the patch still applies to your source, and apply it by hand if the local mode doesn't.
+   - To change WebKit, edit your WebKit clone and put it at `vendor/WebKit` inside the Bun clone (a symlink works, and is what the verified run used), or point `BUN_WEBKIT_PATH` at it.
+   - To change tinycc, edit your tinycc clone. Bun's build only applies `patches/tinycc/tcc.h.patch` when it downloads the pinned tinycc, so with your own copy apply it first, from the tinycc clone: `git apply /path/to/bun/patches/tinycc/tcc.h.patch`. Then build with `--local-deps=tinycc=/absolute/path/to/your/tinycc` (step 3). Don't edit `scripts/build/deps/tinycc.ts`. Bun's own `TCC_VERSION` define overrides the version string in `tcc.h`, so a change there never reaches the binary.
 
-3. Build Bun in a release profile, from the Bun clone:
+3. Build Bun in a release profile, from the Bun clone. For a changed tinycc, which uses Bun's prebuilt WebKit:
+
+   ```sh
+   bun scripts/build.ts --profile=release --build-dir=build/release-tinycc-local \
+     --local-deps=tinycc=/absolute/path/to/your/tinycc
+   ```
+
+   For a changed WebKit:
 
    ```sh
    bun scripts/build.ts --profile=release-local --build-dir=build/release-local
    ```
 
-   `release-local` is Bun's release profile with `webkit: "local"` (`scripts/build/profiles.ts` at the Bun tag), the same as passing `--webkit=local` to the release profile. If you changed only tinycc, `--profile=release` uses Bun's prebuilt WebKit. The package script `bun run build:local` is a debug build, so don't use it. The build prints where it wrote the Bun executable.
+   `release-local` is Bun's release profile with `webkit: "local"` (`scripts/build/profiles.ts` at the Bun tag), the same as passing `--webkit=local` to the release profile. The package script `bun run build:local` is a debug build, so don't use it. The build prints where it wrote the Bun executable, `<build-dir>/bun`.
 
-4. Clone this program at the release tag and install its dependencies. The npm registry serves them at the lockfile's versions, and `THIRD-PARTY-NOTICES.txt` lists them:
+   To confirm your change is in the result, put a distinctive string in an error message you changed and check `strings <build-dir>/bun | grep <string>`. The verified runs used an error message in tinycc's `libtcc.c` and one in WebKit's `Source/JavaScriptCore/runtime/ExceptionHelpers.cpp`.
+
+4. Clone this program at the release tag and install its dependencies. The npm registry serves them at the lockfile's versions, and `THIRD-PARTY-NOTICES.txt` lists them. Replace `v2.0.0` with the tag you are relinking:
 
    ```sh
-   git clone --branch <release tag> https://github.com/atendev/pokemon-memory-reader
+   git clone --branch v2.0.0 https://github.com/atendev/pokemon-memory-reader
    cd pokemon-memory-reader
    bun install --frozen-lockfile
    ```
@@ -88,7 +101,7 @@ The build must not use `--bytecode`, because that ties the attached JavaScript t
 
 At `bun-v1.4.2`:
 
-- tinycc: `patches/tinycc/tcc.h.patch`, applied to the pinned tinycc source.
+- tinycc: `patches/tinycc/tcc.h.patch`, applied to the pinned tinycc source only when Bun downloads it. With `--local-deps` you apply it yourself (step 2).
 - WebKit: none. On Windows, a local WebKit build patches ICU's `.vcxproj` files while it builds ICU. That is ICU, not WebKit.
 
 A Bun upgrade can change both lists, so the owner rechecks them and this page for every new Bun pin.
