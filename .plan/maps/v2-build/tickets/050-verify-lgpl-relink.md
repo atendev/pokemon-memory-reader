@@ -23,3 +23,21 @@ Both relink runs passed on linux-x64 on 2026-11-18 (Arch Linux, Bun 1.4.2 at `bu
 Doc changes in `docs/lgpl-relinking.md`: the "Last verified" line is filled in; the tools table gains Ruby with `erb`, make, libtool and gcc, with the `libxml2.so.2` note for the LLVM tarball; tinycc uses `--local-deps` with a hand-applied patch instead of editing `tinycc.ts`; a `strings` check, separate build commands and a concrete clone tag are added. Amendment 042 carries a revision note, since its §4, §6 and §7 still said to edit the pin.
 
 Excluded. macOS, Windows and linux-arm64 relinks stay untested. The release-archive route (unpacking the three source archives) is untested until a release builds them. No test checks the doc's step text beyond the existing offline check, which still passes.
+
+## Handoff
+
+Branch `wayfinder/v2-build-master`, work in progress at `0b80d0e` (`wip:`). Tag for pickup: run `printf 'wfr-%s\n' 'v2-build-050-<unix seconds>'` again. Not claimed in the ticket file, since agents never write `claimed_by`.
+
+Done: both runs passed (see the Answer). `docs/lgpl-relinking.md`, the 042 amendment note and the ticket Answer are written. `biome check docs`, `bun run lgpl:check` and the 119 LGPL tests pass. Council round 1 is done.
+
+Council round 1 (one round used, four left):
+- gemini: APPROVE 10, no problems. gpt: APPROVE 9, no problems. Both are stale until they re-check the changed hunks.
+- claude (haiku): DISAPPROVE 7. Blocking: ticket record missing from the diff (fixed: Answer added). Minor, fixed: ambiguous "about 30 minutes" time, an unsupported clang claim, a build-dir name that didn't match the run. Minor, rebutted: Ruby 2.5 floor (WebKit's own error says "Ruby 2.5 or higher is required"), and "ticket 050" cross-reference (this is ticket 050).
+
+Left, in order:
+1. Round 2: dispatch all three seats with the changed hunks since round 1 (the doc's "Last verified" line, the LLVM paragraph, the step 3 build-dir, and the ticket Answer) plus each seat's ledger rows. Mark `printf 'wft %s\n' 'audit 2'`.
+2. On APPROVE: unslop the decision report, then the commit gate with AskUserQuestion.
+3. CI: push the branch, never force, watch the run.
+4. Record: add the Decisions bullet to `map.md`, run `wf-time.py close --slug v2-build --ticket 50`, delete this Handoff section, commit the resolution.
+
+Read first: `docs/lgpl-relinking.md`, this ticket, `.plan/maps/v2-build/assets/042-bun-lgpl-terms.md` (top revision note). Build scratch is `~/lgpl-relink` and needs no more work.
