@@ -1,0 +1,33 @@
+name: LGPL pins
+
+# Bun-pin PRs: the pinned Bun, WebKit and tinycc commits must still resolve upstream (amendment 042 §7).
+on:
+  pull_request:
+    paths:
+      - scripts/notices/bun-runtime.json
+      - package.json
+      - scripts/lgpl-sources.ts
+      - docs/lgpl-relinking.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lgpl-pins-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  online:
+    name: Pinned sources resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run lgpl-sources check --online
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
