@@ -16,20 +16,16 @@ Per [the 042 amendment](../assets/042-bun-lgpl-terms.md): `scripts/lgpl-sources.
 - Running the script builds the three archives (WebKit split into numbered parts at 2 GiB or more), and a failed fetch fails the release.
 - The offline check runs in tests with no network call, and the online check fails when a pinned commit doesn't resolve or a source asset is missing.
 
-## Handoff
+## Answer
 
-Branch `t3/lgpl-release-check-assets`. Code is final and committed (see HEAD SHA below). Nothing left to build.
+`scripts/lgpl-sources.ts` (`bun run lgpl-sources`) reads the Bun, WebKit and tinycc pins from `scripts/notices/bun-runtime.json`. `build` fetches each source from upstream at its pin and writes a deterministic `.xz` archive plus its `SHA256SUMS` line. A failed fetch throws, so the release fails. An archive at or above 2 GiB is split into numbered 1900 MiB parts, each with its own `SHA256SUMS` line. `body <file> --tag <tag>` adds the source-offer section to the release body.
 
-**Done.** `scripts/lgpl-sources.ts` (`build`, `body`, `check [--online [--release <tag> --repo <r>]]`, `bun run lgpl-sources`) with 36 tests in `scripts/lgpl-sources.test.ts`. `.github/workflows/lgpl-pins.yml`, a `rehost-smoke` job in `ci.yml`, and `REPO_URL` exported from `scripts/notices.ts`. Lint, typecheck and `notices --check` pass. The only failing test is the Lua 5.3 test (`lua5.3` not installed locally, unrelated). The live `check --online` passed against GitHub. A real full-size build was never run, by instruction. Scratch goes under gitignored `out/`, never `/tmp`.
+`check` is the offline check. It makes no network call and runs in the default suite, with a missing or extra `SHA256SUMS` line as a failure. `check --online` fails when a pinned commit does not resolve upstream, and with `--release <tag> --repo <r>` it also fails when a source asset is missing from the release. `.github/workflows/lgpl-pins.yml` runs the online check on pull requests that touch the pins, and `ci.yml` gets a `rehost-smoke` job. 36 tests in `scripts/lgpl-sources.test.ts` pass.
 
-**Audit.** The owner accepted a two-seat audit (Claude + Gemini) because the GPT seat is out of quota. Do not retry GPT. Round 1: claude 8, gemini 9. Round 2 (fixes to claude's minors: xz determinism test, extra `SHA256SUMS` lines flagged in `checkAssets`, no duplicate messages): claude 8, gemini 9. Gemini's last minor (guard re-evaluated inside the loop) was fixed with a test and not re-audited. Audit rounds used: 2 of 5. Declined minors: the 2 GiB boundary and a real WebKit build are unproven (forbidden after the OOM; split tested with an injected threshold).
+`release.yml` does not exist, so the calls wait under the beta.1 fog like [the 039 body step](./039-signature-evidence-in-release-body.md). It should run `bun run lgpl-sources build`, `body <file> --tag <tag>` and `check --online --release <tag> --repo <r>` before publishing. [Ticket 053](./053-online-check-exception-sources.md) extends the online check.
 
-**Left, in order.**
-1. Write `.plan/maps/v2-build/assets/049-lgpl-release-check-assets-report.md` (decisions, options, who decided, audit verdicts, declined minors, the two-seat note and reason). Run `unslop` on it.
-2. Add `## Answer` to this ticket (`release.yml` does not exist, so the call waits under the beta.1 fog like ticket 039; the commands are ready). Delete this Handoff section.
-3. Run the Timing close: `python3 -I ~/.claude/skills/wayfinder-runner/wf-time.py close --slug v2-build --ticket 049 --name 'LGPL release check and source assets' --ticket-file .plan/maps/v2-build/tickets/049-lgpl-release-check-assets.md`.
-4. Commit (normal subject, no co-author clause), push without forcing, return DONE with the Decision line. Leave map.md alone.
+Excluded: a real full-size WebKit build and the exact 2 GiB boundary, both unproven after an out-of-memory failure. The split is tested with an injected threshold, and the live `check --online` passed against GitHub.
 
-**Files to read first.** `scripts/lgpl-sources.ts`, `.plan/maps/v2-build/assets/042-bun-lgpl-terms.md` §4-§7.
+Report: [049 report](../assets/049-lgpl-release-check-assets-report.md). Audit: APPROVE in round 2, two seats (Claude 8, Gemini 9), the GPT seat being out of quota with the owner's approval for this ticket only. Two minor problems declined. CI was not run for this branch.
 
-**Surface for the master.** The beta.1 `release.yml` should run `bun run lgpl-sources build`, `body <file> --tag <tag>` and `check --online --release <tag> --repo <r>` before publishing. Ticket 053 extends `checkOnline`.
+Timing: wall 42m, active 13m, user 0s, wait 29m, blocked 0s | setup 37s, implement 34m, audit 7m (2 rounds), record 32s | tools 76 (7 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 157k | cost $2.65 sonnet-5-5 + $0.02 haiku-5-5
