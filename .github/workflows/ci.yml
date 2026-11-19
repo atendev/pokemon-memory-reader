@@ -92,3 +92,25 @@ jobs:
           --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
           --outfile out/pokemon-memory-reader server/src/main.ts
       - run: bun scripts/smoke.ts out/pokemon-memory-reader "$(jq -r .version server/package.json)"
+
+  rehost-smoke:
+    name: Re-host smoke (linux-x64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # Compiles onto a copy of the official bun kept apart from the one running the build. This shows the app can be
+      # re-hosted onto a given bun, not that relinking works (docs/lgpl-relinking.md, amendment 042 §7).
+      - run: |
+          mkdir -p "$RUNNER_TEMP/rehost"
+          cp "$(command -v bun)" "$RUNNER_TEMP/rehost/bun"
+          bun build --compile --compile-executable-path "$RUNNER_TEMP/rehost/bun" \
+            --define 'PMR_TARGET="linux-x64"' \
+            --define "PMR_COMMIT=\"${GITHUB_SHA::7}\"" \
+            --outfile out/pokemon-memory-reader-rehost server/src/main.ts
+      - run: bun scripts/smoke.ts out/pokemon-memory-reader-rehost "$(jq -r .version server/package.json)"

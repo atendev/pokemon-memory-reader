@@ -711,7 +711,7 @@ export function collectNotices(opts: NoticesOptions): NoticesResult {
 
 const RULE = "=".repeat(78);
 
-const REPO_URL = "https://github.com/atendev/pokemon-memory-reader";
+export const REPO_URL = "https://github.com/atendev/pokemon-memory-reader";
 
 /** The files of an entry that carry an LGPL or COPYING text, so the LGPL section can point at them. */
 function lgplTextNames(entry: NoticeEntry): string[] {
