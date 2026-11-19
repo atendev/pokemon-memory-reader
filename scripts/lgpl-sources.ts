@@ -462,6 +462,19 @@ export function checkAssets(
   for (const name of names) {
     if (!sums.has(name)) problems.push(`SHA256SUMS does not list ${name}.`);
   }
+  // A line for a part the release doesn't carry means parts went missing or the part count changed.
+  const assetsValid = names.length > 0 && problems.length === 0;
+  for (const listed of sums.keys()) {
+    if (
+      assetsValid &&
+      (listed === pin.asset || partPattern.test(listed)) &&
+      !names.includes(listed)
+    ) {
+      problems.push(
+        `SHA256SUMS lists ${listed} but the release has no such asset.`,
+      );
+    }
+  }
   return problems;
 }
 

@@ -147,6 +147,15 @@ describe("buildArchive and buildAll", () => {
     expect(readFileSync(a).equals(readFileSync(b))).toBe(true);
   });
 
+  test("two builds of the xz archive give the same bytes", () => {
+    const { base, pins } = makeUpstream(realPins);
+    const pin = pins.find((p) => p.id === "webkit") as SourcePin;
+    const a = buildArchive(pin, { outDir: join(dir, "xz-a"), baseUrl: base });
+    const b = buildArchive(pin, { outDir: join(dir, "xz-b"), baseUrl: base });
+    expect(pin.asset.endsWith(".tar.xz")).toBe(true);
+    expect(readFileSync(a).equals(readFileSync(b))).toBe(true);
+  });
+
   test("a commit upstream doesn't have fails the build and leaves no archive", async () => {
     const { base, pins } = makeUpstream(realPins);
     const bad = pins.map((p) =>
@@ -446,6 +455,59 @@ describe("checkAssets WebKit parts", () => {
     expect(
       checkAssets(webkit, both, sums(both.map((a) => a.name))).join("\n"),
     ).toContain("whole and as parts");
+  });
+
+  test("a SHA256SUMS line for a part the release lacks fails", () => {
+    const assets = [
+      { name: partName(webkit.asset, 0), size: PART_BYTES },
+      { name: partName(webkit.asset, 1), size: 10 },
+    ];
+    const listed = [...assets.map((a) => a.name), partName(webkit.asset, 2)];
+    expect(checkAssets(webkit, assets, sums(listed))).toEqual([
+      `SHA256SUMS lists ${partName(webkit.asset, 2)} but the release has no such asset.`,
+    ]);
+  });
+
+  test("every extra SHA256SUMS line is reported, not just the first", () => {
+    const assets = [
+      { name: partName(webkit.asset, 0), size: PART_BYTES },
+      { name: partName(webkit.asset, 1), size: 10 },
+    ];
+    const extra = [partName(webkit.asset, 2), partName(webkit.asset, 3)];
+    expect(
+      checkAssets(
+        webkit,
+        assets,
+        sums([...assets.map((a) => a.name), ...extra]),
+      ),
+    ).toHaveLength(2);
+  });
+
+  test("a broken asset set gets its own message only, not one per sums line", () => {
+    const both = [
+      { name: webkit.asset, size: 10 },
+      { name: partName(webkit.asset, 0), size: 10 },
+    ];
+    const problems = checkAssets(
+      webkit,
+      both,
+      sums([...both.map((a) => a.name), partName(webkit.asset, 1)]),
+    );
+    expect(problems).toEqual([
+      `${webkit.asset} is attached whole and as parts.`,
+    ]);
+  });
+
+  test("sums lines for other assets are left alone", () => {
+    const tinycc = realPins.find((p) => p.id === "tinycc") as SourcePin;
+    const assets = [{ name: webkit.asset, size: 10 }];
+    expect(
+      checkAssets(
+        webkit,
+        assets,
+        sums([webkit.asset, tinycc.asset, "app.zip"]),
+      ),
+    ).toEqual([]);
   });
 
   test("a part missing from SHA256SUMS fails", () => {
