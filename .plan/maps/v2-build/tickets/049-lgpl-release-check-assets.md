@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [048]
+claimed_by: wayfinder-master v2-build-master-1795069748
+claimed_at: 2026-11-19T06:35:00Z
 ---
 
 # LGPL release check and source assets
