@@ -24,3 +24,7 @@ Fix anything broken in the mGBA shim or adapter, with the agent working from the
 
 - The owner confirms the live party matches the game.
 - Shim fixes are merged with CI green.
+
+## Answer
+
+Done with the owner on 2026-11-20 using mGBA 0.10.5 (AppImage, run with `QT_QPA_PLATFORM=xcb`) and an Emerald US 1.0 ROM (SHA-1 matches the profile). The tracer executable was built locally, because CI never uploads an artifact for it. The bridge loaded from `bridges/mgba.lua`, `hello` and the game message arrived (`romName` POKEMON EMER, crc32 `1f1c08fb`), and `/api/v2/status` reported `state: game`, `stalled: false`, `match: header`, `signature: unchecked`. The owner checked the live party (a level 5 Torchic with a nickname) against the game's summary screens and every field matched, in the API and in the viewer. A Hidden Power of rock 33 was checked by hand against the IVs. In a battle, the viewer's HP followed the game's by about 0.9 s (frame-counted from the owner's recording), which is the viewer's 1000 ms poll (`POLL_MS`), not the read loop (20 Hz). `print(_VERSION)` printed `5.4` in mGBA, so Lua 5.4 is confirmed, and the API still answered with the emulator paused. Both checks left open by [Emulator Lua runtimes](./003-emulator-lua-runtimes.md) are closed. mGBA 0.10.5 has no scripting call that returns its version, so `emulator.version` stays null and no shim fix was needed. The Lua binding sources were not read, so a live `pairs(_G)` listing would settle that fully. Only the mGBA shim's header comment changed.

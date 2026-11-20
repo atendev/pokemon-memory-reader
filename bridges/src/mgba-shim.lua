@@ -1,13 +1,11 @@
 -- mGBA shim for the protocol core (spec 4.1, 4.9). The build step joins core.lua and this file
 -- into one mgba.lua and fills the three @...@ settings below.
 --
--- UNTESTED IN A REAL mGBA. CI runs this file only against a stub of the mGBA scripting API
--- (bridges/test/mgba_stub.lua), which encodes what the research notes say the API does. The
--- real smoke test is the First live run on mGBA ticket. Things that stub can't confirm:
---   * memory domain methods take offsets inside the domain (emu.memory.<name>:readRange)
---   * emu:checksum(C.CHECKSUM.CRC32) returns a number or a hex string
---   * frame callbacks and socket polling while the emulator is paused (spec 4.12)
---   * whether any version string is reachable (emulator.version stays null until then)
+-- Checked live in mGBA 0.10.5 (Lua 5.4) on Emerald US 1.0 in the First live run on mGBA ticket:
+-- batched reads, the CRC32 checksum, hello and game messages, and polling while paused all work.
+-- CI runs this file against a stub of the mGBA scripting API (bridges/test/mgba_stub.lua).
+-- mGBA 0.10.x has no scripting call that returns its version (the docs and `scripting.c` list
+-- none), so emulator.version stays null.
 --
 -- `core` is the protocol core, provided by the build step as a local before this code.
 
