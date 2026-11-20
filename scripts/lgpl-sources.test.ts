@@ -16,12 +16,16 @@ import {
   buildAll,
   buildArchive,
   checkAssets,
+  checkExceptionSources,
   checkOffline,
   checkOnline,
+  type ExceptionSource,
+  githubUpstream,
   MANIFEST_PATH,
   PART_BYTES,
   parseSums,
   partName,
+  readExceptionSources,
   readPins,
   runCommand,
   type SourcePin,
@@ -30,6 +34,7 @@ import {
   type Upstream,
   withBodySection,
 } from "./lgpl-sources";
+import { RUNTIME_ENTRY_EXCEPTIONS } from "./notices";
 
 // Under the gitignored `out/`, not /tmp, which can be RAM-backed. Every fixture is a few bytes.
 const scratchRoot = join(import.meta.dir, "../out");
@@ -331,7 +336,10 @@ const allResolve: Upstream = {
   commitExists: async () => true,
   tagCommit: async (_repo, _tag) =>
     realPins.find((p) => p.id === "bun")?.commit ?? null,
+  urlResolves: async () => true,
 };
+
+const realSources = readExceptionSources();
 
 describe("checkOnline", () => {
   test("passes when every pin resolves and the release carries every asset", async () => {
@@ -409,6 +417,155 @@ describe("checkOnline", () => {
     expect(problems).toContain(
       "The release body does not link docs/lgpl-relinking.md.",
     );
+  });
+});
+
+describe("exception source URLs", () => {
+  test("reads the source of every manifest entry an exception matches", () => {
+    expect(realSources.map((s) => s.entry)).toEqual(
+      RUNTIME_ENTRY_EXCEPTIONS.map((e) => e.entry),
+    );
+    expect(realSources[0]?.entry).toBe("domain-browser@4.23.0");
+    expect(realSources[0]?.source).toBe(
+      "https://registry.npmjs.org/domain-browser/-/domain-browser-4.23.0.tgz",
+    );
+  });
+
+  test("skips an exception with no manifest entry and reads only matched entries", () => {
+    const stale = [
+      ...RUNTIME_ENTRY_EXCEPTIONS,
+      { ...RUNTIME_ENTRY_EXCEPTIONS[0], entry: "gone@1.0.0" },
+    ] as typeof RUNTIME_ENTRY_EXCEPTIONS;
+    expect(readExceptionSources(MANIFEST_PATH, stale)).toEqual(realSources);
+    expect(readExceptionSources(MANIFEST_PATH, [])).toEqual([]);
+  });
+
+  test("passes when every exception source resolves, and asks about each URL once", async () => {
+    const asked: string[] = [];
+    const upstream: Upstream = {
+      ...allResolve,
+      urlResolves: async (url) => {
+        asked.push(url);
+        return true;
+      },
+    };
+    expect(
+      await checkOnline(realPins, upstream, undefined, realSources),
+    ).toEqual([]);
+    expect(asked).toEqual(realSources.map((s) => s.source));
+  });
+
+  test("checkOnline fails when an exception source doesn't resolve", async () => {
+    const problems = await checkOnline(
+      realPins,
+      { ...allResolve, urlResolves: async () => false },
+      undefined,
+      realSources,
+    );
+    expect(problems).toEqual([
+      `Runtime entry exception domain-browser@4.23.0: source ${realSources[0]?.source} does not resolve.`,
+    ]);
+  });
+
+  test("a failed fetch is a problem, not a pass", async () => {
+    const problems = await checkExceptionSources(realSources, {
+      ...allResolve,
+      urlResolves: async () => {
+        throw new Error("getaddrinfo ENOTFOUND");
+      },
+    });
+    expect(problems.join("\n")).toContain("could not fetch");
+    expect(problems.join("\n")).toContain("ENOTFOUND");
+  });
+
+  test("an empty or non-http source fails without a request", async () => {
+    let asked = 0;
+    const upstream: Upstream = {
+      ...allResolve,
+      urlResolves: async () => {
+        asked++;
+        return true;
+      },
+    };
+    const bad: ExceptionSource[] = [
+      { entry: "a@1.0.0", source: "" },
+      { entry: "b@1.0.0", source: "file:///etc/passwd" },
+      { entry: "c@1.0.0", source: "not a url" },
+    ];
+    const problems = await checkExceptionSources(bad, upstream);
+    expect(problems).toHaveLength(3);
+    expect(problems.every((p) => p.includes("is not an http(s) URL"))).toBe(
+      true,
+    );
+    expect(asked).toBe(0);
+  });
+
+  test("one bad URL among good ones fails only that entry", async () => {
+    const sources: ExceptionSource[] = [
+      { entry: "a@1.0.0", source: "https://example.test/a.tgz" },
+      { entry: "b@1.0.0", source: "https://example.test/b.tgz" },
+    ];
+    const problems = await checkExceptionSources(sources, {
+      ...allResolve,
+      urlResolves: async (url) => url.endsWith("a.tgz"),
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("b@1.0.0");
+  });
+
+  test("the offline check makes no request for exception sources", () => {
+    const real = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (() => {
+      calls++;
+      throw new Error("offline check must not fetch");
+    }) as unknown as typeof fetch;
+    try {
+      expect(checkOffline()).toEqual([]);
+    } finally {
+      globalThis.fetch = real;
+    }
+    expect(calls).toBe(0);
+  });
+
+  describe("githubUpstream.urlResolves against a local server", () => {
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const path = new URL(request.url).pathname;
+        if (path === "/ok.tgz") return new Response("x");
+        if (path === "/moved.tgz") {
+          return new Response(null, {
+            status: 302,
+            headers: { location: "/ok.tgz" },
+          });
+        }
+        if (path === "/gone.tgz") return new Response("no", { status: 410 });
+        if (path === "/broken.tgz") return new Response("no", { status: 503 });
+        return new Response("no", { status: 404 });
+      },
+    });
+    afterAll(() => server.stop(true));
+    const url = (path: string) => `http://localhost:${server.port}${path}`;
+
+    test("true on success and after a redirect", async () => {
+      expect(await githubUpstream.urlResolves(url("/ok.tgz"))).toBe(true);
+      expect(await githubUpstream.urlResolves(url("/moved.tgz"))).toBe(true);
+    });
+
+    test("false on 404 and 410", async () => {
+      expect(await githubUpstream.urlResolves(url("/missing.tgz"))).toBe(false);
+      expect(await githubUpstream.urlResolves(url("/gone.tgz"))).toBe(false);
+    });
+
+    test("throws on a server error and on a closed port", async () => {
+      await expect(
+        githubUpstream.urlResolves(url("/broken.tgz")),
+      ).rejects.toThrow("503");
+      await expect(
+        githubUpstream.urlResolves("http://localhost:1/x.tgz"),
+      ).rejects.toThrow();
+    });
   });
 });
 

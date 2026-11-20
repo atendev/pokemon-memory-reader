@@ -1,12 +1,13 @@
 name: LGPL pins
 
-# Bun-pin PRs: the pinned Bun, WebKit and tinycc commits must still resolve upstream (amendment 042 §7).
+# Bun-pin PRs: the pinned Bun, WebKit and tinycc commits and the runtime exception source URLs must still resolve upstream (amendments 042 §7, 044 item 5).
 on:
   pull_request:
     paths:
       - scripts/notices/bun-runtime.json
       - package.json
       - scripts/lgpl-sources.ts
+      - scripts/notices.ts
       - docs/lgpl-relinking.md
 
 permissions:
