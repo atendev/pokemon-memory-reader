@@ -15,6 +15,8 @@ import {
   collectNotices,
   needsLgplTerm,
   REPO_URL,
+  RUNTIME_ENTRY_EXCEPTIONS,
+  type RuntimeEntryException,
   renderLgplSection,
   repoOptions,
 } from "./notices";
@@ -52,9 +54,39 @@ interface ManifestFile {
     name: string;
     version: string;
     spdx: string;
+    source?: string;
     displayName?: string;
     upstream?: { repo: string; commit: string };
   }[];
+}
+
+/** The `source` URL of a Bun manifest entry that a runtime entry exception matches. */
+export interface ExceptionSource {
+  /** The exact `name@version` of the entry. */
+  entry: string;
+  /** Empty when the manifest entry has none. */
+  source: string;
+}
+
+/**
+ * The `source` URL of every Bun manifest entry that a runtime entry exception matches (amendment 044 item 5).
+ * An exception with no manifest entry is stale, which `notices --check` reports, so it is skipped here.
+ */
+export function readExceptionSources(
+  manifestPath: string = MANIFEST_PATH,
+  exceptions: readonly RuntimeEntryException[] = RUNTIME_ENTRY_EXCEPTIONS,
+): ExceptionSource[] {
+  const manifest: ManifestFile = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const sources: ExceptionSource[] = [];
+  for (const exception of exceptions) {
+    const component = manifest.components.find(
+      (c) => `${c.name}@${c.version}` === exception.entry,
+    );
+    if (component) {
+      sources.push({ entry: exception.entry, source: component.source ?? "" });
+    }
+  }
+  return sources;
 }
 
 const SHA = /^[0-9a-f]{40}$/;
@@ -484,18 +516,23 @@ export interface Upstream {
   commitExists(repo: string, commit: string): Promise<boolean>;
   /** The commit a tag points at (peeled for annotated tags), or null when the tag doesn't exist. */
   tagCommit(repo: string, tag: string): Promise<string | null>;
+  /** True when a request for `url` ends in a success status after redirects, false on 404 or 410. Throws on anything else. */
+  urlResolves(url: string): Promise<boolean>;
 }
 
 /**
  * The online check. Every pinned commit and the Bun tag must resolve upstream. With a release, it must carry each source
- * asset, list each in `SHA256SUMS`, and put the upstream links and the relink steps in its body.
+ * asset, list each in `SHA256SUMS`, and put the upstream links and the relink steps in its body. Each exception
+ * source URL must resolve.
  */
 export async function checkOnline(
   pins: SourcePin[],
   upstream: Upstream,
   release?: ReleaseInfo,
+  exceptionSources: ExceptionSource[] = [],
 ): Promise<string[]> {
   const problems: string[] = [];
+  problems.push(...(await checkExceptionSources(exceptionSources, upstream)));
   for (const pin of pins) {
     try {
       if (!(await upstream.commitExists(pin.repo, pin.commit))) {
@@ -537,7 +574,35 @@ export async function checkOnline(
   return problems;
 }
 
-/** GitHub's REST API and `git ls-remote`. `GITHUB_TOKEN` lifts the anonymous rate limit when set. */
+/** Fails each exception entry whose `source` is empty, isn't an http(s) URL, or doesn't resolve. */
+export async function checkExceptionSources(
+  sources: ExceptionSource[],
+  upstream: Upstream,
+): Promise<string[]> {
+  const problems: string[] = [];
+  for (const { entry, source } of sources) {
+    if (!/^https?:\/\/\S+$/.test(source)) {
+      problems.push(
+        `Runtime entry exception ${entry}: source "${source}" is not an http(s) URL.`,
+      );
+      continue;
+    }
+    try {
+      if (!(await upstream.urlResolves(source))) {
+        problems.push(
+          `Runtime entry exception ${entry}: source ${source} does not resolve.`,
+        );
+      }
+    } catch (error) {
+      problems.push(
+        `Runtime entry exception ${entry}: could not fetch ${source}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return problems;
+}
+
+/** GitHub's REST API, `git ls-remote`, and a plain request for source URLs. `GITHUB_TOKEN` lifts the anonymous rate limit when set. */
 export const githubUpstream: Upstream = {
   async commitExists(repo, commit) {
     const token = process.env.GITHUB_TOKEN;
@@ -573,6 +638,12 @@ export const githubUpstream: Upstream = {
     return (
       refs.get(`refs/tags/${tag}^{}`) ?? refs.get(`refs/tags/${tag}`) ?? null
     );
+  },
+  async urlResolves(url) {
+    const response = await fetch(url, { method: "HEAD", redirect: "follow" });
+    if (response.ok) return true;
+    if (response.status === 404 || response.status === 410) return false;
+    throw new Error(`${url} answered ${response.status}.`);
   },
 };
 
@@ -669,6 +740,7 @@ export async function main(args: string[]): Promise<number> {
             readPins(),
             githubUpstream,
             tag && repo ? loadRelease(tag, repo) : undefined,
+            readExceptionSources(),
           )),
         );
       }
