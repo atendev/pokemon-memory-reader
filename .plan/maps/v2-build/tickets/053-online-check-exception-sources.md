@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [052, 049]
+claimed_by: wayfinder-master v2-build-master-1795197565
+claimed_at: 2026-11-20T18:02:00Z
 ---
 
 # Online check for exception source URLs
