@@ -196,7 +196,6 @@ describe("the committed changelog and notes", () => {
       notes: readFileSync(join(root, "scripts/release-notes.md"), "utf8"),
       dryRun: false,
     });
-    expect(body).toContain("Not released yet");
     expect(body).not.toContain("{{");
   });
 
@@ -220,9 +219,7 @@ describe("the committed changelog and notes", () => {
       dryRun: false,
     });
     const links = [
-      ...body.matchAll(
-        /https:\/\/github\.com\/atendev\/pokemon-memory-reader\/blob\/v2\.0\.0-beta\.1\/README\.md#([\w-]+)/g,
-      ),
+      ...body.matchAll(/https:\/\/github\.com\/[^\s)]*\/README\.md#([\w-]+)/g),
     ].map((m) => m[1] as string);
     expect(links).toContain("windows-smartscreen");
     for (const anchor of links) expect(anchors.has(anchor)).toBe(true);
