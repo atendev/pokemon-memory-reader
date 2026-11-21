@@ -72,6 +72,24 @@ function byHash(game: GameInfo, registry: ProfileRegistry): readonly Profile[] {
 
 const hasHash = (game: GameInfo) => game.sha1 !== null || game.crc32 !== null;
 
+/**
+ * Whether a profile may take a base-game pick for this ROM (amendment 014 §3): the emulator gave a
+ * hash, the adapter reads ROM, the header names the profile, and the signature passed or the
+ * profile declares none. Both the pick lookup and `GET /manual-picks` decide it here.
+ */
+export function baseEligible(
+  game: GameInfo,
+  headerMatch: boolean,
+  signature: SignatureResult | null,
+): boolean {
+  return (
+    hasHash(game) &&
+    game.domains.rom !== undefined &&
+    headerMatch &&
+    (signature === null || signature === "match")
+  );
+}
+
 const declaresSignature = (profile: Profile) =>
   (profile.identify?.signature.length ?? 0) > 0;
 
@@ -359,7 +377,9 @@ export function identification(
           stage = "eligible";
           return { read: ranges };
         }
-        eligible = candidates.filter((_, i) => plans[i]?.judge([]) === null);
+        eligible = candidates.filter((_, i) =>
+          baseEligible(game, true, plans[i]?.judge([]) ?? null),
+        );
         return decide(found);
       }
       if (previous === null) return { done: null };
@@ -374,7 +394,7 @@ export function identification(
           at += plan.ranges.length;
           candidateSlices.set(profile, mine);
           const result = plan.judge(mine);
-          if (result === null || result === "match") eligible.push(profile);
+          if (baseEligible(game, true, result)) eligible.push(profile);
         });
         return decide(found as Unidentified);
       }

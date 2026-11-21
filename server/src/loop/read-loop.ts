@@ -19,6 +19,7 @@ import {
 } from "@pokemon-memory-reader/internal/debug";
 import type { InternalErrorCode } from "@pokemon-memory-reader/internal/errors";
 import type {
+  ManualPicksBody,
   PickBody,
   PickRequest,
 } from "@pokemon-memory-reader/internal/manual-picks-route";
@@ -33,6 +34,12 @@ import { unreadableBoxes } from "../format/gen3/box";
 import type { Regions } from "../format/regions";
 import { type BoundGame, type BoundPart, bindGame } from "../format/registry";
 import type { BattleExtras, BattleProbe } from "../format/types";
+import {
+  candidateRows,
+  profilesFor,
+  readSignatures,
+  type Signatures,
+} from "../identify/candidates";
 import {
   type AppliedPick,
   type Identification,
@@ -235,6 +242,12 @@ export type ReadLoop = Resources &
      * pick and the re-identification it causes are one change, so no reader sees a half state.
      */
     pick(request: PickRequest): Promise<PickResult>;
+    /**
+     * The `GET /manual-picks` body: the key a pick would use, the pick that applied, and the profiles
+     * that fit an unidentified ROM with their signature results. The signature reads go through the
+     * request slot in small requests, so a tick waits for at most one.
+     */
+    pickList(): Promise<ManualPicksBody>;
     /** Forgets the pick that applied to the ROM loaded now and re-identifies, as one change. */
     forget(): Promise<ForgetResult>;
     close(): Promise<void>;
@@ -264,6 +277,8 @@ interface Session {
   readonly usable: boolean;
   /** A pick this ROM has for the session only, from a pick with no key or one the file didn't take. */
   sessionPick: SessionPick | null;
+  /** The candidates' signature reads, shared by `GET /manual-picks` calls. The ROM doesn't change under a loaded game, so a complete read stays. */
+  signatures: Promise<Signatures> | null;
   identification: Identification | null;
   identifying: Promise<void> | null;
   bound: BoundGame | null;
@@ -296,6 +311,7 @@ const sessionFor = (
   epoch: adapter.state.gameEpoch,
   usable: isUsable(adapter.state),
   sessionPick: null,
+  signatures: null,
   identification: null,
   identifying: null,
   bound: null,
@@ -1095,6 +1111,51 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     };
   }
 
+  async function pickList(): Promise<ManualPicksBody> {
+    const current = session;
+    const game = adapter.state.game;
+    const found = current.identification;
+    const empty: ManualPicksBody = {
+      romKey: null,
+      current: null,
+      candidates: [],
+    };
+    if (
+      !current.usable ||
+      game === null ||
+      game.platform === "other" ||
+      found === null
+    )
+      return empty;
+    const romKey = keysOfLoaded(current)[0] ?? null;
+    const applied = found.kind === "identified" ? found.pick : undefined;
+    const key = applied?.keys[0];
+    const manual = found.kind === "identified" && found.match === "manual";
+    const body = (
+      candidates: ManualPicksBody["candidates"],
+    ): ManualPicksBody => ({
+      romKey,
+      current:
+        manual && applied && key !== undefined
+          ? { key, scope: applied.scope, profileId: found.profile.id }
+          : null,
+      candidates,
+    });
+    if (found.kind === "identified" && !manual) return body([]);
+
+    const profiles = profilesFor(registry, game);
+    current.signatures ??= readSignatures(profiles, game, (ranges) =>
+      exclusive(() => read(ranges)),
+    );
+    const signatures = await current.signatures;
+    // A read that gave nothing is tried again by the next call.
+    if (!signatures.complete) current.signatures = null;
+    if (current !== session) return pickList();
+    return body(
+      candidateRows(profiles, game, found.header, registry, signatures.results),
+    );
+  }
+
   async function forget(): Promise<ForgetResult> {
     const current = session;
     const found = current.identification;
@@ -1127,6 +1188,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     retain,
     rawRead,
     pick,
+    pickList,
     forget,
     /** Takes effect from the next tick (spec §9.4). */
     setPollHz(hz) {
