@@ -6,6 +6,7 @@ import { type AboutInfo, createApp } from "./app/app";
 import { createStreamHub } from "./app/stream";
 import { type Clock, systemClock } from "./clock";
 import type { Config } from "./config";
+import type { IconService } from "./icons/service";
 import { type Log, silentLog } from "./log";
 import { createReadLoop } from "./loop/read-loop";
 import type { ProfileRegistry } from "./profile/registry";
@@ -27,6 +28,8 @@ export interface ServerOptions {
   readonly config?: Config;
   /** Without it there are no `/about` routes. */
   readonly about?: AboutInfo;
+  /** The `/icons` lookup. Without it there is no `/icons` route. */
+  readonly icons?: IconService;
   /** `--debug`: adds `/debug/read`. */
   readonly debug?: boolean;
   readonly clock?: Clock;
@@ -63,6 +66,7 @@ export function startServer(options: ServerOptions): RunningServer {
     log,
     config: options.config,
     about: options.about,
+    icons: options.icons,
     ...(options.debug ? { rawRead: loop.rawRead } : {}),
     // The Host checks read the address the server really listens on, which port 0 only picks once it is up.
     listening: () => ({

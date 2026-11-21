@@ -11,7 +11,7 @@ export interface RouteEntry {
  * registered through `createApp`'s `internalRoute`, which looks it up here, so a route missing
  * from the table can't be registered, and the route-table test fails when a row here isn't
  * registered. A ticket that adds a route adds its row, one per line.
- * Static files served by `Bun.serve` itself (`/`, and later `/icons/*`) never reach the app.
+ * The viewer at `/` is served by `Bun.serve` itself and never reaches the app.
  */
 export const ROUTES: readonly RouteEntry[] = [
   { method: "GET", path: "/settings", guard: "open" },
@@ -20,6 +20,7 @@ export const ROUTES: readonly RouteEntry[] = [
   { method: "GET", path: "/about/third-party-notices.txt", guard: "open" },
   { method: "GET", path: "/debug/read", guard: "debug" },
   { method: "GET", path: "/bridges/:file", guard: "static" },
+  { method: "GET", path: "/icons/*", guard: "static" },
 ];
 
 export const guardOf = (method: string, path: string): GuardClass => {

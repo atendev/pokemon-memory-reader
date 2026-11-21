@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { aboutBody } from "@pokemon-memory-reader/internal/about";
@@ -14,7 +14,10 @@ import { type AboutInfo, createApp } from "../../src/app/app";
 import { ROUTES } from "../../src/app/route-table";
 import { readConfigFile, resolveConfig } from "../../src/config";
 import { resolvePaths } from "../../src/data-folder";
+import { createIconService } from "../../src/icons/service";
 import type { RawReadResult, Resources } from "../../src/loop/read-loop";
+import { builtinProfiles } from "../../src/profile/builtin/index";
+import { loadProfiles } from "../../src/profile/registry";
 
 const status = {
   state: "disconnected",
@@ -72,6 +75,23 @@ const okRead: RawReadResult = {
   },
 };
 
+const iconRegistry = loadProfiles({
+  builtin: builtinProfiles,
+  user: [],
+}).registry;
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 7]);
+
+function iconService(mode: "online" | "local" | "off") {
+  const p = paths();
+  return createIconService({
+    paths: { iconsFolder: p.iconsFolder, iconCacheFolder: p.iconCacheFolder },
+    registry: iconRegistry,
+    settings: () => ({ mode, baseUrl: null }),
+    fetch: (() =>
+      Promise.reject(new Error("no network"))) as unknown as typeof fetch,
+  });
+}
+
 async function everything(
   read?: (address: string, length: number) => Promise<RawReadResult>,
 ) {
@@ -80,6 +100,7 @@ async function everything(
     bridges: { mgba: "-- mgba" },
     config: await loadConfig(),
     about: ABOUT,
+    icons: iconService("local"),
     rawRead: read ?? (() => Promise.resolve(okRead)),
     listening: () => ({ host: "127.0.0.1", port: PORT }),
   });
@@ -156,6 +177,7 @@ test("the route table gives each route the expected class", () => {
   expect(classOf("GET", "/about")).toBe("open");
   expect(classOf("GET", "/about/third-party-notices.txt")).toBe("open");
   expect(classOf("GET", "/debug/read")).toBe("debug");
+  expect(classOf("GET", "/icons/*")).toBe("static");
 });
 
 // Write guard
@@ -747,4 +769,83 @@ test("an internal error body carries no public status and rejects an unknown cod
   expect(
     internalErrorBody.parse({ error: { code: "no_rom", message: "x" } }),
   ).toEqual({ error: { code: "no_rom", message: "x" } });
+});
+
+// Icons
+
+const ICON = "/icons/emerald-us-1.0/pokemon/25";
+
+async function withPackedIcon() {
+  const dir = join(paths().iconsFolder, "pokemon", "emerald");
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "25.png"), PNG);
+  return everything();
+}
+
+test("the icons route serves the PNG with its headers, to a LAN peer too", async () => {
+  const app = await withPackedIcon();
+  const response = await app.request(
+    ICON,
+    { headers: { Host: "192.168.1.5:7425" } },
+    lan,
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Content-Type")).toBe("image/png");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("Cache-Control")).toBe("no-cache");
+  expect(response.headers.get("ETag")).toMatch(/^"[0-9a-f]{40}"$/);
+  expect(response.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  expect(new Uint8Array(await response.arrayBuffer())).toEqual(PNG);
+});
+
+test("a matching If-None-Match gets a 304 with no body, and a stale one gets the image", async () => {
+  const app = await withPackedIcon();
+  const etag = (await app.request(ICON)).headers.get("ETag") as string;
+  const same = await app.request(ICON, { headers: { "If-None-Match": etag } });
+  expect(same.status).toBe(304);
+  expect(same.headers.get("ETag")).toBe(etag);
+  expect(await same.text()).toBe("");
+  const weak = await app.request(ICON, {
+    headers: { "If-None-Match": `"other", W/${etag}` },
+  });
+  expect(weak.status).toBe(304);
+  const stale = await app.request(ICON, {
+    headers: { "If-None-Match": '"stale"' },
+  });
+  expect(stale.status).toBe(200);
+});
+
+test("a missing icon, a bad path and an unknown profile are all 404", async () => {
+  const app = await withPackedIcon();
+  for (const path of [
+    "/icons/emerald-us-1.0/pokemon/26",
+    "/icons/emerald-us-1.0/pokemon/025",
+    "/icons/emerald-us-1.0/pokemon/25/shiny/x",
+    "/icons/emerald-us-1.0/item/1/shiny",
+    "/icons/%2e%2e/pokemon/25",
+    "/icons/nope/pokemon/25",
+    "/icons/emerald-us-1.0",
+    "/icons",
+  ]) {
+    const response = await app.request(path);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).not.toBe("image/png");
+  }
+});
+
+test("with mode off the route is a 404 even when the pack has the file", async () => {
+  const dir = join(paths().iconsFolder, "pokemon", "emerald");
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "25.png"), PNG);
+  const app = createApp({
+    resources: idle,
+    icons: iconService("off"),
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  expect((await app.request(ICON)).status).toBe(404);
+});
+
+test("without an icon service there is no icons route", async () => {
+  const app = createApp({ resources: idle });
+  expect((await app.request(ICON)).status).toBe(404);
 });
