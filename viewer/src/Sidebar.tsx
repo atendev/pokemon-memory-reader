@@ -65,7 +65,7 @@ export function Sidebar({
   collapsed: boolean;
   onToggle: () => void;
   status: StatusResource | null;
-  /** A red dot on Battle while a battle is live. Nothing sets it until the battle screen lands. */
+  /** A red dot on Battle while a battle is live. */
   battleLive?: boolean;
 }) {
   return (

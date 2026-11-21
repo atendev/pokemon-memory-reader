@@ -1,9 +1,14 @@
 import {
+  get,
   getParty,
   getStatus,
   PmrApiError,
 } from "@pokemon-memory-reader/api/client";
-import type { Party, StatusResource } from "@pokemon-memory-reader/api/schemas";
+import type {
+  Battle,
+  Party,
+  StatusResource,
+} from "@pokemon-memory-reader/api/schemas";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 /** Until the SSE stream lands, the viewer polls the snapshot routes. */
@@ -46,6 +51,7 @@ function usePolled<T>(load: () => Promise<T>, enabled: boolean): Loaded<T> {
 const options = { baseUrl: "" };
 const loadStatus = () => getStatus(options);
 const loadParty = () => getParty(options);
+const loadBattle = () => get("battle", options);
 
 export function useStatus(): Loaded<StatusResource> {
   return usePolled(loadStatus, true);
@@ -54,6 +60,14 @@ export function useStatus(): Loaded<StatusResource> {
 /** The party is only requested while a game is identified, so no request holds demand otherwise. */
 export function useParty(enabled: boolean): Loaded<Party> {
   return usePolled(loadParty, enabled);
+}
+
+/**
+ * The battle is read whenever a game is identified, not only on its own screen, because the
+ * sidebar's red dot needs to know whether a battle is live (spec §11.1).
+ */
+export function useBattle(enabled: boolean): Loaded<Battle> {
+  return usePolled(loadBattle, enabled);
 }
 
 function subscribeHash(onChange: () => void): () => void {
