@@ -17,21 +17,8 @@ Spec §12.7 and §12.8, and the `supported` flag the tracer left out ([009](./00
 - `status.game` and the 503 codes match 020, and the viewer's `unsupported` state works through the connection screen.
 - The matrix is generated, not hand-edited, and a CI test fails when it is stale.
 
-## Handoff
+## Answer
 
-Branch `t3/coverage-matrix-support-gate`, SHA aec2570 (the build, all committed). Audit round so far: 0 (none run). Tag `wfm-v2-build-093-1795265782`.
+`SUPPORTED` in `server/src/format/support.ts` holds one flag per data format, and all four ship `false` because no tier 1 fixture is verified yet. `bindGame` returns `{ supported: false }` for such a format, and the read loop answers 503 `unsupported` on every resource, ahead of `no_data`, with `status.state` still `game` and `status.game` populated. The viewer's connection screen already shows its `unsupported` state from that code. The matrix in `server/test/fixtures/coverage.ts` and the guard in `server/test/support/coverage-guard.ts` fail the suite when a format is flagged supported without every tier 1 state verified on each primary revision. `bun run coverage` generates `docs/coverage.md`, and a default-suite test fails when it is stale. `PMR_ASSUME_SUPPORTED=<formats>` serves an unsupported format for decoder work and the executable test. Capturing the tier 1 fixtures and lifting the flags is surfaced as a ticket. Audit: Claude seat only, approved at round 2 with a score of 8 (Gemini and GPT: not run). [Report](../assets/093-coverage-matrix-and-support-gate-report.md).
 
-**Done**
-- `server/src/format/support.ts`: `SUPPORTED` flags (all false), `isSupported`, `assumeSupported` (`PMR_ASSUME_SUPPORTED` env override, wired in `main.ts` with a warn log).
-- `bindGame(profile, support = SUPPORTED)` returns `{ supported: false }` for an unsupported format and sets `BoundGame.supported`. The read loop (`unavailable`) returns 503 `unsupported` when `supported === false`. `ReadLoopDeps.supported` and `ServerOptions.supported` pass the flags through.
-- Matrix: `server/test/fixtures/coverage.ts`. Guard, scan and render: `server/test/support/coverage-guard.ts`, `coverage-report.ts`. Script `bun run coverage` (`--check`) writes `docs/coverage.md`.
-- Tests: `server/test/fixtures/coverage.test.ts`, `support-flags.test.ts`, and a "support gate" describe in `server/test/loop/read-loop.test.ts`. Existing loop tests now pass `supported: ALL_SUPPORTED` (`server/test/support/supported.ts`). The executable e2e test sets `PMR_ASSUME_SUPPORTED=gen3`.
-- Local: lint clean, typecheck clean, `bun test` 1665 pass, 1 fail (Lua 5.5 in `bridge/core.test.ts`, environmental, predates this work).
-
-**Left, in order**
-1. Run the council audit (single Claude seat, "Gemini and GPT: not run") on the diff against master `wayfinder/v2-build-master`. Fix problems, up to 5 rounds.
-2. Write `.plan/maps/v2-build/assets/093-coverage-matrix-and-support-gate-report.md` (decisions: env override name and why; `bindGame` gating and optional `BoundGame.supported`; doc location `docs/coverage.md`; guard prints via the script, not the test; tier 2 gaps in the doc; smoke slugs `smoke-party`/`smoke-player`; matrix field paths; "full"/"smoke"/"none" checks). Run unslop, commit.
-3. Run the timing close (`wf-time.py close --slug v2-build --ticket 093 ...`), add `## Answer`, delete this Handoff section, commit, push without force, open a PR against `wayfinder/v2-build-master` and link it.
-4. Surface a ticket: "Capture tier 1 fixtures and lift `supported`" (HITL, needs ROMs and an emulator).
-
-**Open audit problems:** none yet. **Read first:** `server/test/support/coverage-guard.ts`, `server/src/format/registry.ts`, `server/src/format/support.ts`.
+Timing: wall 8m, active 8m, user 0s, wait 0s, blocked 0s | implement 6m, audit 1m (2 rounds) | tools 73 (8 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 143k | cost $2.46 sonnet-5-5 + $0.02 haiku-5-5
