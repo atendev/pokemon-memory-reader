@@ -35,8 +35,11 @@ const connected: AdapterState = {
   gameEpoch: 1,
 };
 
-const status = (adapter: AdapterState, identification = null as never) =>
-  buildStatus({ adapterId: "mgba", adapter, identification });
+const status = (
+  adapter: AdapterState,
+  identification = null as never,
+  stalled = false,
+) => buildStatus({ adapterId: "mgba", adapter, identification, stalled });
 
 describe("buildStatus", () => {
   test("disconnected: no adapter detail, no ROM", () => {
@@ -66,6 +69,13 @@ describe("buildStatus", () => {
     expect(result.state).toBe("no_game");
     expect(result.rom).toBeNull();
     expect(result.adapter).toMatchObject({ stalled: false });
+  });
+
+  test("adapter.stalled follows the flag it is given", () => {
+    expect(status(connected, null as never, true).adapter).toMatchObject({
+      stalled: true,
+    });
+    expect(status(connected).adapter).toMatchObject({ stalled: false });
   });
 
   test("no_game while identification is pending, with the ROM hashes known", () => {

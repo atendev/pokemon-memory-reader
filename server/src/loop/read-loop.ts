@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import type {
   Box,
   Boxes,
@@ -31,6 +32,7 @@ import { createBoxCorruptionLog } from "../resource/box-corruption";
 import { buildStatus, isUsable } from "../resource/status";
 import { runJob } from "./job";
 import { PointerCache, readBatch } from "./plan";
+import { createStallTracker, type StallTracker } from "./stall";
 
 /** The 503 codes this server produces (spec §7.2, amendment 020). `not_found` is a 404 and belongs to `box()`. */
 export type UnavailableCode =
@@ -56,6 +58,15 @@ export type BoxSnapshot =
       readonly code: UnavailableCode | "not_found";
       readonly status: StatusResource;
     };
+
+/**
+ * A resource whose value changed, for the SSE stream (spec §8.6). A topic's first decoded value
+ * in a session is always one, and doubles as the on-connect value. `status` events mean
+ * `adapter.stalled` flipped. Other `status` changes come from the adapter's state, not from here.
+ */
+export type ChangeEvent = {
+  [T in Topic]: { readonly topic: T; readonly value: ResourceMap[T] };
+}[Topic];
 
 /** What the HTTP app sees. SSE `subscribe` and the settings actions join this when their tickets land. */
 export interface Resources {
@@ -92,7 +103,10 @@ type MainTopic = Exclude<Decoded, "boxes">;
 interface Part {
   readonly name: string;
   readonly part: BoundPart<unknown>;
-  accept(value: unknown): void;
+  /** False when the decoded value isn't the cycle's final answer yet, so its raw bytes aren't remembered. */
+  accept(value: unknown): boolean | undefined;
+  /** False forces a decode although the raw bytes match the last tick's. */
+  canSkip?(): boolean;
 }
 const DECODED: readonly MainTopic[] = ["party", "player", "bag", "battle"];
 
@@ -121,6 +135,8 @@ export function normalizePollHz(value: unknown, log: Log): number {
 }
 
 export type ReadLoop = Resources & {
+  /** Internal change events (spec §8.6). The SSE stream is the subscriber. Returns the unsubscribe. */
+  onChange(listener: (event: ChangeEvent) => void): () => void;
   /** A live `pollHz` change, clamped like the one at startup. */
   setPollHz(hz: number): void;
   close(): Promise<void>;
@@ -154,6 +170,11 @@ interface Session {
   /** The pointer values the main batch last read (spec §8.5). Empty until the first cycle, so that cycle sends two requests. */
   readonly pointers: PointerCache;
   values: { [T in MainTopic]?: ResourceMap[T] };
+  /** Hash of the raw bytes each main part last decoded from. Equal bytes skip the decode (spec §8.6). */
+  readonly raw: Map<string, string>;
+  /** The last value emitted per topic. Only a different decode emits again. */
+  readonly emitted: Map<Decoded, unknown>;
+  readonly stall: StallTracker;
   boxes: BoxState;
   /** The battle tracker's state. A new session starts it over, so a game change resets `battleId` and `lastBattle` (spec §7.8). */
   battle: BattleTrackerState;
@@ -163,7 +184,11 @@ interface Session {
   cold: Map<MainTopic, Promise<void>>;
 }
 
-const sessionFor = (adapter: Adapter, log: Log): Session => ({
+const sessionFor = (
+  adapter: Adapter,
+  log: Log,
+  onStall: () => void,
+): Session => ({
   epoch: adapter.state.gameEpoch,
   usable: isUsable(adapter.state),
   identification: null,
@@ -171,6 +196,9 @@ const sessionFor = (adapter: Adapter, log: Log): Session => ({
   bound: null,
   pointers: new PointerCache(),
   values: {},
+  raw: new Map(),
+  emitted: new Map(),
+  stall: createStallTracker(onStall),
   boxes: {
     pointers: new PointerCache(),
     corruption: createBoxCorruptionLog(log),
@@ -188,8 +216,9 @@ const sessionFor = (adapter: Adapter, log: Log): Session => ({
 
 /**
  * Owns the one request slot (spec §4.5) and orders identification, the tick cycle and cold
- * reads through it. Change detection and `stalled` (spec §8.6) and SSE demand (spec §8.2) slot in
- * here. Box requests (spec §8.3) run after the main batch, in their own request.
+ * reads through it. It detects changes and `stalled` (spec §8.6) and hands change events to
+ * `onChange`. SSE demand (spec §8.2) slots in here. Box requests (spec §8.3) run after the main
+ * batch, in their own request, and never count toward `stalled`.
  */
 export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   const { adapter, registry, clock, log } = deps;
@@ -198,7 +227,24 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     Math.max(1000 / normalizePollHz(hz, log), adapter.limits.minIntervalMs);
   let intervalMs = intervalFor(deps.pollHz);
 
-  let session = sessionFor(adapter, log);
+  const listeners = new Set<(event: ChangeEvent) => void>();
+  const emit = (event: ChangeEvent): void => {
+    for (const listener of listeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        log.error("change listener threw", { error });
+      }
+    }
+  };
+  const newSession = (): Session => {
+    const made: Session = sessionFor(adapter, log, () => {
+      if (made === session) emit({ topic: "status", value: status() });
+    });
+    return made;
+  };
+
+  let session = newSession();
   let slot: Promise<unknown> = Promise.resolve();
   let cancelTick: (() => void) | null = null;
   let closed = false;
@@ -216,13 +262,47 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     ranges: Parameters<Adapter["read"]>[0],
   ): Promise<ReadOutcome> => adapter.read(ranges, BOX_TIMEOUT_MS);
 
+  /** Feeds a batch's outcome to the stall check. A failed read that didn't time out (a bridge error) counts as neither (spec §8.6). */
+  function note(
+    current: Session,
+    startedAt: number,
+    kind: ReadOutcome["kind"],
+  ): void {
+    if (kind === "data") current.stall.good();
+    else if (kind === "timeout") current.stall.timeout(startedAt, clock.now());
+  }
+
+  /** Caches a decoded value. It is emitted only when it differs from the last one emitted (spec §8.6). */
+  function publish<T extends MainTopic>(
+    current: Session,
+    topic: T,
+    value: ResourceMap[T],
+  ): void {
+    current.values[topic] = value as never;
+    if (
+      current.emitted.has(topic) &&
+      isDeepStrictEqual(current.emitted.get(topic), value)
+    )
+      return;
+    current.emitted.set(topic, value);
+    emit({ topic, value } as ChangeEvent);
+  }
+
   function identify(current: Session): Promise<void> {
     const game = adapter.state.game;
     if (current.identification !== null || !current.usable || game === null)
       return Promise.resolve();
     current.identifying ??= exclusive(async () => {
       if (current !== session) return;
-      const found = await runJob(identification(game, registry), read);
+      const found = await runJob(
+        identification(game, registry),
+        async (ranges) => {
+          const started = clock.now();
+          const outcome = await read(ranges);
+          note(current, started, outcome.kind);
+          return outcome;
+        },
+      );
       if (current !== session || found === null) return;
       current.identification = found;
       current.bound = found.kind === "identified" ? bind(found.profile) : null;
@@ -254,7 +334,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     );
     current.battle = step.state;
     for (const warning of step.warnings) log.warn(warning);
-    if (step.value !== null) current.values.battle = step.value;
+    if (step.value !== null) publish(current, "battle", step.value);
     return false;
   }
 
@@ -264,6 +344,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     platform: Platform,
     parts: readonly Part[],
   ): Promise<void> {
+    const started = clock.now();
     const result = await runJob(
       readBatch(
         parts.map(({ part }) => part.regions),
@@ -275,18 +356,29 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       ),
       read,
     );
-    // A timeout or a failed read keeps the last value. `stalled` counts the timeouts here.
+    note(
+      current,
+      started,
+      result.kind === "sample" ? "data" : result.outcome.kind,
+    );
+    // A timeout or a failed read keeps the last value and emits nothing (spec §8.6).
     if (current !== session || result.kind !== "sample") return;
-    for (const { name, part, accept } of parts) {
+    for (const { name, part, accept, canSkip } of parts) {
       const sliced = result.sample.slices(part.regions);
       if (!sliced.ok) {
         log.debug(`${name} skipped this cycle: ${sliced.reason}`);
         continue;
       }
+      // Stage one: bytes equal to the last tick's decode to the same value, so skip the decode.
+      const key = hashOf(sliced.slices);
+      if (current.raw.get(name) === key && (canSkip?.() ?? true)) continue;
       try {
         const decoded = part.decode(sliced.slices);
-        if (decoded.ok) accept(decoded.value);
-        else log.debug(`${name} did not decode: ${decoded.reason}`);
+        if (!decoded.ok) {
+          log.debug(`${name} did not decode: ${decoded.reason}`);
+          continue;
+        }
+        if (accept(decoded.value) !== false) current.raw.set(name, key);
       } catch (error) {
         log.error(`${name} decoder threw, which is a layout bug`, { error });
       }
@@ -319,7 +411,8 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
                 name: topic,
                 part,
                 accept: (value: unknown) => {
-                  current.values[topic] = value as never;
+                  publish(current, topic, value as never);
+                  return true;
                 },
               },
             ]
@@ -333,7 +426,10 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
           part: current.battleOn ? battle.frame : battle.probe,
           accept: (value) => {
             frameNeeded = feedBattle(current, value as BattleProbe);
+            return !frameNeeded;
           },
+          // While the frame fails validation, every tick runs the tracker, which times the warning (spec §8.6).
+          canSkip: () => current.battle.failingSince === null,
         });
       }
       if (parts.length === 0) return;
@@ -345,7 +441,9 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
             part: battle.frame,
             accept: (value) => {
               feedBattle(current, value as BattleProbe);
+              return true;
             },
+            canSkip: () => current.battle.failingSince === null,
           },
         ]);
       }
@@ -436,10 +534,12 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     state.readAt = clock.now();
     if (hash === state.hash) return;
     state.hash = hash;
+    // Stage two: different bytes can still decode to the value already served (spec §8.6).
+    if (state.value !== undefined && isDeepStrictEqual(state.value, value))
+      return;
     state.value = value;
     state.corruption.report(value);
-    // SSE slot: the `boxes` topic pushes `value` to its subscribers from here, at most once a
-    // second (spec §7.9, §8.3). It waits for the SSE ticket (071).
+    emit({ topic: "boxes", value });
   }
 
   /**
@@ -494,7 +594,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   const stopListening = adapter.subscribe((state) => {
     if (state.gameEpoch === session.epoch && isUsable(state) === session.usable)
       return;
-    session = sessionFor(adapter, log);
+    session = newSession();
     void identify(session);
   });
   void identify(session);
@@ -505,6 +605,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       adapterId: adapter.id,
       adapter: adapter.state,
       identification: session.identification,
+      stalled: session.stall.stalled,
     });
 
   /** The first 503 that applies, checked in the order of amendment 020 §3, without `no_data`. */
@@ -551,6 +652,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       let run = current.cold.get(wanted);
       if (run === undefined) {
         delete current.values[wanted];
+        current.raw.delete(wanted);
         run = cycle(current, [wanted]).finally(() => {
           current.cold.delete(wanted);
         });
@@ -589,12 +691,17 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     status,
     get,
     box,
+    onChange(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
     /** Takes effect from the next tick (spec §9.4). */
     setPollHz(hz) {
       intervalMs = intervalFor(hz);
     },
     async close() {
       closed = true;
+      listeners.clear();
       cancelTick?.();
       stopListening();
       await slot;

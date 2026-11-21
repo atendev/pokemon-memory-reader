@@ -8,6 +8,8 @@ export interface StatusInputs {
   readonly adapter: AdapterState;
   /** null until identification has run for the current game. */
   readonly identification: Identification | null;
+  /** True after 1 s of consecutive read timeouts, until the next good read (spec §8.6). */
+  readonly stalled: boolean;
 }
 
 /** A bridge is usable once connected with no problem (spec §4.7). */
@@ -67,8 +69,7 @@ function gameOf(identification: Identification | null) {
 
 /**
  * The `status` resource (spec §7.4, amendment 020). `adapter` is null while the adapter is
- * neither usable nor reporting a problem. `stalled` stays false until the stall check lands
- * (spec §8.6).
+ * neither usable nor reporting a problem.
  */
 export function buildStatus(inputs: StatusInputs): StatusResource {
   const { adapter, identification } = inputs;
@@ -86,7 +87,7 @@ export function buildStatus(inputs: StatusInputs): StatusResource {
       usable || adapter.problem !== null
         ? {
             id: inputs.adapterId,
-            stalled: false,
+            stalled: inputs.stalled,
             bridge: adapter.bridge && { ...adapter.bridge },
             problem: adapter.problem,
           }
