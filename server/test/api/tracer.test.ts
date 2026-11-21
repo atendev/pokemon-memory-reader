@@ -187,6 +187,33 @@ describe("tracer API against the fake bridge", () => {
     return getStatus();
   }
 
+  test("status.adapter.stalled turns true after 1 s of unanswered reads and clears on a good one", async () => {
+    memory = emeraldMemory([TREECKO]);
+    const { bridge, bridgePort, url } = setup();
+    bridge.game = null;
+    bridge.start(bridgePort);
+    const getStatus = async () =>
+      StatusResource.parse(await (await fetch(`${url}/status`)).json());
+    const stalled = async () => (await getStatus()).adapter?.stalled;
+    await until(async () => (await getStatus()).state === "no_game", "no_game");
+    bridge.sendGame({ ...GBA_GAME, crc32: "1f1c08fb", sha1: null });
+    await until(async () => (await getStatus()).state === "game", "game");
+    expect(await stalled()).toBe(false);
+
+    // The bridge goes quiet. Each read times out after 250 ms, so the flag flips within about 1.3 s.
+    const unanswered: Parameters<typeof bridge.onRead>[] = [];
+    const answer = bridge.onRead;
+    bridge.onRead = (...args) => {
+      unanswered.push(args);
+    };
+    await until(async () => (await stalled()) === true, "stalled", 5000);
+
+    // It answers again. The held requests get their late replies, which are discarded.
+    bridge.onRead = answer;
+    for (const args of unanswered) answer(...args);
+    await until(async () => (await stalled()) === false, "stalled cleared");
+  }, 15000);
+
   test("with no hash, a header and signature match loads by header", async () => {
     memory = emeraldMemory([TREECKO]);
     const status = await statusAfter({ ...GBA_GAME, crc32: null });
