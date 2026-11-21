@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Bytes } from "../../src/format/bytes";
 import { gen3Battle } from "../../src/format/gen3/battle";
+import { gen3Constants } from "../../src/format/gen3/profile";
 import { gen3Trainers } from "../../src/format/gen3/trainers";
 import type { Regions, Slices } from "../../src/format/regions";
 import type { DecodeContext } from "../../src/format/types";
@@ -188,5 +189,17 @@ describe("Ruby trainer prize money", () => {
     });
     // 4 × level 20 × multiplier 1 × value 25.
     expect(filled.opponent.trainers[0]?.prizeMoney).toBe(2000);
+  });
+});
+
+describe("the gen3 constants block", () => {
+  test("rejects a key it does not define", () => {
+    expect(
+      gen3Constants.safeParse({ inBattleOffset: 0x43d, typo: 1 }).success,
+    ).toBe(false);
+  });
+
+  test("is empty by default", () => {
+    expect(gen3Constants.parse(undefined)).toEqual({});
   });
 });
