@@ -15,7 +15,10 @@ import { TOPICS } from "./schemas.js";
 describe("meaning records", () => {
   for (const [enumName, record] of Object.entries(OPEN_ENUMS)) {
     test(`every ${enumName} name has a one-line meaning`, () => {
-      expect(Object.keys(record).length).toBeGreaterThan(0);
+      // `battleMode` stays empty until its first fixture lands (amendment 015).
+      if (enumName !== "battleMode") {
+        expect(Object.keys(record).length).toBeGreaterThan(0);
+      }
       for (const [value, entry] of Object.entries<{
         meaning: string;
         retiredIn?: string;

@@ -86,6 +86,13 @@ export const TOPIC_NAMES = {
   party: { meaning: "The player's party, in slot order." },
 } as const satisfies Record<string, MeaningRecord>;
 
+/**
+ * `battle.modes` values (amendment 015). A name joins when its verification fixture lands, with a
+ * generation-neutral, yes/no meaning, so this record is empty until then. Tags are independent and
+ * can co-occur, and the array is sorted in code-point order. Never pre-list an unverified name.
+ */
+export const BATTLE_MODES = {} as const satisfies Record<string, MeaningRecord>;
+
 /** Every open enum, keyed by the name the contract docs and the baseline file use. */
 export const OPEN_ENUMS = {
   errorCode: ERROR_CODES,
@@ -94,4 +101,5 @@ export const OPEN_ENUMS = {
   bridgeId: BRIDGE_IDS,
   adapterProblem: ADAPTER_PROBLEMS,
   topic: TOPIC_NAMES,
+  battleMode: BATTLE_MODES,
 } as const satisfies Record<string, Readonly<Record<string, MeaningRecord>>>;

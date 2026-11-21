@@ -1,25 +1,36 @@
 import { z } from "zod";
 import { TOPIC_NAMES } from "./meanings.js";
 import type {
+  ActiveBattle as ActiveBattleType,
   AdapterId,
   AdapterInfo as AdapterInfoType,
   AdapterProblem,
+  BattleMode,
+  BattleMove as BattleMoveType,
+  Battler as BattlerType,
+  Battle as BattleType,
   BridgeId,
   DataFormat,
   ErrorBody as ErrorBodyType,
   ErrorCode,
   Game as GameType,
+  InactiveBattle as InactiveBattleType,
+  LastBattle as LastBattleType,
   Move as MoveType,
   Nature as NatureType,
+  OpponentMon as OpponentMonType,
   Party as PartyType,
   Pokemon as PokemonType,
   Ref as RefType,
   ResourceMap as ResourceMapType,
   Rom as RomType,
+  SideConditions as SideConditionsType,
+  StatStages as StatStagesType,
   Stats as StatsType,
   StatusResource as StatusResourceType,
   Status as StatusType,
   Topic as TopicType,
+  Trainer as TrainerType,
   Type as TypeType,
 } from "./types.js";
 
@@ -271,6 +282,139 @@ export const ErrorBody = z.looseObject({
   status: StatusResource,
 });
 export type ErrorBody = ErrorBodyType;
+
+/** -6 to +6 in every generation. Gen 1's single Special stage fills both `spa` and `spd`. */
+export const StatStages = z.looseObject({
+  atk: z.int().min(-6).max(6),
+  def: z.int().min(-6).max(6),
+  spa: z.int().min(-6).max(6),
+  spd: z.int().min(-6).max(6),
+  spe: z.int().min(-6).max(6),
+  acc: z.int().min(-6).max(6),
+  eva: z.int().min(-6).max(6),
+});
+export type StatStages = StatStagesType;
+
+export const BattleMove = z.looseObject({
+  id: z.int(),
+  name: z.string().nullable(),
+  pp: z.int(),
+  maxPp: z.int().nullable(),
+});
+export type BattleMove = BattleMoveType;
+
+export const Battler = z.looseObject({
+  position: z.int(),
+  owner: z.enum(["player", "partner", "opponent"]),
+  partySlot: z.int().nullable(),
+  species: Pokemon.shape.species,
+  level: z.int(),
+  types: z.array(Type).nullable(),
+  hp: z.int(),
+  maxHp: z.int(),
+  status: Status.nullable(),
+  ability: Ref.nullable(),
+  heldItem: Ref.nullable(),
+  moves: z.array(BattleMove),
+  stats: Stats,
+  statStages: StatStages,
+});
+export type Battler = BattlerType;
+
+export const Trainer = z.looseObject({
+  id: z.int(),
+  classId: z.int().nullable(),
+  className: z.string().nullable(),
+  name: z.string().nullable(),
+  prizeMoney: z.int().nullable(),
+  items: z.array(Ref).nullable(),
+});
+export type Trainer = TrainerType;
+
+export const OpponentMon = z.looseObject({
+  ...Pokemon.shape,
+  partySlot: z.int(),
+  trainer: z.int().nullable(),
+  revealed: z.boolean(),
+});
+export type OpponentMon = OpponentMonType;
+
+export const SideConditions = z.looseObject({
+  reflect: z.boolean().nullable(),
+  lightScreen: z.boolean().nullable(),
+  safeguard: z.boolean().nullable(),
+  mist: z.boolean().nullable(),
+  spikes: z.int().nullable(),
+});
+export type SideConditions = SideConditionsType;
+
+export const BATTLE_KINDS = ["wild", "trainer"] as const;
+export const BATTLE_FORMATS = ["single", "double"] as const;
+export const BATTLE_OUTCOMES = [
+  "won",
+  "lost",
+  "drew",
+  "ran",
+  "caught",
+  "forfeited",
+  "unknown",
+] as const;
+
+const Modes = z.array(openEnum<BattleMode>());
+
+export const LastBattle = z.looseObject({
+  battleId: z.int(),
+  outcome: z.enum(BATTLE_OUTCOMES),
+  endedAt: z.iso.datetime(),
+  kind: z.enum(BATTLE_KINDS),
+  format: z.enum(BATTLE_FORMATS),
+  modes: Modes,
+  trainers: z.array(Trainer),
+  opponentParty: z.array(OpponentMon),
+});
+export type LastBattle = LastBattleType;
+
+export const InactiveBattle = z.looseObject({
+  active: z.literal(false),
+  lastBattle: LastBattle.nullable(),
+});
+export type InactiveBattle = InactiveBattleType;
+
+export const ActiveBattle = z.looseObject({
+  active: z.literal(true),
+  battleId: z.int(),
+  kind: z.enum(BATTLE_KINDS),
+  format: z.enum(BATTLE_FORMATS),
+  modes: Modes,
+  turn: z.int().nullable(),
+  player: z.looseObject({
+    active: z.array(Battler),
+    partner: Trainer.nullable(),
+  }),
+  opponent: z.looseObject({
+    active: z.array(Battler),
+    party: z.array(OpponentMon),
+    trainers: z.array(Trainer),
+  }),
+  field: z.looseObject({
+    weather: z.enum(["none", "rain", "sun", "sandstorm", "hail"]).nullable(),
+    terrain: z
+      .enum(["none", "electric", "grassy", "misty", "psychic"])
+      .nullable(),
+    sides: z.looseObject({
+      player: SideConditions,
+      opponent: SideConditions,
+    }),
+  }),
+});
+export type ActiveBattle = ActiveBattleType;
+
+/** The `battle` resource, a union discriminated by `active`. */
+export const Battle = z.discriminatedUnion("active", [
+  InactiveBattle,
+  ActiveBattle,
+]);
+export type Battle = BattleType;
 
 /**
  * The resources the server serves so far, in the order of the topic record. `player`, `bag`, `battle`

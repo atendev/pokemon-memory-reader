@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { z } from "zod";
-import { resourceSchemas } from "./schemas.js";
+import { Battle, resourceSchemas } from "./schemas.js";
 
 /** Every `z.enum` a published schema holds, by path. A `z.enum` is closed by construction. */
 function closedEnums(
@@ -14,6 +14,7 @@ function closedEnums(
     element?: z.ZodType;
     innerType?: z.ZodType;
     entries?: Record<string, string>;
+    options?: z.ZodType[];
   };
   switch (def.type) {
     case "enum":
@@ -27,6 +28,9 @@ function closedEnums(
     case "array":
       closedEnums(def.element as z.ZodType, `${path}[]`, found);
       return;
+    case "union":
+      for (const option of def.options ?? []) closedEnums(option, path, found);
+      return;
     case "nullable":
     case "optional":
       closedEnums(def.innerType as z.ZodType, path, found);
@@ -36,6 +40,7 @@ function closedEnums(
     case "number":
     case "int":
     case "boolean":
+    case "literal":
       return;
     default:
       throw new Error(
@@ -50,8 +55,44 @@ function closedEnums(
 // `--update-snapshots` to make this test pass: a changed closed enum is a breaking API change.
 test("the closed enums of every resource are unchanged", () => {
   const found: Record<string, string[]> = {};
-  for (const [topic, schema] of Object.entries(resourceSchemas)) {
+  // `battle` joins `resourceSchemas` with its route, so its closed enums are pinned here already.
+  for (const [topic, schema] of Object.entries({
+    ...resourceSchemas,
+    battle: Battle,
+  })) {
     closedEnums(schema, topic, found);
   }
   expect(found).toMatchSnapshot();
+});
+
+const emptySide = {
+  reflect: false,
+  lightScreen: false,
+  safeguard: false,
+  mist: false,
+  spikes: 0,
+};
+
+test("battle is a union on `active`, and an unknown mode name still parses", () => {
+  const inactive = { active: false, lastBattle: null };
+  expect(Battle.safeParse(inactive).success).toBe(true);
+  expect(Battle.safeParse({ active: true }).success).toBe(false);
+  const active = {
+    active: true,
+    battleId: 1,
+    kind: "wild",
+    format: "single",
+    modes: ["a_mode_a_newer_server_adds"],
+    turn: null,
+    player: { active: [], partner: null },
+    opponent: { active: [], party: [], trainers: [] },
+    field: {
+      weather: null,
+      terrain: null,
+      sides: { player: emptySide, opponent: emptySide },
+    },
+  };
+  expect(Battle.safeParse(active).success).toBe(true);
+  expect(Battle.safeParse({ ...active, kind: "link" }).success).toBe(false);
+  expect(Battle.safeParse({ ...active, modes: [1] }).success).toBe(false);
 });

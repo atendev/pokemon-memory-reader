@@ -9,6 +9,7 @@
 import type {
   ADAPTER_IDS,
   ADAPTER_PROBLEMS,
+  BATTLE_MODES,
   BRIDGE_IDS,
   DATA_FORMATS,
   ERROR_CODES,
@@ -30,6 +31,9 @@ export type KnownBridgeId = keyof typeof BRIDGE_IDS;
 export type BridgeId = KnownBridgeId | (string & {});
 export type KnownAdapterProblem = keyof typeof ADAPTER_PROBLEMS;
 export type AdapterProblem = KnownAdapterProblem | (string & {});
+/** Empty until a mode's verification fixture lands (amendment 015), so only the open part applies. */
+export type KnownBattleMode = keyof typeof BATTLE_MODES;
+export type BattleMode = KnownBattleMode | (string & {});
 
 export type Type =
   | "normal"
@@ -288,3 +292,158 @@ export type ResourceMap = {
   status: StatusResource;
   party: Party;
 };
+
+/** A stat stage, -6 to +6 in every generation. Gen 1's single Special stage fills both `spa` and `spd`. */
+export type StatStages = {
+  atk: number;
+  def: number;
+  spa: number;
+  spd: number;
+  spe: number;
+  acc: number;
+  eva: number;
+  [key: string]: unknown;
+};
+
+/** A move in battle: live PP from the battle struct. */
+export type BattleMove = {
+  id: number;
+  name: string | null;
+  pp: number;
+  maxPp: number | null;
+  [key: string]: unknown;
+};
+
+/**
+ * A mon on the field, read live from the battle struct, so a Transformed mon shows the copied
+ * species, types and moves. `partySlot` indexes the side's party as the game stores it, and is null
+ * only for partner battlers whose mons aren't in party memory.
+ */
+export type Battler = {
+  position: number;
+  owner: "player" | "partner" | "opponent";
+  partySlot: number | null;
+  species: Pokemon["species"];
+  level: number;
+  types: Type[] | null;
+  hp: number;
+  maxHp: number;
+  status: Status | null;
+  ability: Ref | null;
+  heldItem: Ref | null;
+  moves: BattleMove[];
+  stats: Stats;
+  statStages: StatStages;
+  [key: string]: unknown;
+};
+
+/**
+ * A trainer in the battle. The table-derived fields are null when the profile's ROM table is missing
+ * and in link, Tower and Frontier battles. `prizeMoney` is the expected payout on a win, without Pay
+ * Day money. `items` is the remaining list in Gen 2, the starting list in Gen 3 and null in Gen 1.
+ */
+export type Trainer = {
+  id: number;
+  classId: number | null;
+  className: string | null;
+  name: string | null;
+  prizeMoney: number | null;
+  items: Ref[] | null;
+  [key: string]: unknown;
+};
+
+type Flatten<T> = { [K in keyof T]: T[K] };
+
+/**
+ * An opponent party mon. `revealed` is the program's best effort: a trainer mon is revealed once a
+ * valid frame lists its slot on the field or its HP is below max, and a wild mon always is. If the
+ * program attaches mid-battle, a mon sent out earlier that is back at full HP reads as unrevealed.
+ * `trainer` indexes `opponent.trainers` and is null for wild mons.
+ */
+export type OpponentMon = Flatten<
+  Pokemon & {
+    partySlot: number;
+    trainer: number | null;
+    revealed: boolean;
+  }
+>;
+
+export type SideConditions = {
+  reflect: boolean | null;
+  lightScreen: boolean | null;
+  safeguard: boolean | null;
+  mist: boolean | null;
+  spikes: number | null;
+  [key: string]: unknown;
+};
+
+export type BattleField = {
+  weather: "none" | "rain" | "sun" | "sandstorm" | "hail" | null;
+  terrain: "none" | "electric" | "grassy" | "misty" | "psychic" | null;
+  sides: {
+    player: SideConditions;
+    opponent: SideConditions;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+/**
+ * Which outcomes a generation can report: Gen 3 and CFRU map `gBattleOutcome` to all but `unknown`
+ * where the game sets them, and Gen 1-2 report `unknown` until their fixtures land.
+ */
+export type BattleOutcome =
+  | "won"
+  | "lost"
+  | "drew"
+  | "ran"
+  | "caught"
+  | "forfeited"
+  | "unknown";
+
+/** The last finished battle. Everything except `outcome` and `endedAt` is frozen from the last valid active snapshot. */
+export type LastBattle = {
+  battleId: number;
+  outcome: BattleOutcome;
+  /** ISO 8601 UTC, from the program's clock. */
+  endedAt: string;
+  kind: "wild" | "trainer";
+  format: "single" | "double";
+  modes: BattleMode[];
+  trainers: Trainer[];
+  opponentParty: OpponentMon[];
+  [key: string]: unknown;
+};
+
+export type InactiveBattle = {
+  active: false;
+  /** Never carried while a battle is active. null until a battle ends in this session. */
+  lastBattle: LastBattle | null;
+  [key: string]: unknown;
+};
+
+/** `battleId` is unique only within one session: it resets on a game change or a program restart. */
+export type ActiveBattle = {
+  active: true;
+  battleId: number;
+  kind: "wild" | "trainer";
+  format: "single" | "double";
+  modes: BattleMode[];
+  turn: number | null;
+  player: {
+    active: Battler[];
+    partner: Trainer | null;
+    [key: string]: unknown;
+  };
+  opponent: {
+    active: Battler[];
+    party: OpponentMon[];
+    trainers: Trainer[];
+    [key: string]: unknown;
+  };
+  field: BattleField;
+  [key: string]: unknown;
+};
+
+/** The `battle` resource, a union discriminated by `active`. */
+export type Battle = ActiveBattle | InactiveBattle;
