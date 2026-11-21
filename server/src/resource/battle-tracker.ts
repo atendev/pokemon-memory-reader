@@ -95,7 +95,13 @@ export interface BattleTrackerState {
 }
 
 function byCodePoint(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+  const left = Array.from(a, (ch) => ch.codePointAt(0) ?? 0);
+  const right = Array.from(b, (ch) => ch.codePointAt(0) ?? 0);
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    const diff = (left[i] ?? 0) - (right[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return left.length - right.length;
 }
 
 /** Unique and sorted, so reordered or repeated tags never look like a change (amendment 015 item 6). */

@@ -188,10 +188,14 @@ describe("battleId and reconnects", () => {
     expect(outputs[1]?.value).toMatchObject({ active: true, battleId: 1 });
   });
 
-  test("a reconnect to the same game mid-battle keeps the id and logs the encounter once", () => {
+  test("a reconnect to the same game mid-battle keeps the id and freezes one lastBattle for the encounter", () => {
     const before = run([valid(), valid()], idle()).state;
     // The adapter drops and reconnects: the loop keeps the state and sends no ticks in the gap.
     const { outputs } = run([valid(), valid(), clear("won"), valid()], before);
+    const frozen = outputs.filter(
+      (o) => o.value !== null && !o.value.active && o.value.lastBattle,
+    );
+    expect(frozen).toHaveLength(1);
     expect(outputs[0]?.value).toMatchObject({ active: true, battleId: 1 });
     expect(outputs[1]?.value).toMatchObject({ active: true, battleId: 1 });
     expect(outputs[2]?.value).toMatchObject({
@@ -300,6 +304,14 @@ describe("modes", () => {
     expect(outputs[0]?.value).toMatchObject({
       modes: ["legendary", "roamer"],
     });
+  });
+
+  test("order astral characters after the basic plane, not by UTF-16 unit", () => {
+    const { outputs } = run(
+      [valid(trainerFrame({ modes: ["\u{1F600}", "Ａ"] }))],
+      idle(),
+    );
+    expect(outputs[0]?.value).toMatchObject({ modes: ["Ａ", "\u{1F600}"] });
   });
 });
 
