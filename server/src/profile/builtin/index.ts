@@ -4,5 +4,11 @@ import fireredUs10 from "./firered-us-1.0.json";
 import fireredUs11 from "./firered-us-1.1.json";
 import leafgreenUs10 from "./leafgreen-us-1.0.json";
 import leafgreenUs11 from "./leafgreen-us-1.1.json";
+import rubyUs10 from "./ruby-us-1.0.json";
+import rubyUs11 from "./ruby-us-1.1.json";
+import rubyUs12 from "./ruby-us-1.2.json";
+import sapphireUs10 from "./sapphire-us-1.0.json";
+import sapphireUs11 from "./sapphire-us-1.1.json";
+import sapphireUs12 from "./sapphire-us-1.2.json";
 
-export const builtinProfiles: readonly unknown[] = [emeraldUs10, fireredUs10, fireredUs11, leafgreenUs10, leafgreenUs11];
+export const builtinProfiles: readonly unknown[] = [emeraldUs10, fireredUs10, fireredUs11, leafgreenUs10, leafgreenUs11, rubyUs10, rubyUs11, rubyUs12, sapphireUs10, sapphireUs11, sapphireUs12];

@@ -1,7 +1,7 @@
-import type { ProfileDefinition } from "./definition";
+import type { ProfileDefinition, SignatureWord } from "./definition";
 import type { SignatureEvidence } from "./evidence";
 import type { RomHashes } from "./hashes";
-import { requireSymbol, type SymbolInfo } from "./sym";
+import { requireAnchor, requireSymbol, type SymbolInfo } from "./sym";
 
 const hex = (value: number, digits = 8) =>
   `0x${value.toString(16).padStart(digits, "0")}`;
@@ -18,9 +18,24 @@ function littleEndian(value: number): string {
 
 function tableOf(
   symbols: ReadonlyMap<string, SymbolInfo>,
-  table: { readonly symbol: string; readonly entrySize: number },
+  table: {
+    readonly symbol: string;
+    readonly entrySize: number;
+    readonly count?: number;
+  },
 ) {
   const symbol = requireSymbol(symbols, table.symbol);
+  if (table.count !== undefined) {
+    if (symbol.size !== 0)
+      throw new Error(
+        `${table.symbol} has a size of ${symbol.size} bytes, so drop the hand-written count ${table.count}`,
+      );
+    return { base: hex(symbol.address), count: table.count };
+  }
+  if (symbol.size === 0)
+    throw new Error(
+      `${table.symbol} has a size of 0, so its count must be written by hand`,
+    );
   if (symbol.size % table.entrySize !== 0) {
     throw new Error(
       `${table.symbol} is ${symbol.size} bytes, not a multiple of ${table.entrySize}`,
@@ -29,12 +44,28 @@ function tableOf(
   return { base: hex(symbol.address), count: symbol.size / table.entrySize };
 }
 
-/** Builds one profile file as plain JSON. A pure function of the definition, the symbol file, the hashes and the signature evidence level. */
+function signatureWord(
+  word: SignatureWord,
+  symbols: ReadonlyMap<string, SymbolInfo>,
+  locals: ReadonlyMap<string, readonly SymbolInfo[]>,
+) {
+  const at =
+    typeof word.at === "number"
+      ? word.at
+      : requireAnchor(symbols, locals, word.at).address + word.at.offset;
+  const value =
+    requireSymbol(symbols, word.value.symbol).address +
+    (word.value.offset ?? 0);
+  return { address: hex(at), bytes: littleEndian(value) };
+}
+
+/** Builds one profile file as plain JSON. A pure function of the definition, the symbol files, the hashes and the signature evidence level. */
 export function buildProfile(
   definition: ProfileDefinition,
   symbols: ReadonlyMap<string, SymbolInfo>,
   hashes: RomHashes,
   evidence: SignatureEvidence,
+  locals: ReadonlyMap<string, readonly SymbolInfo[]> = new Map(),
 ): Record<string, unknown> {
   const addresses: Record<string, unknown> = {};
   for (const entry of definition.addresses) {
@@ -51,15 +82,14 @@ export function buildProfile(
     addresses,
     player: definition.player,
     bag: definition.bag,
-    constants: {},
+    constants: definition.constants ?? {},
     identify: {
       sha1: hashes.sha1,
       crc32: hashes.crc32,
       header: definition.identify.header,
-      signature: definition.identify.signature.map((word) => ({
-        address: hex(word.address),
-        bytes: littleEndian(requireSymbol(symbols, word.symbol).address),
-      })),
+      signature: definition.identify.signature.map((word) =>
+        signatureWord(word, symbols, locals),
+      ),
     },
     trainerTables: {
       trainers: tableOf(symbols, definition.trainerTables.trainers),

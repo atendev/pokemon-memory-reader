@@ -17,7 +17,7 @@ export interface ProfileDefinition {
   readonly sha1: { readonly commit: string; readonly file: string };
   /** The No-Intro DAT in libretro-database that holds the CRC32 for each SHA-1, at a pinned commit. */
   readonly noIntro: { readonly commit: string; readonly file: string };
-  /** Profile key to symbol. A pointer symbol becomes a pointer entry that reads the target at offset 0. */
+  /** Profile key to symbol. A pointer symbol becomes a pointer entry that reads the target at offset 0, and any other symbol becomes a static address. */
   readonly addresses: ReadonlyArray<{
     readonly key: string;
     readonly symbol: string;
@@ -29,23 +29,44 @@ export interface ProfileDefinition {
   readonly bag: Readonly<Record<string, number | readonly number[]>>;
   /** The species table the generator checks for the vanilla stride. The count is the species count of this data format's reference data. */
   readonly speciesInfo: SpeciesInfoTable;
-  /** Table symbol to its entry size in bytes. The count is the symbol's size divided by it. */
+  /** The profile's `constants` block as hand-written, verified values. Absent where the game matches the decoder defaults (Emerald and FireRed). */
+  readonly constants?: Readonly<Record<string, number>>;
+  /**
+   * Table symbol to its entry size in bytes. The count is the symbol's size divided by it. A table symbol
+   * whose size is 0 (a label with no `.size`) gives its `count` by hand from the pinned pret source instead.
+   */
   readonly trainerTables: {
-    readonly trainers: { readonly symbol: string; readonly entrySize: number };
-    readonly classNames: {
-      readonly symbol: string;
-      readonly entrySize: number;
-    };
-    readonly money: { readonly symbol: string; readonly entrySize: number };
+    readonly trainers: TrainerTable;
+    readonly classNames: TrainerTable;
+    readonly money: TrainerTable;
   };
   readonly identify: {
     readonly header: { readonly gameCode: string; readonly revision: number };
-    /** GF ROM header words that must point at the symbol's address (spec §5.4). */
-    readonly signature: ReadonlyArray<{
-      readonly address: number;
-      readonly symbol: string;
-    }>;
+    /** The signature words (spec §5.4 and amendment 036 item 4). */
+    readonly signature: readonly SignatureWord[];
   };
+}
+
+interface TrainerTable {
+  readonly symbol: string;
+  readonly entrySize: number;
+  readonly count?: number;
+}
+
+/**
+ * One signature word: 4 bytes at `at`, holding the address of `value.symbol` plus `value.offset`. A
+ * number `at` is a fixed address (a GF ROM header word). An anchor `at` is a named symbol, local or
+ * global, plus an offset, and the generator checks the symbol appears once with exactly `size` bytes.
+ */
+export interface SignatureWord {
+  readonly at:
+    | number
+    | {
+        readonly symbol: string;
+        readonly offset: number;
+        readonly size: number;
+      };
+  readonly value: { readonly symbol: string; readonly offset?: number };
 }
 
 /**

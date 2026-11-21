@@ -5,7 +5,7 @@ import { definitions, heldBack } from "./definitions";
 import { parseLedger } from "./evidence";
 import { brokenChain, parseNoIntroDat, parsePretSha1 } from "./hashes";
 import { NOTES_FILE, planGeneration } from "./plan";
-import { parseSymFile } from "./sym";
+import { parseLocalSymbols, parseSymFile } from "./sym";
 
 const fixture = (name: string) =>
   readFileSync(join(import.meta.dir, "fixtures", name), "utf8");
@@ -39,6 +39,27 @@ const frlgBuilt = frlg.map((definition) => {
     pretSha1s: parsePretSha1(fixture(`${name}.rom.sha1`), `${name}.sha1`),
     noIntro,
     symbols: parseSymFile(fixture(`${name}.excerpt.sym`)),
+  };
+});
+
+/** The six pokeruby builds, each with its symbol and SHA-1 excerpt from the pinned commits. */
+const RUBY_FIXTURES: Record<string, string> = {
+  "ruby-us-1.0": "pokeruby",
+  "ruby-us-1.1": "pokeruby_rev1",
+  "ruby-us-1.2": "pokeruby_rev2",
+  "sapphire-us-1.0": "pokesapphire",
+  "sapphire-us-1.1": "pokesapphire_rev1",
+  "sapphire-us-1.2": "pokesapphire_rev2",
+};
+const ruby = definitions.filter((definition) => definition.id in RUBY_FIXTURES);
+const rubyBuilt = ruby.map((definition) => {
+  const name = RUBY_FIXTURES[definition.id];
+  return {
+    definition,
+    pretSha1s: parsePretSha1(fixture(`${name}.rom.sha1`), `${name}.sha1`),
+    noIntro,
+    symbols: parseSymFile(fixture(`${name}.excerpt.sym`)),
+    locals: parseLocalSymbols(fixture(`${name}.excerpt.sym`)),
   };
 });
 
@@ -118,6 +139,7 @@ describe("the committed output", () => {
       built: [
         { definition: emerald, pretSha1s: emeraldSha1, noIntro, symbols },
         ...frlgBuilt,
+        ...rubyBuilt,
       ],
       held: [],
       ledger: committed,
@@ -205,5 +227,72 @@ describe("the FireRed and LeafGreen builds", () => {
     expect(out.messages[0]).toContain(bogus);
     expect(out.files.has(`${firered.id}.json`)).toBe(false);
     expect(out.files.get("index.ts")).not.toContain(firered.id);
+  });
+});
+
+describe("the Ruby and Sapphire builds", () => {
+  const { files, messages } = planGeneration({
+    built: rubyBuilt,
+    held: [],
+    ledger: [],
+  });
+  const profile = (id: string) => JSON.parse(files.get(`${id}.json`) ?? "{}");
+
+  test("all six English builds generate, with none held back", () => {
+    expect(ruby).toHaveLength(6);
+    expect(messages).toEqual([]);
+    for (const { id } of ruby) expect(files.has(`${id}.json`)).toBe(true);
+    for (const build of rubyBuilt)
+      expect(brokenChain(build.pretSha1s, noIntro)).toEqual([]);
+  });
+
+  test("identify by the right game code and revision and two anchored signature words", () => {
+    expect(ruby.map(({ id }) => profile(id).identify.header)).toEqual([
+      { gameCode: "AXVE", revision: 0 },
+      { gameCode: "AXVE", revision: 1 },
+      { gameCode: "AXVE", revision: 2 },
+      { gameCode: "AXPE", revision: 0 },
+      { gameCode: "AXPE", revision: 1 },
+      { gameCode: "AXPE", revision: 2 },
+    ]);
+    for (const { id } of ruby)
+      expect(profile(id).identify.signature).toHaveLength(2);
+  });
+
+  test("Ruby 1.0 records the two words of amendment 036", () => {
+    expect(profile("ruby-us-1.0").identify.signature).toEqual([
+      { address: "0x08026ce4", bytes: "2cb11f08" },
+      { address: "0x0839f4e4", bytes: "e3831f08" },
+    ]);
+  });
+
+  test("have static save and storage addresses, no pointer entries and no second opposing trainer", () => {
+    for (const { id } of ruby) {
+      const { addresses } = profile(id);
+      for (const key of ["gSaveBlock1", "gSaveBlock2", "gPokemonStorage"])
+        expect(typeof addresses[key]).toBe("string");
+      expect(addresses.gBattleStruct).toBe("0x02000000");
+      expect(addresses.gBattleResources).toBeUndefined();
+      expect(addresses.gTrainerBattleOpponent_B).toBeUndefined();
+    }
+  });
+
+  test("count the size-0 money table by hand and the others from their sizes", () => {
+    const { trainerTables } = profile("ruby-us-1.0");
+    expect(trainerTables.money.count).toBe(55);
+    expect(trainerTables.trainers.count * 40).toBe(0x6c70);
+    expect(trainerTables.classNames.count * 13).toBe(0x2f2);
+  });
+
+  test("carry the four layout constants and no encryption key", () => {
+    for (const { id } of ruby) {
+      expect(profile(id).constants).toEqual({
+        inBattleOffset: 0x43d,
+        sideTimerSpikesOffset: 6,
+        moneyMultiplierOffset: 0x16056,
+        trainerMoneyEntrySize: 4,
+      });
+      expect(profile(id).player.encryptionKeyOffset).toBeUndefined();
+    }
   });
 });

@@ -4,7 +4,7 @@ import { definitions, heldBack } from "./definitions";
 import { parseLedger } from "./evidence";
 import { parseNoIntroDat, parsePretSha1 } from "./hashes";
 import { planGeneration } from "./plan";
-import { parseSymFile } from "./sym";
+import { parseLocalSymbols, parseSymFile } from "./sym";
 
 const OUT = join(import.meta.dir, "../../server/src/profile/builtin");
 const LEDGER = join(import.meta.dir, "signature-ledger.json");
@@ -51,6 +51,7 @@ for (const entry of heldBack) {
 const built = [];
 for (const definition of definitions) {
   const { repo, commit, symbolFile } = definition.source;
+  const symbolText = await fetchText(repo, commit, symbolFile);
   built.push({
     definition,
     pretSha1s: parsePretSha1(
@@ -61,7 +62,8 @@ for (const definition of definitions) {
       definition.noIntro.commit,
       definition.noIntro.file,
     ),
-    symbols: parseSymFile(await fetchText(repo, commit, symbolFile)),
+    symbols: parseSymFile(symbolText),
+    locals: parseLocalSymbols(symbolText),
   });
 }
 

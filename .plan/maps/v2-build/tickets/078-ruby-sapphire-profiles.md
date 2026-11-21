@@ -20,15 +20,18 @@ Add the English pokeruby builds (Ruby and Sapphire, with their revisions) to `ge
 
 ## Handoff
 
-Branch `t3/ruby-sapphire-profiles`, base b253ec0. Audit round 0 (no council yet). No code written yet, research only.
+Branch `t3/ruby-sapphire-profiles-2` (from `1cadcdf`), base b253ec0. Audit round 0 (no council yet). Facts: [the facts file](../assets/078-ruby-sapphire-profiles-facts.md).
 
-Done: read the ticket, the 036 amendment, the FireRed commits (2cf210f, 8ed9317) as the model, and the generator and gen3 decoders. Every Ruby fact is in [the facts file](../assets/078-ruby-sapphire-profiles-facts.md), including six build names, SHA-1 files, symbol gaps, layout differences and the plan.
+Done and passing (typecheck, biome ci, `bun test` 1425 pass; the one failure, "Lua core runs under Lua 5.3 or 5.4", is this machine's Lua 5.5.1, not the change):
+- Schema: `gen3Constants` (strict optional `inBattleOffset`, `sideTimerSpikesOffset`, `moneyMultiplierOffset`, `trainerMoneyEntrySize`) and `GEN3_CONSTANT_DEFAULTS` in `format/gen3/profile.ts`, `member()` takes a constants schema, `gBattleResources` optional. `battle.ts` and `trainers.ts` read them.
+- Generator: `SignatureWord { at, value }`, `requireAnchor` (size and once-only check), `parseLocalSymbols`, table `count` override, `constants` in the definition, `locals` through `plan.ts` and `main.ts`. Emerald and FireRed JSON unchanged.
+- Six pokeruby definitions, fixtures (excerpt `.sym`, `.rom.sha1`, DAT excerpt), generated six profiles and the evidence notes. All six chains intact, none held back. Second run stable.
+- Tests: `build.test.ts` and `plan.test.ts` (anchor size failure, count override, committed files), `loop/ruby.test.ts`, `gen3/battle-ruby.test.ts`.
 
 Left, in order:
-1. Schema: optional `battle` layout values in the Gen 3 `constants` (`inBattleOffset`, `sideTimerSpikesOffset`, `moneyMultiplierOffset`, `trainerMoneyEntrySize`), defaults in `battle.ts` and `trainers.ts`. Make `gBattleResources` optional.
-2. Generator: anchored signature words `{ at, value }` with the size check (failing synthetic test), local-symbol lookup for anchors, `count` override for the size-0 `gTrainerMoney`, `constants` field in `ProfileDefinition`.
-3. `definitions.ts`: six pokeruby builds, `.sym` and `.sha1` excerpt fixtures under `scripts/generate-profiles/fixtures`, No-Intro DAT entries added to the excerpt. Run `bun run generate:profiles` (network works) and check a stable second run. Hold back any build with a broken chain, with the reason in `SIGNATURE-EVIDENCE.md`.
-4. Tests: loop test on synthetic Ruby memory (static box at `gPokemonStorage`, money unXORed, party, player, bag), battle test with the Ruby offsets, generator tests. Fix any count tests (profile counts, notes, No-Intro entries).
-5. Typecheck, lint, `bun test`. Council audit (Claude seat only), decision report to `assets/078-ruby-sapphire-profiles-report.md` with unslop, record the resolution, run the Timing close, commit, push, return DONE.
+1. Mutation-check the new tests (break one signature byte, the `inBattleOffset`, the money entry size) to see each fail. Optionally add a schema test that `constants` rejects unknown keys.
+2. Add a Ruby line to `SIGNATURE-EVIDENCE.md` reasoning: none held back, all `unconfirmed`. Check `CONTEXT.md` Signature entry needs no change.
+3. Council audit, Claude seat only, "Gemini and GPT: not run". Fix problems, up to five rounds.
+4. Decision report `assets/078-ruby-sapphire-profiles-report.md` with unslop, record the resolution (delete this section), Decisions line, Timing close, commit, push without force, open PR against `wayfinder/v2-build-master` and link it, return DONE.
 
-Read first: the facts file, `scripts/generate-profiles/{definition,definitions,build,sym,plan}.ts`, `server/src/format/gen3/{profile,battle,trainers}.ts`, `server/src/profile/schema.ts` (`member`), `server/test/loop/firered.test.ts`, `server/test/gen3/battle-firered.test.ts`.
+Read first: the Done list's files above and `git diff b253ec0 --stat`.

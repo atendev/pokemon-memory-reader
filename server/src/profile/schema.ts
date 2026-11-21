@@ -3,7 +3,12 @@ import { z } from "zod";
 import { cfruAddresses } from "../format/cfru/profile";
 import { gen1Addresses } from "../format/gen1/profile";
 import { gen2Addresses } from "../format/gen2/profile";
-import { gen3Addresses, gen3Bag, gen3Player } from "../format/gen3/profile";
+import {
+  gen3Addresses,
+  gen3Bag,
+  gen3Constants,
+  gen3Player,
+} from "../format/gen3/profile";
 import { addressText, anyAddress } from "./address";
 
 export const DATA_FORMATS = ["gen1", "gen2", "gen3", "cfru"] as const;
@@ -213,7 +218,8 @@ function member<
   A extends z.ZodType,
   P extends z.ZodType,
   B extends z.ZodType,
->(format: F, addresses: A, player: P, bag: B) {
+  C extends z.ZodType,
+>(format: F, addresses: A, player: P, bag: B, formatConstants: C) {
   const platform = platformOf[format];
   const t = tables(
     anyAddress(platform),
@@ -231,7 +237,7 @@ function member<
       }),
       artVersion: z.enum(ART_VERSIONS),
       addresses,
-      constants: constants.default({}),
+      constants: formatConstants,
       player,
       bag,
       identify: t.identify.optional(),
@@ -252,10 +258,28 @@ function member<
  */
 export const profileFull = z
   .discriminatedUnion("dataFormat", [
-    member("gen1", gen1Addresses, untypedPlayer, untypedBag),
-    member("gen2", gen2Addresses, untypedPlayer, untypedBag),
-    member("gen3", gen3Addresses, gen3Player, gen3Bag),
-    member("cfru", cfruAddresses, untypedPlayer, untypedBag),
+    member(
+      "gen1",
+      gen1Addresses,
+      untypedPlayer,
+      untypedBag,
+      constants.default({}),
+    ),
+    member(
+      "gen2",
+      gen2Addresses,
+      untypedPlayer,
+      untypedBag,
+      constants.default({}),
+    ),
+    member("gen3", gen3Addresses, gen3Player, gen3Bag, gen3Constants),
+    member(
+      "cfru",
+      cfruAddresses,
+      untypedPlayer,
+      untypedBag,
+      constants.default({}),
+    ),
   ])
   .superRefine((profile, ctx) => {
     if (profile.kind !== "hack") return;

@@ -49,3 +49,39 @@ game (
 	serial "BPGE"
 	rom ( name "Pokemon - LeafGreen Version (USA, Europe) (Rev 1).gba" size 16777216 crc DAFFECEC md5 9D33A02159E018D09073E700E1FD10FD sha1 7862C67BDECBE21D1D69CE082CE34327E1C6ED5E serial "BPGE" )
 )
+game (
+	name "Pokemon - Ruby Version (USA, Europe)"
+	region "USA"
+	serial "AXVE"
+	rom ( name "Pokemon - Ruby Version (USA, Europe).gba" size 16777216 crc F0815EE7 md5 53D1A2027AB49DF34A689FAA1FB14726 sha1 F28B6FFC97847E94A6C21A63CACF633EE5C8DF1E serial "AXVE" )
+)
+game (
+	name "Pokemon - Ruby Version (USA, Europe) (Rev 1)"
+	region "USA"
+	serial "AXVE"
+	rom ( name "Pokemon - Ruby Version (USA, Europe) (Rev 1).gba" size 16777216 crc 61641576 md5 E0503182A2E699678BCF25A6897A24D6 sha1 610B96A9C9A7D03D2BAFB655E7560CCFF1A6D894 serial "AXVE" )
+)
+game (
+	name "Pokemon - Ruby Version (USA, Europe) (Rev 2)"
+	region "USA"
+	serial "AXVE"
+	rom ( name "Pokemon - Ruby Version (USA, Europe) (Rev 2).gba" size 16777216 crc AEAC73E6 md5 3E1B2065B3837C14FFBD03FE205FDFD7 sha1 5B64EACF892920518DB4EC664E62A086DD5F5BC8 serial "AXVE" )
+)
+game (
+	name "Pokemon - Sapphire Version (USA, Europe)"
+	region "USA"
+	serial "AXPE"
+	rom ( name "Pokemon - Sapphire Version (USA, Europe).gba" size 16777216 crc 554DEDC4 md5 F34E91399C719812E66E2C828A2E93D7 sha1 3CCBBD45F8553C36463F13B938E833F652B793E4 serial "AXPE" )
+)
+game (
+	name "Pokemon - Sapphire Version (USA, Europe) (Rev 1)"
+	region "USA"
+	serial "AXPE"
+	rom ( name "Pokemon - Sapphire Version (USA, Europe) (Rev 1).gba" size 16777216 crc BAFEDAE5 md5 3A32FD98B065283D09EEBA1CE0542888 sha1 4722EFB8CD45772CA32555B98FD3B9719F8E60A9 serial "AXPE" )
+)
+game (
+	name "Pokemon - Sapphire Version (USA, Europe) (Rev 2)"
+	region "USA"
+	serial "AXPE"
+	rom ( name "Pokemon - Sapphire Version (USA, Europe) (Rev 2).gba" size 16777216 crc 9CC4410E md5 9BC2B765CA6997175FAC51E6CDC29089 sha1 89B45FB172E6B55D51FC0E61989775187F6FE63C serial "AXPE" )
+)
