@@ -22,3 +22,5 @@
 0202433a g 00000001 gBattleOutcome
 020243cc g 00000002 gBattleWeather
 030022c0 g 0000043c gMain
+02038bca g 00000002 gTrainerBattleOpponent_A
+02038bcc g 00000002 gTrainerBattleOpponent_B
