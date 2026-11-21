@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wfm-v2-build-master-1795285581
+claimed_at: 2026-11-21T18:37:00Z
 ---
 
 # Convert the viewer to Tailwind
