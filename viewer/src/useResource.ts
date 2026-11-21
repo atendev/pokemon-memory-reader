@@ -6,6 +6,7 @@ import {
 } from "@pokemon-memory-reader/api/client";
 import type {
   Battle,
+  Boxes,
   Party,
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
@@ -52,6 +53,7 @@ const options = { baseUrl: "" };
 const loadStatus = () => getStatus(options);
 const loadParty = () => getParty(options);
 const loadBattle = () => get("battle", options);
+const loadBoxes = () => get("boxes", options);
 
 export function useStatus(): Loaded<StatusResource> {
   return usePolled(loadStatus, true);
@@ -68,6 +70,14 @@ export function useParty(enabled: boolean): Loaded<Party> {
  */
 export function useBattle(enabled: boolean): Loaded<Battle> {
   return usePolled(loadBattle, enabled);
+}
+
+/**
+ * The boxes are requested only while their screen is open (spec §11.5), at the poll rate the
+ * server already limits to once a second (spec §8.3). Until the SSE stream lands this is a poll.
+ */
+export function useBoxes(enabled: boolean): Loaded<Boxes> {
+  return usePolled(loadBoxes, enabled);
 }
 
 function subscribeHash(onChange: () => void): () => void {

@@ -585,3 +585,83 @@ body {
   min-height: 88px;
   color: var(--label-2);
 }
+
+.box-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+.box-select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--separator);
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+}
+.box-note {
+  margin: 8px 0 0;
+  max-width: 672px;
+}
+.box-grid {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.box-slot {
+  display: flex;
+  min-width: 0;
+  min-height: 60px;
+  border-radius: 8px;
+}
+.box-slot-empty,
+.box-slot-corrupt {
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  border: 1px dashed var(--separator);
+  color: var(--label-2);
+}
+.box-slot-corrupt {
+  border: 2px solid var(--red);
+  color: var(--red);
+}
+.box-slot-mon {
+  background: var(--surface);
+}
+.box-mon {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.box-mon-name {
+  overflow-wrap: anywhere;
+}
+.box-mon-selected {
+  border-color: var(--blue);
+}
+.box-unreadable {
+  margin-top: 16px;
+  max-width: 672px;
+}
+.box-detail {
+  margin-top: 24px;
+  max-width: 672px;
+}

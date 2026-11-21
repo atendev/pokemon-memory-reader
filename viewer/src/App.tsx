@@ -1,9 +1,11 @@
 import type {
   Battle,
+  Boxes,
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import { About } from "./About";
 import { BattleScreen } from "./BattleScreen";
+import { BoxesScreen } from "./BoxesScreen";
 import { ConnectionScreen } from "./ConnectionScreen";
 import { useSidebarCollapsed } from "./collapse";
 import { PartyScreen } from "./PartyScreen";
@@ -13,6 +15,7 @@ import { Sidebar } from "./Sidebar";
 import {
   type Loaded,
   useBattle,
+  useBoxes,
   useHash,
   useParty,
   useStatus,
@@ -31,11 +34,13 @@ export function Screen({
   status,
   party,
   battle = LOADING,
+  boxes = LOADING,
 }: {
   route: Route;
   status: StatusResource | null;
   party: ReturnType<typeof useParty>;
   battle?: Loaded<Battle>;
+  boxes?: Loaded<Boxes>;
 }) {
   if (route === "about") return <About />;
   if (route === "not_found") return <Placeholder title="Page not found" />;
@@ -49,6 +54,9 @@ export function Screen({
     return <PartyScreen party={party} />;
   }
   if (route === "battle") return <BattleScreen battle={battle} />;
+  if (route === "boxes") {
+    return <BoxesScreen boxes={boxes} generation={status?.game?.generation} />;
+  }
   const screen = SCREENS.find((s) => s.id === route);
   return <Placeholder title={screen?.label ?? "Page not found"} />;
 }
@@ -60,6 +68,7 @@ export function App() {
   const inGame = known?.state === "game";
   const party = useParty(inGame && route === "party");
   const battle = useBattle(inGame);
+  const boxes = useBoxes(inGame && route === "boxes");
   const battleLive = battle.kind === "ready" && battle.value.active;
   const [collapsed, toggle] = useSidebarCollapsed();
   return (
@@ -73,7 +82,13 @@ export function App() {
       />
       <main className="content">
         {status.kind === "loading" ? null : (
-          <Screen route={route} status={known} party={party} battle={battle} />
+          <Screen
+            route={route}
+            status={known}
+            party={party}
+            battle={battle}
+            boxes={boxes}
+          />
         )}
       </main>
     </div>
