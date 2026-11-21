@@ -153,8 +153,12 @@ describe("the screens by route", () => {
   test("Battle, Boxes, and Trainer & bag render once a game is up", () => {
     expect(screen("battle")).toContain("Battle");
     expect(screen("boxes")).toContain("Boxes");
-    expect(screen("trainer")).toContain("This screen isn&#x27;t built yet.");
+    expect(screen("trainer")).toContain("Reading the trainer");
     expect(screen("trainer")).toContain("Trainer &amp; bag");
+  });
+
+  test("Settings is still a placeholder", () => {
+    expect(screen("settings")).toContain("This screen isn&#x27;t built yet.");
   });
 
   test("the game screens give way to the connection screen without a game", () => {

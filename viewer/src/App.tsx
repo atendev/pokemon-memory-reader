@@ -1,6 +1,8 @@
 import type {
+  Bag,
   Battle,
   Boxes,
+  Player,
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import { About } from "./About";
@@ -12,12 +14,15 @@ import { PartyScreen } from "./PartyScreen";
 import { Placeholder } from "./Placeholder";
 import { type Route, routeFromHash, SCREENS } from "./routes";
 import { Sidebar } from "./Sidebar";
+import { TrainerScreen } from "./TrainerScreen";
 import {
   type Loaded,
+  useBag,
   useBattle,
   useBoxes,
   useHash,
   useParty,
+  usePlayer,
   useStatus,
 } from "./useResource";
 
@@ -35,12 +40,16 @@ export function Screen({
   party,
   battle = LOADING,
   boxes = LOADING,
+  player = LOADING,
+  bag = LOADING,
 }: {
   route: Route;
   status: StatusResource | null;
   party: ReturnType<typeof useParty>;
   battle?: Loaded<Battle>;
   boxes?: Loaded<Boxes>;
+  player?: Loaded<Player>;
+  bag?: Loaded<Bag>;
 }) {
   if (route === "about") return <About />;
   if (route === "not_found") return <Placeholder title="Page not found" />;
@@ -57,6 +66,7 @@ export function Screen({
   if (route === "boxes") {
     return <BoxesScreen boxes={boxes} generation={status?.game?.generation} />;
   }
+  if (route === "trainer") return <TrainerScreen player={player} bag={bag} />;
   const screen = SCREENS.find((s) => s.id === route);
   return <Placeholder title={screen?.label ?? "Page not found"} />;
 }
@@ -69,6 +79,8 @@ export function App() {
   const party = useParty(inGame && route === "party");
   const battle = useBattle(inGame);
   const boxes = useBoxes(inGame && route === "boxes");
+  const player = usePlayer(inGame && route === "trainer");
+  const bag = useBag(inGame && route === "trainer");
   const battleLive = battle.kind === "ready" && battle.value.active;
   const [collapsed, toggle] = useSidebarCollapsed();
   return (
@@ -88,6 +100,8 @@ export function App() {
             party={party}
             battle={battle}
             boxes={boxes}
+            player={player}
+            bag={bag}
           />
         )}
       </main>
