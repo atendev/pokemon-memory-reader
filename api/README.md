@@ -8,7 +8,7 @@ Three subpaths:
 
 - `/types`: hand-written TypeScript types for every resource, checked equal to the `/schemas` inferred types. No runtime code. Open enums such as `ErrorCode` are a known union plus `(string & {})`, so a client tolerates names a newer server adds. Known names are never removed within 2.x. The meanings are in [docs/open-enums.md](../docs/open-enums.md).
 - `/schemas`: Zod schemas for every resource and the error body, plus `TOPICS`, `ResourceMap` and `resourceSchemas`.
-- `/client`: `get`, `getStatus` and `getParty`, `PmrApiError`, `API_VERSION` and the default host, port and base URL.
+- `/client`: `get`, `getStatus`, `getParty` and `subscribe`, `PmrApiError`, `API_VERSION` and the default host, port and base URL. Set `validate: true` on `get` or `subscribe` to check each answer or event against its `/schemas` schema. A bad one becomes a `PmrApiError` of kind `invalid` (a bad event is dropped and reported through `onError`). `validate` loads `/schemas` by dynamic import, so it needs `zod`, and a client that never sets it loads neither.
 
 ## OBS browser source
 

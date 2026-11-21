@@ -15,10 +15,10 @@ const RESOLUTIONS = [
   { module: "esnext", moduleResolution: "bundler" },
 ];
 
-const CONSUMER = `import { getParty, getStatus, type ClientOptions } from "@pokemon-memory-reader/api/client";
+const CONSUMER = `import { getParty, getStatus, subscribe, type ClientOptions } from "@pokemon-memory-reader/api/client";
 import type { ErrorBody, ErrorCode, KnownErrorCode, Pokemon, ResourceMap, Topic } from "@pokemon-memory-reader/api/types";
 
-const options: ClientOptions = {};
+const options: ClientOptions = { validate: false };
 const status: Promise<ResourceMap["status"]> = getStatus(options);
 const party: Promise<ResourceMap["party"]> = getParty(options);
 const topic: Topic = "party";
@@ -26,7 +26,21 @@ const known: KnownErrorCode = "no_game";
 const open: ErrorCode = "a_code_a_newer_server_adds";
 declare const body: ErrorBody;
 declare const pokemon: Pokemon;
-export { body, known, open, party, pokemon, status, topic };
+const stream = subscribe(["party"], { party: (data) => data.pokemon.length }, { validate: true, onError: (error) => error.kind });
+export { body, known, open, party, pokemon, status, stream, topic };
+`;
+
+/** Runs under bun in the consumer project, where `zod` is not installed. */
+const RUNTIME = `import { getParty, PmrApiError } from "@pokemon-memory-reader/api/client";
+
+const fetchParty = (async () => new Response(JSON.stringify({ pokemon: [] }))) as unknown as typeof fetch;
+const party = await getParty({ fetch: fetchParty });
+if (party.pokemon.length !== 0) throw new Error("get without validate changed the body");
+
+const error = await getParty({ fetch: fetchParty, validate: true }).catch((e: unknown) => e);
+if (!(error instanceof PmrApiError) || error.kind !== "invalid")
+  throw new Error("validate without zod should report an invalid error, got " + String(error));
+console.log("ok: client runs without zod, and validate reports it");
 `;
 
 const tarballArg = process.argv[2];
@@ -60,6 +74,7 @@ try {
     throw new Error("zod was installed, so this check proves nothing");
   }
   await writeFile(join(dir, "consumer.ts"), CONSUMER);
+  await writeFile(join(dir, "runtime.ts"), RUNTIME);
   for (const { module, moduleResolution } of RESOLUTIONS) {
     await writeFile(
       join(dir, "tsconfig.json"),
@@ -80,6 +95,13 @@ try {
     run("bunx", ["tsc", "-p", "tsconfig.json"], dir);
     console.log(`ok: ${module}/${moduleResolution}`);
   }
+  const runtime = spawnSync("bun", ["runtime.ts"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
+  if (runtime.status !== 0)
+    throw new Error(`runtime check failed\n${runtime.stdout}${runtime.stderr}`);
+  process.stdout.write(runtime.stdout);
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

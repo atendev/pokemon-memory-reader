@@ -20,6 +20,12 @@ export interface ClientOptions {
   readonly baseUrl?: string;
   /** Defaults to the global `fetch`. */
   readonly fetch?: typeof fetch;
+  /**
+   * Checks each answer or event against the `/schemas` Zod schema for its topic. A bad one is
+   * reported as a `PmrApiError` of kind `invalid`. Off by default. `/schemas` loads by dynamic
+   * import only when this is set, so a client that never sets it needs no `zod`.
+   */
+  readonly validate?: boolean;
 }
 
 export type PmrApiErrorKind =
@@ -27,6 +33,8 @@ export type PmrApiErrorKind =
   | "unavailable"
   /** Any other non-2xx answer. */
   | "http"
+  /** `validate` is set and the data failed its schema, or `/schemas` could not load. `cause` holds the Zod error or the load failure. */
+  | "invalid"
   /** The request failed before an answer arrived. `cause` holds the fetch failure. */
   | "network";
 
@@ -72,7 +80,37 @@ function isErrorBody(value: unknown): value is ErrorBody {
   );
 }
 
-/** Fetches one resource snapshot. Throws `PmrApiError`. The answer is not validated. */
+/** The one place `/client` reaches `/schemas`. The import test allows this call and no other. */
+const loadSchemas = () => import("./schemas.js");
+
+/** Throws a `PmrApiError` of kind `invalid` when `data` fails the schema for `topic`. */
+async function validateResource(
+  topic: Topic,
+  data: unknown,
+  httpStatus: number | null,
+): Promise<void> {
+  let schemas: Awaited<ReturnType<typeof loadSchemas>>;
+  try {
+    schemas = await loadSchemas();
+  } catch (cause) {
+    throw new PmrApiError(
+      "invalid",
+      "validate needs /schemas and its zod peer dependency, which could not be loaded",
+      { httpStatus, cause },
+    );
+  }
+  const result = schemas.resourceSchemas[topic].safeParse(data);
+  if (result.success) return;
+  const issue = result.error.issues[0];
+  const where = issue?.path.length ? ` at ${issue.path.join(".")}` : "";
+  throw new PmrApiError(
+    "invalid",
+    `the ${topic} data failed validation${where}: ${issue?.message ?? "unknown issue"}`,
+    { httpStatus, cause: result.error },
+  );
+}
+
+/** Fetches one resource snapshot. Throws `PmrApiError`. The answer is validated only when `options.validate` is set. */
 export async function get<T extends Topic>(
   topic: T,
   options: ClientOptions = {},
@@ -86,8 +124,9 @@ export async function get<T extends Topic>(
     throw new PmrApiError("network", `could not reach ${url}`, { cause });
   }
   if (response.ok) {
+    let data: unknown;
     try {
-      return (await response.json()) as ResourceMap[T];
+      data = await response.json();
     } catch (cause) {
       throw new PmrApiError(
         "http",
@@ -98,6 +137,8 @@ export async function get<T extends Topic>(
         },
       );
     }
+    if (options.validate) await validateResource(topic, data, response.status);
+    return data as ResourceMap[T];
   }
   const body: unknown = await response.json().catch(() => null);
   if (response.status === 503 && isErrorBody(body)) {
@@ -135,7 +176,10 @@ export interface SubscribeOptions extends ClientOptions {
   ) => EventSourceLike;
   /** Called on every change of `connection`. */
   readonly onConnection?: (state: ConnectionState) => void;
-  /** Called with a `PmrApiError` for a refused connection or an event body that isn't JSON. */
+  /**
+   * Called with a `PmrApiError` for a refused connection, an event body that isn't JSON, or with
+   * `validate` set, an event of kind `invalid`. An invalid event is dropped, never handed to a handler.
+   */
   readonly onError?: (error: PmrApiError) => void;
   /** Called for a requested topic this package doesn't know. `data` is the parsed body, never validated. */
   readonly onUnknown?: (topic: string, data: unknown) => void;
@@ -160,7 +204,8 @@ const isKnownTopic = (topic: string): topic is Topic =>
  * Opens `/events` for these topics. The server sends each topic's current value on connect, which
  * also covers the reconnects `EventSource` makes by itself. A refused connection, such as a `400` for
  * a `topics` list naming nothing the server knows, closes it and reports a `PmrApiError` of kind
- * `http` through `onError` with no retry. The data is not validated.
+ * `http` through `onError` with no retry. The data is validated only when `options.validate` is set,
+ * and events then reach their handlers in arrival order.
  */
 export function subscribe(
   topics: readonly (Topic | (string & {}))[],
@@ -187,6 +232,7 @@ export function subscribe(
     options.onConnection?.(next);
   };
 
+  let queue: Promise<void> = Promise.resolve();
   const source = new Source(url);
   const handle = (topic: string, raw: unknown): void => {
     if (connection === "closed") return;
@@ -205,9 +251,27 @@ export function subscribe(
       );
       return;
     }
-    if (isKnownTopic(topic))
+    if (!isKnownTopic(topic)) {
+      options.onUnknown?.(topic, data);
+      return;
+    }
+    const deliver = (): void =>
       (handlers[topic] as ((value: unknown) => void) | undefined)?.(data);
-    else options.onUnknown?.(topic, data);
+    if (!options.validate) {
+      deliver();
+      return;
+    }
+    // Validation waits on a dynamic import, so a queue keeps events in arrival order.
+    queue = queue
+      .then(() => validateResource(topic, data, null))
+      .then(
+        () => {
+          if (connection !== "closed") deliver();
+        },
+        (error: PmrApiError) => {
+          if (connection !== "closed") options.onError?.(error);
+        },
+      );
   };
   for (const topic of names)
     source.addEventListener(topic, (event) => handle(topic, event.data));

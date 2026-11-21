@@ -94,3 +94,43 @@ describe("get helpers", () => {
     expect(error.cause).toBe(cause);
   });
 });
+
+describe("get with validate", () => {
+  test("passes a good answer through", async () => {
+    const status = await getStatus({
+      validate: true,
+      fetch: respond(200, STATUS),
+    });
+    expect(status).toEqual(STATUS);
+  });
+
+  test("reports a bad answer as an invalid error that keeps the Zod error", async () => {
+    const error = (await getParty({
+      validate: true,
+      fetch: respond(200, { pokemon: "none" }),
+    }).catch((e: unknown) => e)) as PmrApiError;
+    expect(error).toBeInstanceOf(PmrApiError);
+    expect(error.kind).toBe("invalid");
+    expect(error.httpStatus).toBe(200);
+    expect(error.code).toBeNull();
+    expect(error.message).toContain("party");
+    expect(error.message).toContain("pokemon");
+    expect((error.cause as Error).name).toBe("ZodError");
+  });
+
+  test("does not check an answer unless asked", async () => {
+    const party = await getParty({ fetch: respond(200, { pokemon: "none" }) });
+    expect(party).toEqual({ pokemon: "none" } as never);
+  });
+
+  test("still reports a 503 body as unavailable", async () => {
+    const error = (await get("party", {
+      validate: true,
+      fetch: respond(503, {
+        error: { code: "no_game", message: "No game." },
+        status: STATUS,
+      }),
+    }).catch((e: unknown) => e)) as PmrApiError;
+    expect(error.kind).toBe("unavailable");
+  });
+});

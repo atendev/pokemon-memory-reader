@@ -42,12 +42,17 @@ class FakeSource implements EventSourceLike {
   }
 }
 
-function setup(topics: string[], handlers: TopicHandlers = {}) {
+function setup(
+  topics: string[],
+  handlers: TopicHandlers = {},
+  validate = false,
+) {
   const states: ConnectionState[] = [];
   const errors: PmrApiError[] = [];
   const unknown: [string, unknown][] = [];
   const subscription = subscribe(topics, handlers, {
     baseUrl: "http://host:1",
+    validate,
     EventSource: FakeSource,
     onConnection: (state) => states.push(state),
     onError: (error) => errors.push(error),
@@ -128,6 +133,64 @@ describe("subscribe", () => {
     source.open();
     expect(parties).toHaveLength(0);
     expect(subscription.connection).toBe("closed");
+  });
+
+  test("with validate, drops a bad event as an invalid error and passes good ones in order", async () => {
+    const seen: string[] = [];
+    const { source, errors, subscription } = setup(
+      ["party", "status"],
+      {
+        party: (data) => seen.push(`party:${data.pokemon.length}`),
+        status: (data) => seen.push(`status:${data.state}`),
+      },
+      true,
+    );
+    source.open();
+    source.send("party", { pokemon: [] });
+    source.send("party", { pokemon: "none" });
+    source.send("status", {
+      state: "no_game",
+      adapter: null,
+      rom: null,
+      game: null,
+    });
+    // The checks wait on a dynamic import, so nothing has been delivered yet.
+    expect(seen).toEqual([]);
+    await Bun.sleep(20);
+    expect(seen).toEqual(["party:0", "status:no_game"]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.kind).toBe("invalid");
+    expect(errors[0]?.message).toContain("party");
+    expect(subscription.connection).toBe("open");
+  });
+
+  test("with validate, an event queued before close is not delivered", async () => {
+    const seen: unknown[] = [];
+    const { source, subscription } = setup(
+      ["party"],
+      { party: (data) => seen.push(data) },
+      true,
+    );
+    source.send("party", { pokemon: [] });
+    subscription.close();
+    await Bun.sleep(20);
+    expect(seen).toEqual([]);
+  });
+
+  test("with validate, an unknown topic still reaches onUnknown unchecked", () => {
+    const { source, unknown } = setup(["later"], {}, true);
+    source.send("later", { any: 1 });
+    expect(unknown).toEqual([["later", { any: 1 }]]);
+  });
+
+  test("without validate, a bad event reaches its handler unchecked", () => {
+    const seen: unknown[] = [];
+    const { source, errors } = setup(["party"], {
+      party: (data) => seen.push(data),
+    });
+    source.send("party", { pokemon: "none" });
+    expect(seen).toEqual([{ pokemon: "none" }]);
+    expect(errors).toHaveLength(0);
   });
 
   test("without an EventSource it throws a PmrApiError", () => {
