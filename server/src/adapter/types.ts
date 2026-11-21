@@ -72,6 +72,8 @@ export interface GameInfo {
   readonly sha1: string | null;
   /** Logs only. */
   readonly romName: string | null;
+  /** RetroArch's content name, the file name without its extension (amendment 014). Only the RetroArch adapter sets it. */
+  readonly contentName?: string | null;
   /** Reachable size per domain. No `rom` key means the adapter can't read ROM. */
   readonly domains: Readonly<Partial<Record<Domain, number>>>;
 }
