@@ -265,15 +265,16 @@ export function subscribe(
     // handler is rethrown outside the queue, as it would escape the listener without `validate`,
     // so it never stalls or mislabels the events behind it.
     queue = queue.then(async () => {
+      let failure: PmrApiError | null = null;
       try {
         await validateResource(topic, data, null);
       } catch (error) {
-        if (connection !== "closed") options.onError?.(error as PmrApiError);
-        return;
+        failure = error as PmrApiError;
       }
       if (connection === "closed") return;
       try {
-        deliver();
+        if (failure) options.onError?.(failure);
+        else deliver();
       } catch (error) {
         queueMicrotask(() => {
           throw error;
