@@ -50,7 +50,17 @@ export const definitions: readonly ProfileDefinition[] = [
       { key: "gBattleWeather", symbol: "gBattleWeather" },
       { key: "gSideStatuses", symbol: "gSideStatuses" },
       { key: "gSideTimers", symbol: "gSideTimers" },
+      { key: "gMapHeader", symbol: "gMapHeader" },
     ],
+    // pokeemerald: badge flags are FLAG_BADGE01_GET to FLAG_BADGE08_GET (SYSTEM_FLAGS 0x860 + 7 to 0xE). Money is
+    // `SaveBlock1.money` at 0x490, the flag array `SaveBlock1.flags` at 0x1270, and the XOR key
+    // `SaveBlock2.encryptionKey` at 0xAC.
+    player: {
+      badgeFlags: [0x867, 0x868, 0x869, 0x86a, 0x86b, 0x86c, 0x86d, 0x86e],
+      moneyOffset: 0x490,
+      flagsOffset: 0x1270,
+      encryptionKeyOffset: 0xac,
+    },
     // 412 species is the length of `speciesData` in `gen3-en.json`, which a test pins.
     speciesInfo: { symbol: "gSpeciesInfo", speciesCount: 412 },
     // pokeemerald: sizeof(struct Trainer) 40, trainer class names 13 bytes, struct TrainerMoney 2 bytes.

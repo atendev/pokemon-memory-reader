@@ -23,6 +23,8 @@ export interface ProfileDefinition {
     readonly symbol: string;
     readonly pointer?: true;
   }>;
+  /** The `player` block as hand-written, verified values: save block offsets and badge flag IDs from the pinned pret source. It is written into the profile as-is. */
+  readonly player: Readonly<Record<string, number | readonly number[]>>;
   /** The species table the generator checks for the vanilla stride. The count is the species count of this data format's reference data. */
   readonly speciesInfo: SpeciesInfoTable;
   /** Table symbol to its entry size in bytes. The count is the symbol's size divided by it. */

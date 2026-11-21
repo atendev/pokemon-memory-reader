@@ -152,3 +152,28 @@ export const GROWTH = {
 export const ATTACKS = { moves: 0, pp: 8 } as const;
 export const EVS = { hp: 0, atk: 1, def: 2, spe: 3, spa: 4, spd: 5 } as const;
 export const MISC = { pokerus: 0, metLocation: 1, origins: 2, ivs: 4 } as const;
+
+/**
+ * The player fields in `struct SaveBlock2` (identity and play time, from offset 0), `struct
+ * SaveBlock1` (the position at 0) and `struct MapHeader` (the section byte). Money, the flag array
+ * and the encryption key sit at profile offsets because they differ between games.
+ */
+export const PLAYER = {
+  name: 0x00,
+  nameLength: 7,
+  trainerId: 0x0a,
+  secretId: 0x0c,
+  hours: 0x0e,
+  minutes: 0x10,
+  seconds: 0x11,
+  frames: 0x12,
+  identitySize: 0x13,
+  /** `pos` is two s16 with no border offset, then `location` starts with the map group and number. */
+  x: 0x00,
+  y: 0x02,
+  mapGroup: 0x04,
+  mapNumber: 0x05,
+  positionSize: 0x06,
+  /** `MapHeader.regionMapSectionId`. */
+  section: 0x14,
+} as const;

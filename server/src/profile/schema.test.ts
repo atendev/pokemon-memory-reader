@@ -216,6 +216,39 @@ describe("the full schema rejects malformed profiles", () => {
   });
 });
 
+describe("the Gen 3 player block", () => {
+  test("the Emerald profile types its player values", () => {
+    const parsed = profileFull.parse(emerald);
+    expect(parsed.dataFormat === "gen3" && parsed.player).toEqual({
+      badgeFlags: [0x867, 0x868, 0x869, 0x86a, 0x86b, 0x86c, 0x86d, 0x86e],
+      moneyOffset: 0x490,
+      flagsOffset: 0x1270,
+      encryptionKeyOffset: 0xac,
+    });
+  });
+
+  test("a Gen 3 profile without eight badge flags, or without a player block, fails", () => {
+    const short = clone();
+    short.player = { ...(short.player as object), badgeFlags: [1, 2, 3] };
+    expect(messages(short)).toContain("player.badgeFlags");
+    const missing = clone();
+    delete missing.player;
+    expect(messages(missing)).toContain("player");
+  });
+
+  test("a file may state a null key to drop an inherited one", () => {
+    expect(
+      profileFile.safeParse({
+        id: "a",
+        kind: "hack",
+        name: "x",
+        extends: "b",
+        player: { encryptionKeyOffset: null },
+      }).success,
+    ).toBe(true);
+  });
+});
+
 describe("the file schema", () => {
   test("exports JSON Schema", () => {
     const schema = z.toJSONSchema(profileFile) as {

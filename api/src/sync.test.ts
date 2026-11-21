@@ -3,8 +3,8 @@ import { z } from "zod";
 import * as schemas from "./schemas.js";
 import type {
   ActiveBattle,
-  Badge,
   AdapterInfo,
+  Badge,
   Battle,
   BattleMove,
   Battler,
@@ -19,8 +19,8 @@ import type {
   Nature,
   OpponentMon,
   Party,
-  PlayTime,
   Player,
+  PlayTime,
   Pokemon,
   Ref,
   ResourceMap,

@@ -1,4 +1,4 @@
-import type { Party } from "@pokemon-memory-reader/api/schemas";
+import type { Party, Player } from "@pokemon-memory-reader/api/schemas";
 import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
 import type { BattleTick } from "../resource/battle-tracker";
@@ -30,6 +30,7 @@ export interface BoundBattle {
 /** What the read loop reads and decodes for the loaded game. A part left out makes its resource 503 `unsupported` (spec §7.2). */
 export interface BoundGame {
   readonly party?: BoundPart<Party>;
+  readonly player?: BoundPart<Player>;
   readonly battle?: BoundBattle;
 }
 
@@ -68,6 +69,9 @@ export function declaredRegions(profile: Profile): {
           ...(gen3Decoder.party
             ? [{ part: "party", regions: gen3Decoder.party.regions(profile) }]
             : []),
+          ...(gen3Decoder.player
+            ? [{ part: "player", regions: gen3Decoder.player.regions(profile) }]
+            : []),
           ...(gen3Decoder.battle
             ? [
                 {
@@ -102,9 +106,10 @@ export function bindGame(profile: Profile): BoundGame {
           locations: reference.locations(profile.artVersion),
         },
       };
-      const { party, battle } = gen3Decoder;
+      const { party, player, battle } = gen3Decoder;
       return {
         ...(party && { party: bind(party, profile, ctx) }),
+        ...(player && { player: bind(player, profile, ctx) }),
         ...(battle && {
           battle: {
             probe: bind(battle.probe, profile, ctx),
