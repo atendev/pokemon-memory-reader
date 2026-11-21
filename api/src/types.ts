@@ -305,8 +305,8 @@ export type ErrorBody = {
 };
 
 /**
- * The resources the server serves so far, derived from the topic record. `player`, `bag`
- * and `boxes` join the record and `ResourceMap` as their decoders land, which is an additive change
+ * The resources the server serves so far, derived from the topic record. `player` and `bag`
+ * join the record and `ResourceMap` as their decoders land, which is an additive change
  * inside `/api/v2`. Topic names are an open enum, but a topic you can fetch is always a known one.
  */
 export type Topic = keyof typeof TOPIC_NAMES;
@@ -315,6 +315,7 @@ export type ResourceMap = {
   status: StatusResource;
   party: Party;
   battle: Battle;
+  boxes: Boxes;
 };
 
 /** A stat stage, -6 to +6 in every generation. Gen 1's single Special stage fills both `spa` and `spd`. */

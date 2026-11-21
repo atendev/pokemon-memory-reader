@@ -88,6 +88,10 @@ export const TOPIC_NAMES = {
     meaning:
       "The current battle, or whether none is active and the last one that ended.",
   },
+  boxes: {
+    meaning:
+      "The PC boxes and the current box, in game order. Read on demand, at most once a second.",
+  },
 } as const satisfies Record<string, MeaningRecord>;
 
 /**

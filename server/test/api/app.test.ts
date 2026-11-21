@@ -14,6 +14,7 @@ test("a failing handler answers 500 with the error body and the status", async (
   const resources: Resources = {
     status: () => status,
     get: () => Promise.reject(new Error("boom")),
+    box: () => Promise.reject(new Error("boom")),
   };
   const response = await createApp({ resources }).request("/api/v2/party");
   expect(response.status).toBe(500);
@@ -25,6 +26,7 @@ test("a failing handler answers 500 with the error body and the status", async (
 const idle: Resources = {
   status: () => status,
   get: () => Promise.reject(new Error("unused")),
+  box: () => Promise.reject(new Error("unused")),
 };
 
 test("a bridge is served by name as text", async () => {
@@ -61,6 +63,7 @@ test("GET /api/v2/battle serves the resource, and a 503 carries the status", asy
         ok: true,
         value: { active: false, lastBattle: null },
       } as never),
+    box: () => Promise.reject(new Error("unused")),
   };
   const served = await createApp({ resources: ok }).request("/api/v2/battle");
   expect(served.status).toBe(200);
@@ -69,6 +72,7 @@ test("GET /api/v2/battle serves the resource, and a 503 carries the status", asy
   const refused: Resources = {
     status: () => status,
     get: () => Promise.resolve({ ok: false, code: "no_game", status }),
+    box: () => Promise.reject(new Error("unused")),
   };
   const response = await createApp({ resources: refused }).request(
     "/api/v2/battle",
