@@ -1,23 +1,23 @@
 import type { StatusResource } from "@pokemon-memory-reader/api/schemas";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
-import { type ReactNode, useEffect, useState } from "react";
-import {
-  forgetPick,
-  type ManualPicksBody,
-  pickProfile,
-  probeAdapters,
-  putSettings,
-  refusalCopy,
-  switchAdapter,
-} from "./internal-api";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import type { ManualPicksBody } from "./internal-api";
 import { ManualPickSection } from "./ManualPick";
+import {
+  adoptDraft,
+  forgetNow,
+  type Notice,
+  pickNow,
+  probeNow,
+  saveSettings,
+  switchNow,
+} from "./settings-actions";
 import {
   ADAPTER_KEYS,
   ADAPTER_LABELS,
   type AdapterKey,
   type AdapterPin,
-  changesUpdateCheck,
   type Draft,
   draftFrom,
   type FieldId,
@@ -40,19 +40,7 @@ import {
 
 type Source = "flag" | "file" | "default";
 
-/** One message under the form: what a write did, or why the program refused it. */
-export type Notice =
-  | { readonly kind: "ok"; readonly message: string }
-  | {
-      readonly kind: "error";
-      readonly title: string | null;
-      readonly message: string;
-    };
-
-const refusal = (outcome: {
-  code: string | null;
-  message: string;
-}): Notice => ({ kind: "error", ...refusalCopy(outcome) });
+export type { Notice };
 
 export function NoticeView({ notice }: { notice: Notice | null }) {
   if (notice === null) return null;
@@ -653,8 +641,14 @@ export function SettingsScreen({ status }: { status: StatusResource | null }) {
   const picks = useManualPicks(pickable);
   const reloadPicks = picks.reload;
   const pickState = `${status?.state}|${status?.rom?.crc32}|${status?.game?.match}|${status?.game?.profileId}`;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a changed identification re-reads the candidates (amendment 021, item 8)
-  useEffect(() => reloadPicks(), [pickState, reloadPicks]);
+  // A changed identification re-reads the candidates (amendment 021, item 8). The first read comes
+  // from the hook, so a mount doesn't ask twice.
+  const seenPickState = useRef(pickState);
+  useEffect(() => {
+    if (seenPickState.current === pickState) return;
+    seenPickState.current = pickState;
+    reloadPicks();
+  }, [pickState, reloadPicks]);
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -662,11 +656,8 @@ export function SettingsScreen({ status }: { status: StatusResource | null }) {
     null,
   );
   const loaded = settings.state.kind === "ready" ? settings.state.value : null;
-  // The form starts from the first read and only changes again on a save or a discard, so a poll
-  // never overwrites what is being typed.
   useEffect(() => {
-    if (loaded !== null)
-      setDraft((current) => current ?? draftFrom(loaded.settings));
+    if (loaded !== null) setDraft((current) => adoptDraft(current, loaded));
   }, [loaded]);
 
   if (settings.state.kind === "loading" || loaded === null || draft === null) {
@@ -689,63 +680,41 @@ export function SettingsScreen({ status }: { status: StatusResource | null }) {
   const patch = patchFrom(loaded.settings, draft);
   const dirty = Object.keys(patch).length > 0;
 
+  const run = async <R extends { notice: Notice }>(
+    kind: "save" | "probe" | "switch" | "pick",
+    write: () => Promise<R>,
+  ): Promise<R> => {
+    setBusy(kind);
+    const result = await write();
+    setBusy(null);
+    setNotice(result.notice);
+    return result;
+  };
   const save = async () => {
     if (Object.keys(errors).length > 0 || !dirty) return;
-    setBusy("save");
-    const outcome = await putSettings(patch);
-    setBusy(null);
-    if (!outcome.ok) return setNotice(refusal(outcome));
-    settings.set(outcome.value);
-    setDraft(draftFrom(outcome.value.settings));
-    setNotice({ kind: "ok", message: "Saved." });
-    if (changesUpdateCheck(patch))
+    const result = await run("save", () => saveSettings(patch));
+    if (result.value === null) return;
+    settings.set(result.value);
+    setDraft(draftFrom(result.value.settings));
+    if (result.refreshUpdate)
       window.dispatchEvent(new Event(UPDATE_REFRESH_EVENT));
     adapters.reload();
   };
   const probe = async () => {
-    setBusy("probe");
-    const outcome = await probeAdapters();
-    setBusy(null);
-    if (!outcome.ok) return setNotice(refusal(outcome));
-    adapters.set(outcome.value);
-    setNotice(null);
+    const result = await run("probe", () => probeNow());
+    if (result.value !== null) adapters.set(result.value);
   };
   const switchTo = async (id: AdapterKey) => {
-    setBusy("switch");
-    const outcome = await switchAdapter(id);
-    setBusy(null);
-    if (!outcome.ok) return setNotice(refusal(outcome));
-    adapters.reload();
-    setNotice({
-      kind: "ok",
-      message: `Now reading from ${ADAPTER_LABELS[id]}, until the program restarts.`,
-    });
+    const result = await run("switch", () => switchNow(id));
+    if (result.value !== null) adapters.reload();
   };
   const pick = async (profileId: string, scope: "rom" | "base") => {
-    setBusy("pick");
-    const outcome = await pickProfile({ profileId, scope });
-    setBusy(null);
-    if (!outcome.ok) return setNotice(refusal(outcome));
-    reloadPicks();
-    setNotice({
-      kind: "ok",
-      message: outcome.value.saved
-        ? "Profile picked and remembered for this ROM."
-        : outcome.value.reason === "no_key"
-          ? "Profile picked for this session. This ROM has nothing to remember it by, so it won't be remembered."
-          : "Profile picked for this session. The pick couldn't be saved to disk, so it won't be remembered.",
-    });
+    const result = await run("pick", () => pickNow(profileId, scope));
+    if (result.value !== null) reloadPicks();
   };
   const forget = async () => {
-    setBusy("pick");
-    const outcome = await forgetPick();
-    setBusy(null);
-    if (!outcome.ok) return setNotice(refusal(outcome));
-    reloadPicks();
-    setNotice({
-      kind: "ok",
-      message: "Pick forgotten. The ROM was identified again.",
-    });
+    const result = await run("pick", () => forgetNow());
+    if (result.value !== null) reloadPicks();
   };
 
   return (

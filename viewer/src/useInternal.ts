@@ -81,7 +81,12 @@ function useInternalRead<T>(
     };
   }, [load, enabled, intervalMs, nonce]);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
-  const set = useCallback((value: T) => setState({ kind: "ready", value }), []);
+  // Restarting the read drops a poll still in flight, which would otherwise land after the write
+  // and put the old value back.
+  const set = useCallback((value: T) => {
+    setState({ kind: "ready", value });
+    setNonce((n) => n + 1);
+  }, []);
   return { state, reload, set };
 }
 

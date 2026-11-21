@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -156,6 +156,39 @@ suite("the Settings and About screens on the compiled executable", () => {
       "/settings",
     );
     expect(after?.settings.pollHz.value).toBe(20);
+  }, 30_000);
+
+  test("accepts a write from this machine and keeps it", async () => {
+    await poll("/settings");
+    const put = await fetch(`${base}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pollHz: 30 }),
+    });
+    expect(put.status).toBe(200);
+    const saved = (await put.json()) as {
+      settings: { pollHz: { value: number } };
+    };
+    expect(saved.settings.pollHz.value).toBe(30);
+    const after = await poll<{ settings: { pollHz: { value: number } } }>(
+      "/settings",
+    );
+    expect(after?.settings.pollHz.value).toBe(30);
+    const file = JSON.parse(
+      await readFile(join(dataDir, "config.json"), "utf8"),
+    ) as { pollHz?: number };
+    expect(file.pollHz).toBe(30);
+  }, 30_000);
+
+  test("answers a probe with the adapter list", async () => {
+    const response = await fetch(`${base}/adapters/probe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { adapters: { id: string }[] };
+    expect(body.adapters.map((a) => a.id)).toContain("mgba");
   }, 30_000);
 
   test("serves a viewer that carries the Settings and About screens", async () => {

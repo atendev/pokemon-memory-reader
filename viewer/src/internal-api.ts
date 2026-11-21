@@ -41,7 +41,7 @@ export type Outcome<T> =
       readonly message: string;
     };
 
-type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
+export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const UNREACHABLE = "Could not reach the program.";
 
