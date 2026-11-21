@@ -18,3 +18,9 @@ Test it against a TypeScript fake RetroArch UDP server, in the style of the fake
 - The adapter implements the interface from [interfaces 004](../assets/004-core-module-interfaces.md) with probe, hold and live modes.
 - Tests cover the 1 s probe, descriptor-boundary cuts, an all-or-nothing batch with one lost datagram, the 30 s disconnect, and the 2 s re-check seeing a changed game.
 - The party resource works end to end through the fake RetroArch on synthetic Emerald memory.
+
+## Resolution
+
+The RetroArch adapter is built in `server/src/adapter/retroarch/` (`adapter.ts` and the pure `protocol.ts`) on branch `t3/retroarch-adapter`. It implements `ManagedAdapter` with probe, hold and live modes, and `GameInfo` gained an optional `contentName`. Tests against a TypeScript fake RetroArch UDP server cover the 1 s probe, descriptor-boundary and 16 KiB cuts, the all-or-nothing batch with one lost datagram, the 30 s disconnect, the 2 s re-check seeing a changed game, and the party resource on synthetic Emerald memory. 38 tests pass in `server/test/retroarch`. The one failing test in the server suite is the known host Lua 5.5 check. The decision report is [079-retroarch-adapter-report.md](../assets/079-retroarch-adapter-report.md). Council audit: Claude seat approved in round 2 with score 8. Gemini and GPT seats skipped (out of quota).
+
+Timing: wall 8m, active 8m, user 0s, wait 0s, blocked 0s | implement 5m, audit 2m (1 round), fix 39s | tools 46 (6 subagent) | limits 0, compactions 0, handoffs 0 | ctx peak 146k | cost $1.86 sonnet-5-5 + $0.02 haiku-5-5
