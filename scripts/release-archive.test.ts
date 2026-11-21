@@ -14,6 +14,7 @@ import {
   buildArchive,
   executableName,
   findTarget,
+  releaseFiles,
   TARGETS,
   targetLabel,
   zipBytes,
@@ -158,5 +159,31 @@ describe("buildArchive", () => {
         root: empty,
       }),
     ).toThrow("Run `bun run notices` first");
+  });
+});
+
+describe("releaseFiles", () => {
+  test("skips names already in SHA256SUMS, such as the .tar.gz source archives", () => {
+    const d = join(dir, "files");
+    mkdirSync(d, { recursive: true });
+    for (const n of [
+      "a.zip",
+      "b.tar.gz",
+      "bun-1-source.tar.gz",
+      "x.lua",
+      "body.md",
+    ])
+      writeFileSync(join(d, n), n);
+    expect(releaseFiles(d)).toEqual([
+      "a.zip",
+      "b.tar.gz",
+      "bun-1-source.tar.gz",
+      "x.lua",
+    ]);
+    expect(releaseFiles(d, new Set(["bun-1-source.tar.gz"]))).toEqual([
+      "a.zip",
+      "b.tar.gz",
+      "x.lua",
+    ]);
   });
 });

@@ -16,7 +16,7 @@ import { basename, join, resolve } from "node:path";
 import { crc32, deflateRawSync } from "node:zlib";
 import { DEFAULT_SETTINGS } from "@pokemon-memory-reader/internal/config";
 import { BRIDGE_NAMES, generateBridges } from "../server/src/bridges";
-import { appendSums, sha256File } from "./lgpl-sources";
+import { appendSums, parseSums, sha256File } from "./lgpl-sources";
 
 export const PROGRAM = "pokemon-memory-reader";
 
@@ -272,10 +272,16 @@ export function buildArchive(options: ArchiveOptions): string {
   }
 }
 
-/** Lists every file in `dir` that `SHA256SUMS` should carry, in name order: archives and `.lua` bridges. */
-export function releaseFiles(dir: string): string[] {
+/**
+ * Lists every file in `dir` that `SHA256SUMS` should carry, in name order: archives and `.lua` bridges.
+ * `listed` holds names already in the file. The Bun and tinycc source archives are `.tar.gz` and arrive with their lines from `lgpl-sources.ts build`.
+ */
+export function releaseFiles(
+  dir: string,
+  listed: ReadonlySet<string> = new Set(),
+): string[] {
   return readdirSync(dir)
-    .filter((n) => /\.(zip|tar\.gz|lua)$/.test(n))
+    .filter((n) => /\.(zip|tar\.gz|lua)$/.test(n) && !listed.has(n))
     .sort();
 }
 
@@ -323,8 +329,11 @@ export async function main(args: string[]): Promise<number> {
         return 2;
       }
       const file = resolve(option(rest, "--file") ?? join(dir, "SHA256SUMS"));
+      const listed = parseSums(
+        existsSync(file) ? readFileSync(file, "utf8") : "",
+      );
       const lines = [];
-      for (const name of releaseFiles(resolve(dir))) {
+      for (const name of releaseFiles(resolve(dir), new Set(listed.keys()))) {
         lines.push({ name, hash: await sha256File(join(resolve(dir), name)) });
       }
       appendSums(file, lines);

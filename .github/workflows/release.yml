@@ -15,6 +15,11 @@ on:
       - .github/workflows/release.yml
       - scripts/check-release-ref.ts
       - scripts/release-*
+      - scripts/lgpl-sources.ts
+      - scripts/smoke.ts
+      - scripts/notices.ts
+      - server/src/bridges/**
+      - server/src/main.ts
       - scripts/notices/bun-runtime.json
       - package.json
       - server/package.json
