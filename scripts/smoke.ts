@@ -94,10 +94,15 @@ async function checkServing(base: string, dataDir: string): Promise<void> {
   for (const path of assets) {
     const asset = await fetch(`${base}${path}`);
     check(asset.status === 200, `GET ${path} returned ${asset.status}`);
-    check(
-      (await asset.text()).length > 0,
-      `GET ${path} returned an empty body`,
-    );
+    const body = await asset.text();
+    check(body.length > 0, `GET ${path} returned an empty body`);
+    // A build that skipped the Tailwind plugin ships the stylesheet with its directives raw.
+    if (path.endsWith(".css")) {
+      check(
+        !/@tailwind\b|@import\s+["']tailwindcss|@theme\b/.test(body),
+        `GET ${path} still holds unprocessed Tailwind directives`,
+      );
+    }
   }
 
   for (const name of BRIDGES) {

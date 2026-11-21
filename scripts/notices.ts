@@ -69,8 +69,13 @@ export const RUNTIME_ENTRY_EXCEPTIONS: readonly RuntimeEntryException[] = [
   },
 ];
 
-/** Dev dependencies whose output ends up in the bundle. They are walked like production dependencies. */
-export const EMBEDDED_DEV_PACKAGES: readonly string[] = [];
+/**
+ * Dev dependencies whose output ends up in the bundle. They are walked like production dependencies.
+ * `tailwindcss` is MIT, and the viewer's stylesheet embeds its theme and utility CSS. The one-line
+ * banner Tailwind leaves in the output is not the license text, so the notices file carries it.
+ * `bun-plugin-tailwind` only runs during the build and ships nothing, so it stays out.
+ */
+export const EMBEDDED_DEV_PACKAGES: readonly string[] = ["tailwindcss"];
 
 export type Tier = "permissive" | "runtime";
 

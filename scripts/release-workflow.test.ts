@@ -57,7 +57,7 @@ describe("release.yml", () => {
   });
   test("the build runs notices before compiling", () => {
     expect(text.indexOf("bun run notices")).toBeLessThan(
-      text.indexOf("bun build --compile"),
+      text.indexOf("scripts/build-exe.ts"),
     );
   });
 });

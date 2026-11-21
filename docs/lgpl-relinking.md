@@ -85,11 +85,11 @@ Bun's build looks for LLVM 21.1.x and reports `Could not find ld.lld (version >=
 5. Compile the program onto your Bun. The flag is mandatory. Without it Bun uses its own executable for the host target and downloads `@oven/bun-<os>-<arch>` from npm for any other target:
 
    ```sh
-   bun build --compile --compile-executable-path /path/to/your/bun \
-     --outfile out/pokemon-memory-reader server/src/main.ts
+   bun scripts/build-exe.ts --compile-executable-path /path/to/your/bun \
+     --outfile out/pokemon-memory-reader
    ```
 
-   Use the compile command from `package.json` (`build:exe`) or the release workflow at the release tag, and add the flag to it. The program is recompiled from source because Bun has no tool to move the attached JavaScript onto another Bun.
+   Use `scripts/build-exe.ts` (the script behind `build:exe`, which the release workflow runs at the release tag) and not `bun build --compile` on the command line. Bun's command line ignores plugins, so it would ship the viewer's stylesheet with its Tailwind directives unprocessed. The script calls `Bun.build` with `bun-plugin-tailwind` and passes the flag on as `compile.executablePath`. The program is recompiled from source because Bun has no tool to move the attached JavaScript onto another Bun.
 
 6. On macOS, sign the result again: `codesign --force --sign - out/pokemon-memory-reader`. Windows releases are unsigned, so nothing is needed there.
 
