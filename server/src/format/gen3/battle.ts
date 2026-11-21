@@ -169,7 +169,11 @@ const frameRegions = (profile: Profile<"gen3">): FrameRegions => {
     enemyCount: region(a.gEnemyPartyCount, 1),
     enemyParty: region(a.gEnemyParty, PARTY_MAX * PARTY_MON.size),
     opponentA: region(a.gTrainerBattleOpponent_A, 2),
-    opponentB: region(a.gTrainerBattleOpponent_B, 2),
+    // FireRed and LeafGreen have no second opposing trainer, so B reads A and `decodeFrame` never uses it.
+    opponentB: region(
+      a.gTrainerBattleOpponent_B ?? a.gTrainerBattleOpponent_A,
+      2,
+    ),
     weather: region(a.gBattleWeather, 2),
     sideStatuses: region(a.gSideStatuses, 4),
     sideTimers: region(a.gSideTimers, 2 * SIDE_TIMER.size),
@@ -293,7 +297,11 @@ function decodeFrame(
   const hasPartner =
     (typeFlags & (TYPE.multi | TYPE.inGamePartner)) !== 0 && isDouble;
 
-  const twoOpponents = isTrainer && (typeFlags & TYPE.twoOpponents) !== 0;
+  // Bit 15 is `BATTLE_TYPE_GHOST` in pokefirered, so only a profile with a trainer B symbol reads it as two opponents.
+  const twoOpponents =
+    isTrainer &&
+    ctx.profile.addresses.gTrainerBattleOpponent_B !== undefined &&
+    (typeFlags & TYPE.twoOpponents) !== 0;
   const count = slices.enemyCount.u8(0);
   if (count < 1 || count > PARTY_MAX)
     return fail(`opponent party count ${count} is outside 1 to ${PARTY_MAX}`);

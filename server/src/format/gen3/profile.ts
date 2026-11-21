@@ -25,7 +25,8 @@ export const gen3Addresses = z
     gSideStatuses: gba,
     gSideTimers: gba,
     gTrainerBattleOpponent_A: gba,
-    gTrainerBattleOpponent_B: gba,
+    /** Absent on FireRed and LeafGreen, whose battles never have two opposing trainers. */
+    gTrainerBattleOpponent_B: gba.optional(),
     gMapHeader: gba,
   })
   .strict();

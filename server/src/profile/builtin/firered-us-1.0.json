@@ -1,0 +1,124 @@
+{
+  "id": "firered-us-1.0",
+  "kind": "official",
+  "name": "Pokémon FireRed (US 1.0)",
+  "dataFormat": "gen3",
+  "language": "en",
+  "artVersion": "firered-leafgreen",
+  "addresses": {
+    "gPlayerParty": "0x02024284",
+    "gPlayerPartyCount": "0x02024029",
+    "gEnemyParty": "0x0202402c",
+    "gEnemyPartyCount": "0x0202402a",
+    "gSaveBlock1": {
+      "ptr": "0x03005008",
+      "offset": "0x0"
+    },
+    "gSaveBlock2": {
+      "ptr": "0x0300500c",
+      "offset": "0x0"
+    },
+    "gPokemonStorage": {
+      "ptr": "0x03005010",
+      "offset": "0x0"
+    },
+    "gBattleTypeFlags": "0x02022b4c",
+    "gBattleMons": "0x02023be4",
+    "gBattleStruct": {
+      "ptr": "0x02023fe8",
+      "offset": "0x0"
+    },
+    "gBattleResources": {
+      "ptr": "0x02023ff4",
+      "offset": "0x0"
+    },
+    "gMain": "0x030030f0",
+    "gBattlerPartyIndexes": "0x02023bce",
+    "gBattleOutcome": "0x02023e8a",
+    "gBattleWeather": "0x02023f1c",
+    "gSideStatuses": "0x02023dde",
+    "gSideTimers": "0x02023de4",
+    "gTrainerBattleOpponent_A": "0x020386ae",
+    "gMapHeader": "0x02036dfc"
+  },
+  "player": {
+    "badgeFlags": [
+      2080,
+      2081,
+      2082,
+      2083,
+      2084,
+      2085,
+      2086,
+      2087
+    ],
+    "moneyOffset": 656,
+    "flagsOffset": 3808,
+    "encryptionKeyOffset": 3872
+  },
+  "bag": {
+    "pocketOffsets": [
+      784,
+      952,
+      1072,
+      1124,
+      1356
+    ],
+    "pocketCapacities": [
+      42,
+      30,
+      13,
+      58,
+      43
+    ]
+  },
+  "constants": {},
+  "identify": {
+    "sha1": [
+      "41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc"
+    ],
+    "crc32": [
+      "dd88761c"
+    ],
+    "header": {
+      "gameCode": "BPRE",
+      "revision": 0
+    },
+    "signature": [
+      {
+        "address": "0x080001bc",
+        "bytes": "84472508"
+      },
+      {
+        "address": "0x080001c8",
+        "bytes": "28b03d08"
+      },
+      {
+        "address": "0x080001cc",
+        "bytes": "040c2508"
+      }
+    ]
+  },
+  "trainerTables": {
+    "trainers": {
+      "base": "0x0823eac8",
+      "count": 743
+    },
+    "classNames": {
+      "base": "0x0823e558",
+      "count": 107
+    },
+    "money": {
+      "base": "0x0824f220",
+      "count": 210
+    }
+  },
+  "fixture": "none",
+  "provenance": {
+    "kind": "pret",
+    "repo": "pret/pokefirered",
+    "commit": "3b401eaf14f193946899eb7c056d5ac02a470126",
+    "symbolFile": "pokefirered.sym",
+    "signatureEvidence": "unconfirmed"
+  }
+}
