@@ -390,6 +390,13 @@ describe("regions", () => {
       length: 40,
     });
     expect(Object.keys(gen3Trainers.maxRom(profileWith({})))).toEqual([]);
+    expect(
+      Object.keys(
+        gen3Trainers.maxRom(
+          profileWith({ trainers: { base: rom(TRAINERS_AT), count: 0 } }),
+        ),
+      ),
+    ).toEqual([]);
   });
 
   test("the money multiplier is one byte of gBattleStruct", () => {

@@ -204,10 +204,11 @@ export const gen3Trainers: TrainerFill<Gen3Profile> = {
   },
 
   maxRom(profile) {
-    const last = (profile.trainerTables.trainers?.count ?? 1) - 1;
-    const entry = trainerRegions(profile.trainerTables, [last])[
-      trainerRegion(last)
-    ];
+    const last = (profile.trainerTables.trainers?.count ?? 0) - 1;
+    const entry =
+      last < 0
+        ? undefined
+        : trainerRegions(profile.trainerTables, [last])[trainerRegion(last)];
     return {
       ...(entry && { trainerA: entry, trainerB: entry }),
       ...classTables(profile.trainerTables),

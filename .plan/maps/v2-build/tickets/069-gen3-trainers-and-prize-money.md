@@ -20,16 +20,12 @@ Fill `opponent.trainers` and `LastBattle.trainers` for Emerald, following spec ย
 - Link, Tower and Frontier battles give null table-derived fields.
 - No ROM bytes are committed.
 
-## Handoff
+## Resolution
 
-Branch `t3/gen3-trainers-prize-money-r2` (from `09447ad`). Audit round 0, no council yet. Pickup thread hit 150k.
+`gen3Trainers` (`server/src/format/gen3/trainers.ts`) fills `opponent.trainers` and `LastBattle.trainers` for Emerald. The frame decoder lists each trainer with null table fields, reading `gTrainerBattleOpponent_A` and `_B`. The read loop then reads `gTrainers`, `gTrainerClassNames` and `gTrainerMoneyTable` from ROM once per session (a failed read retries after 5 seconds), and the pure `fill` sets class, class name, name, starting items and prize money. A missing table nulls only its own fields, and `gBattleStruct->moneyMultiplier` (offset 0x4a) is its own read part, so an unreadable struct nulls only the money. Link, Tower, Frontier, e-Reader, Trainer Hill and secret base battles give null table fields and read no ROM. A two-opponent battle lists trainers A and B and splits the party at slot 3. No ROM bytes are committed.
 
-**Done (wip commit):** all production code. `format/types.ts` (`BattleExtras`, `TrainerFill`), new `format/gen3/trainers.ts` (`gen3Trainers`, `prizeMoney`, ROM regions `trainer:<id>`/`classNames`/`money`, pure `fill`), `gen3/battle.ts` (opponent IDs, `Trainer` placeholders, `OpponentMon.trainer`, `tableDerived:false` for tableless types, two-opponent slot loop 0..5 skipping zero slots), `format/registry.ts` (`BoundTrainers`, `declaredRegions().rom`, `battleExtras` part), `profile/registry.ts` (caps check of `rom`), `loop/read-loop.ts` (extras part in the frame batch, per-session ROM cache with 5 s retry, `feedBattle` async fill), `battle-tracker.ts` (`tableDerived`). Existing tests updated; `bun test server` passes except the Lua core test (no Lua here, not mine). `bun install` was run in this worktree.
+Prize money follows pokeemerald `GetTrainerMoneyToGive`: a double battle against one trainer is doubled, but a two-opponent battle pays each trainer its own undoubled amount. That differs from the ticket and spec ยง7.8 text, which say to double whenever `BATTLE_TYPE_DOUBLE` is set. The spec text needs a fix.
 
-**Left, in order:**
-1. Tests (none written yet). `server/test/gen3/trainers.test.ts` on synthetic ROM bytes: entry decode (class, name, items), each table missing nulls only its fields, id at or past `count`, money value and terminator fallback, `prizeMoney` single/double/two-opponent (A and B each own amount, no doubling in two-opponent)/missing input, link/Tower/Frontier give null table fields. Battle decoder test for two-opponent slots (A has 2 mons, B at 3 to 5) and `trainer` indexes. Loop test with a ROM served trainer table (fake adapter ROM is 0x400 bytes, so place tables at small offsets via a test profile) including cached second read.
-2. Docs: `.describe()` for `Trainer.items`/prize money, mention that double battles with two opponents are not doubled (follows `GetTrainerMoneyToGive`, differs from ticket text, say so in the report). Check `api/src/schemas.ts`.
-3. `bun run typecheck`, `bunx biome check --write .`, `bun test server`.
-4. Council audit (Claude seat only, other seats `n/a`), decision report to `.plan/maps/v2-build/assets/069-gen3-trainers-and-prize-money-report.md` (unslop), `wf-time.py close`, record resolution in ticket (delete this section), commit, push (no force), PR against `wayfinder/v2-build-master` if the repo uses PRs, return DONE.
+Council: Claude seat APPROVE 8/10 in round 1, Gemini and GPT `n/a` (out of quota). Report: [069 report](../assets/069-gen3-trainers-and-prize-money-report.md).
 
-**Read first:** `server/src/format/gen3/trainers.ts`, `server/src/loop/read-loop.ts` (`readTrainerRom`, `feedBattle`, `cycle`).
+Timing: wall 16m, active 16m, user 0s, wait 0s, blocked 0s | setup 5m, implement 8m, audit 1m (1 round) | tools 127 (2 subagent) | limits 0, compactions 0, handoffs 2 | ctx peak 158k | cost $4.64 sonnet-5-5 + $0.01 haiku-5-5
