@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { BattleOutcome } from "@pokemon-memory-reader/api/types";
 import { Bytes } from "../../src/format/bytes";
 import { gen3Battle, gen3Outcome } from "../../src/format/gen3/battle";
 import type { Regions, Slices } from "../../src/format/regions";
@@ -128,7 +129,7 @@ describe("gen3Outcome", () => {
   });
 
   test("every raw byte maps through the 0x7f mask", () => {
-    const named: Record<number, string> = {
+    const named: Record<number, BattleOutcome> = {
       1: "won",
       2: "lost",
       3: "drew",
