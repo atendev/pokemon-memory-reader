@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [091]
+claimed_by: wfm-v2-build-master-1795265782
+claimed_at: 2026-11-21T15:30:00Z
 ---
 
 # Coverage matrix, guard and the `supported` flag
