@@ -123,6 +123,19 @@ test("a pick a failed write kept for this run survives a later successful write 
   expect(again.lookup(["sha1:aa"])?.profileId).toBe("r");
 });
 
+test("a failed two-key pick keeps its other key when a later write covers only one", async () => {
+  const store = await openPickStore(path, silentLog);
+  await rm(folder, { recursive: true, force: true });
+  await writeFile(folder, "a file where the folder was");
+  expect(await store.save(["sha1:aa", "crc32:bb"], "p")).toBe(false);
+  await rm(folder, { force: true });
+  expect(await store.save(["sha1:aa"], "q")).toBe(true);
+  expect(store.lookup(["sha1:aa"])?.profileId).toBe("q");
+  expect(store.lookup(["crc32:bb"])?.profileId).toBe("p");
+  expect(await store.forget(["sha1:aa"])).toBe(true);
+  expect(store.lookup(["crc32:bb"])?.profileId).toBe("p");
+});
+
 test("the no-file store finds nothing and saves nothing", async () => {
   expect(noPickStore.lookup(["sha1:aa"])).toBeNull();
   expect(await noPickStore.save(["sha1:aa"], "p")).toBe(false);

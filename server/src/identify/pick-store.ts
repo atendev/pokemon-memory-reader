@@ -28,7 +28,6 @@ export interface PickStore {
 }
 
 type Entries = Record<string, { profileId: string }>;
-type Change = (current: Entries) => void;
 
 /**
  * The picks file, kept in memory and written through. A save re-reads the file, applies its change
@@ -76,43 +75,50 @@ export async function openPickStore(
     return {};
   });
 
-  /** Changes a failed write left applying for this run only. A later write of the same key supersedes them. */
-  let unsaved: { keys: readonly PickKey[]; apply: Change }[] = [];
+  /**
+   * What failed writes left applying for this run only, per key: a profile id, or null for a
+   * forgotten key. A successful write of a key supersedes its overlay entry, and the rest stays.
+   */
+  const overlay = new Map<PickKey, string | null>();
 
+  const view = (saved: Entries): Entries => {
+    const merged = { ...saved };
+    for (const [key, profileId] of overlay) {
+      if (profileId === null) delete merged[key];
+      else merged[key] = { profileId };
+    }
+    return merged;
+  };
+
+  /** Writes `profileId` under every key, or removes every key when it is null. False when the file couldn't take it, and the change then applies for this run only. */
   async function write(
     keys: readonly PickKey[],
-    change: Change,
+    profileId: string | null,
   ): Promise<boolean> {
     const temp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
     try {
       const current = await load();
-      change(current);
+      for (const key of keys) {
+        if (profileId === null) delete current[key];
+        else current[key] = { profileId };
+      }
       await mkdir(dirname(path), { recursive: true });
       await writeFile(
         temp,
         `${JSON.stringify({ version: PICKS_VERSION, picks: current }, null, 2)}\n`,
       );
       await rename(temp, path);
-      unsaved = unsaved.filter(
-        (u) => !u.keys.some((key) => keys.includes(key)),
-      );
-      entries = current;
-      for (const { apply } of unsaved) apply(entries);
+      for (const key of keys) overlay.delete(key);
+      entries = view(current);
       return true;
     } catch (error) {
       await rm(temp, { force: true }).catch(() => {});
       log.error(`could not save ${path}`, { error });
+      for (const key of keys) overlay.set(key, profileId);
+      entries = view(entries);
       return false;
     }
   }
-
-  /** Whatever the file failed to take still applies for this run, so the pick works until the program exits. */
-  const remember = (keys: readonly PickKey[], apply: Change): void => {
-    unsaved = unsaved.filter((u) => !u.keys.some((key) => keys.includes(key)));
-    unsaved.push({ keys, apply });
-    entries = { ...entries };
-    apply(entries);
-  };
 
   return {
     lookup(keys) {
@@ -122,22 +128,8 @@ export async function openPickStore(
       }
       return null;
     },
-    async save(keys, profileId) {
-      const apply = (current: Entries) => {
-        for (const key of keys) current[key] = { profileId };
-      };
-      const saved = await write(keys, apply);
-      if (!saved) remember(keys, apply);
-      return saved;
-    },
-    async forget(keys) {
-      const apply = (current: Entries) => {
-        for (const key of keys) delete current[key];
-      };
-      const saved = await write(keys, apply);
-      if (!saved) remember(keys, apply);
-      return saved;
-    },
+    save: (keys, profileId) => write(keys, profileId),
+    forget: (keys) => write(keys, null),
   };
 }
 
