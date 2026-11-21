@@ -116,26 +116,44 @@ function BattlerCard({ battler, full }: { battler: Battler; full: boolean }) {
   );
 }
 
+/** An opponent battler whose party mon is unrevealed says nothing about it, like a hidden tile. */
+function HiddenBattlerCard() {
+  return (
+    <li className="card mon battler battler-hidden">
+      <BallIcon />
+      <span className="headline">?</span>
+      <span className="visually-hidden">Unrevealed Pokémon</span>
+    </li>
+  );
+}
+
 function Side({
   label,
   battlers,
   full,
+  hidden = () => false,
 }: {
   label: string;
   battlers: readonly Battler[];
   full: boolean;
+  /** True for a battler whose details must not show. */
+  hidden?: (battler: Battler) => boolean;
 }) {
   return (
     <section className="side" aria-label={label}>
       <h3 className="headline">{label}</h3>
       <ul className="battlers">
-        {battlers.map((battler) => (
-          <BattlerCard
-            key={`${battler.owner}-${battler.position}`}
-            battler={battler}
-            full={full}
-          />
-        ))}
+        {battlers.map((battler) =>
+          hidden(battler) ? (
+            <HiddenBattlerCard key={`${battler.owner}-${battler.position}`} />
+          ) : (
+            <BattlerCard
+              key={`${battler.owner}-${battler.position}`}
+              battler={battler}
+              full={full}
+            />
+          ),
+        )}
       </ul>
     </section>
   );
@@ -262,18 +280,6 @@ function HiddenTile() {
   );
 }
 
-function OpponentParty({ battle }: { battle: ActiveBattle }) {
-  const { show, overridden, set } = useShowUnrevealed();
-  return (
-    <OpponentPartyView
-      battle={battle}
-      show={show}
-      overridden={overridden}
-      onChange={set}
-    />
-  );
-}
-
 export function OpponentPartyView({
   battle,
   show,
@@ -355,7 +361,21 @@ function Field({ field }: { field: ActiveBattle["field"] }) {
   );
 }
 
+/** An opponent battler is unrevealed when its party mon is, and the setting is off. */
+export function isHiddenBattler(
+  battle: ActiveBattle,
+  battler: Battler,
+  show: boolean,
+): boolean {
+  if (show || battler.partySlot === null) return false;
+  const mon = battle.opponent.party.find(
+    (m) => m.partySlot === battler.partySlot,
+  );
+  return mon !== undefined && !mon.revealed;
+}
+
 function ActiveView({ battle }: { battle: ActiveBattle }) {
+  const { show, overridden, set } = useShowUnrevealed();
   const { trainers, party } = battle.opponent;
   return (
     <>
@@ -365,7 +385,12 @@ function ActiveView({ battle }: { battle: ActiveBattle }) {
         <span className="vs headline" aria-hidden="true">
           VS
         </span>
-        <Side label="Opponent" battlers={battle.opponent.active} full={false} />
+        <Side
+          label="Opponent"
+          battlers={battle.opponent.active}
+          full={false}
+          hidden={(battler) => isHiddenBattler(battle, battler, show)}
+        />
       </div>
       <ul className="trainers">
         {battle.kind === "wild" || trainers.length === 0 ? (
@@ -389,7 +414,12 @@ function ActiveView({ battle }: { battle: ActiveBattle }) {
           />
         ) : null}
       </ul>
-      <OpponentParty battle={battle} />
+      <OpponentPartyView
+        battle={battle}
+        show={show}
+        overridden={overridden}
+        onChange={set}
+      />
       <Field field={battle.field} />
     </>
   );

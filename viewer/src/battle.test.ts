@@ -90,6 +90,10 @@ describe("Pokémon left", () => {
     expect(pokemonLeft(party)).toBe(2);
   });
 
+  test("a mon with unknown HP counts as still in the fight", () => {
+    expect(pokemonLeft([opponentMon({ hp: null })])).toBe(1);
+  });
+
   test("splits by trainer index in a multi-trainer battle", () => {
     const trainers = [trainer({ id: 1 }), trainer({ id: 2 })];
     const party = [

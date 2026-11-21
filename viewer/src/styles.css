@@ -579,3 +579,9 @@ body {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.battler-hidden {
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  color: var(--label-2);
+}

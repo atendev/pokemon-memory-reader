@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import type { Battle } from "@pokemon-memory-reader/api/schemas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Screen } from "./App";
-import { BattleScreen, OpponentPartyView } from "./BattleScreen";
+import {
+  BattleScreen,
+  isHiddenBattler,
+  OpponentPartyView,
+} from "./BattleScreen";
 import { activeBattle, battler, opponentMon, status, trainer } from "./testing";
 
 const ready = (value: Battle) => ({ kind: "ready", value }) as const;
@@ -400,5 +404,50 @@ describe("a double battle", () => {
 
   test("still hides the unrevealed mon", () => {
     for (const word of SECRET_WORDS) expect(html).not.toContain(word);
+  });
+});
+
+describe("an unrevealed opponent battler", () => {
+  const battle = activeBattle({
+    kind: "trainer",
+    opponent: {
+      active: [
+        battler({
+          owner: "opponent",
+          partySlot: 1,
+          species: SECRET.species,
+          level: SECRET.level,
+          moves: [{ id: 94, name: "Psychic", pp: 10, maxPp: 16 }],
+        }),
+      ],
+      party: [
+        opponentMon({ partySlot: 0, trainer: 0 }),
+        opponentMon({ ...SECRET, partySlot: 1, trainer: 0, revealed: false }),
+      ],
+      trainers: [trainer({ id: 1, name: "JOEY" })],
+    },
+  });
+
+  test("shows no species, level or moves on its battler card either", () => {
+    const html = render(battle);
+    for (const word of SECRET_WORDS) expect(html).not.toContain(word);
+    expect(html).toContain("battler-hidden");
+  });
+
+  test("shows the battler once the setting is on", () => {
+    expect(
+      isHiddenBattler(
+        battle as never,
+        battle.opponent.active[0] as never,
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      isHiddenBattler(
+        battle as never,
+        battle.opponent.active[0] as never,
+        false,
+      ),
+    ).toBe(true);
   });
 });
