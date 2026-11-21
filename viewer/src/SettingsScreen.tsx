@@ -1,8 +1,8 @@
 import type { StatusResource } from "@pokemon-memory-reader/api/schemas";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
+import type { ManualPicksBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { ManualPicksBody } from "./internal-api";
 import { ManualPickSection } from "./ManualPick";
 import {
   adoptDraft,

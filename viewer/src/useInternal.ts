@@ -1,5 +1,6 @@
 import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
+import type { ManualPicksBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import type { UpdateBody } from "@pokemon-memory-reader/internal/update";
 import { useCallback, useEffect, useState } from "react";
@@ -9,7 +10,6 @@ import {
   getManualPicks,
   getSettings,
   getUpdate,
-  type ManualPicksBody,
   type Outcome,
 } from "./internal-api";
 

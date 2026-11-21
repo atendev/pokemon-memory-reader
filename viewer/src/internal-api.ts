@@ -2,33 +2,12 @@ import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
 import type { SettingsPatch } from "@pokemon-memory-reader/internal/config";
 import type {
+  ManualPicksBody,
   PickBody,
   PickRequest,
 } from "@pokemon-memory-reader/internal/manual-picks-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import type { UpdateBody } from "@pokemon-memory-reader/internal/update";
-
-/**
- * `GET /manual-picks` (amendment 021, item 8). The route is ticket 108's, so this mirrors the
- * amendment until that ticket exports the body from `internal/`.
- */
-export interface ManualPicksBody {
-  readonly romKey: string | null;
-  readonly current: {
-    readonly key: string;
-    readonly scope: "rom" | "base";
-    readonly profileId: string;
-  } | null;
-  readonly candidates: readonly {
-    readonly id: string;
-    readonly name: string;
-    readonly kind: string;
-    readonly dataFormat: string;
-    readonly headerMatch: boolean;
-    readonly signature: "match" | "mismatch" | "unchecked" | null;
-    readonly baseEligible: boolean;
-  }[];
-}
 
 /** An internal route's answer: the body, or the refusal with the code the program sent (amendment 021, item 4). */
 export type Outcome<T> =

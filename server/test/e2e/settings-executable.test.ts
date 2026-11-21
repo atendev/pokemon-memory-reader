@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import type { ManualPicksBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import { FakeBridge, GBA_GAME } from "../bridge/fake-bridge";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
@@ -210,6 +211,68 @@ suite("the Settings and About screens on the compiled executable", () => {
     expect(code).toContain("Open-source libraries");
     expect(code).toContain("third-party notices");
     expect(code).toContain("Reading the last update check.");
+    expect(code).toContain("Reading the candidate profiles.");
+    expect(code).not.toContain("can't list candidate profiles yet");
     expect(code).not.toContain("This screen isn't built yet.Settings");
   });
+});
+
+suite("the manual pick list on the compiled executable", () => {
+  const bridge = new FakeBridge();
+  let child: Bun.Subprocess | null = null;
+  let dataDir = "";
+  let base = "";
+
+  beforeAll(async () => {
+    const memory = emeraldMemory([TREECKO]);
+    bridge.game = { ...GBA_GAME, crc32: "deadbeef" };
+    bridge.onRead = (read, socket) =>
+      bridge.reply(socket, read.id, serve(memory, read.ranges));
+    bridge.start();
+    dataDir = await mkdtemp(join(tmpdir(), "pmr-picks-e2e-"));
+    await writeFile(
+      join(dataDir, "config.json"),
+      JSON.stringify({
+        version: 1,
+        adapters: { mgba: { host: "127.0.0.1", port: bridge.port } },
+      }),
+    );
+    const port = await freePort();
+    base = `http://127.0.0.1:${port}`;
+    child = Bun.spawn(
+      [
+        resolve(executable as string),
+        "--no-browser",
+        "--port",
+        String(port),
+        "--data-dir",
+        dataDir,
+      ],
+      { stdout: "ignore", stderr: "ignore" },
+    );
+  });
+
+  afterAll(async () => {
+    child?.kill("SIGKILL");
+    bridge.stop();
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("lists the profiles that fit an unidentified ROM", async () => {
+    const deadline = Date.now() + 20_000;
+    let body = null as ManualPicksBody | null;
+    while (Date.now() < deadline) {
+      try {
+        const response = await fetch(`${base}/manual-picks`);
+        if (response.ok) {
+          body = (await response.json()) as ManualPicksBody;
+          if (body?.candidates.length) break;
+        }
+      } catch {}
+      await Bun.sleep(100);
+    }
+    expect(body?.romKey).toBe("crc32:deadbeef");
+    expect(body?.current).toBeNull();
+    expect(body?.candidates.map((c) => c.id)).toContain("emerald-us-1.0");
+  }, 30_000);
 });
