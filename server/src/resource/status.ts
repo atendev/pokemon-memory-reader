@@ -36,7 +36,7 @@ function romOf({ adapter, identification }: StatusInputs) {
       header?.platform === "gb" ? hex(header.globalChecksum, 4) : null,
     crc32: game.crc32,
     sha1: game.sha1,
-    contentName: null,
+    contentName: game.contentName ?? null,
     expansion: null,
   };
 }

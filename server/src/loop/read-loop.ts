@@ -228,6 +228,10 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       current.bound = found.kind === "identified" ? bind(found.profile) : null;
       if (found.kind === "unidentified")
         log.info(`ROM not identified (${found.reason})`);
+      else if (found.match === "exact" && found.signature === "mismatch")
+        log.error(
+          `profile ${found.profile.id} matched this ROM by hash but its signature does not: the profile's signature is wrong`,
+        );
     })
       .catch((error) => log.error("identification failed", { error }))
       .finally(() => {

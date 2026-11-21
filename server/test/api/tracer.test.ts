@@ -106,7 +106,8 @@ describe("tracer API against the fake bridge", () => {
     expect(ErrorBody.parse(empty.body).error.code).toBe("no_game");
 
     // A game loads.
-    bridge.sendGame(GBA_GAME);
+    // The mGBA bridge sends CRC32 only (amendment 014 §7). This is Emerald US 1.0's.
+    bridge.sendGame({ ...GBA_GAME, crc32: "1f1c08fb", sha1: null });
     await until(
       async () => (await getJson("/status")).body.state === "game",
       "state game",
@@ -117,13 +118,16 @@ describe("tracer API against the fake bridge", () => {
       title: "POKEMON EMER",
       gameCode: "BPEE",
       revision: 0,
-      crc32: "1a2b3c4d",
+      crc32: "1f1c08fb",
+      sha1: null,
+      contentName: null,
     });
     expect(status.game).toMatchObject({
       profileId: "emerald-us-1.0",
       generation: 3,
       dataFormat: "gen3",
-      match: "header",
+      match: "exact",
+      signature: "match",
     });
     expect(status.adapter).toMatchObject({ id: "mgba", problem: null });
 
@@ -166,5 +170,52 @@ describe("tracer API against the fake bridge", () => {
       },
     );
     expect(direct.ok && direct.value).toEqual(parsed);
+  });
+
+  async function statusAfter(game: Record<string, unknown>) {
+    const { bridge, bridgePort, url } = setup();
+    bridge.game = null;
+    bridge.start(bridgePort);
+    const getStatus = async () =>
+      StatusResource.parse(await (await fetch(`${url}/status`)).json());
+    await until(async () => (await getStatus()).state === "no_game", "no_game");
+    bridge.sendGame(game);
+    await until(
+      async () => (await getStatus()).state !== "no_game",
+      "identification",
+    );
+    return getStatus();
+  }
+
+  test("with no hash, a header and signature match loads by header", async () => {
+    memory = emeraldMemory([TREECKO]);
+    const status = await statusAfter({ ...GBA_GAME, crc32: null });
+    expect(status.state).toBe("game");
+    expect(status.game).toMatchObject({ match: "header", signature: "match" });
+  });
+
+  test("a hash that matches no profile is a modified ROM and stays unidentified", async () => {
+    memory = emeraldMemory([TREECKO]);
+    const status = await statusAfter(GBA_GAME);
+    expect(status.state).toBe("unidentified");
+    expect(status.game).toBeNull();
+    expect(status.rom).toMatchObject({ crc32: "1a2b3c4d", gameCode: "BPEE" });
+  });
+
+  test("a hash match with a wrong signature still loads and reports the mismatch", async () => {
+    memory = emeraldMemory([TREECKO]);
+    memory.rom.set([0, 0, 0, 0], 0x1bc);
+    const status = await statusAfter({ ...GBA_GAME, crc32: "1f1c08fb" });
+    expect(status.game).toMatchObject({
+      match: "exact",
+      signature: "mismatch",
+    });
+  });
+
+  test("a header match with a wrong signature is unidentified", async () => {
+    memory = emeraldMemory([TREECKO]);
+    memory.rom.set([0, 0, 0, 0], 0x1bc);
+    const status = await statusAfter({ ...GBA_GAME, crc32: null });
+    expect(status.state).toBe("unidentified");
   });
 });

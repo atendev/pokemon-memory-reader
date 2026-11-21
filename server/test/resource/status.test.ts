@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { StatusResource } from "@pokemon-memory-reader/api/schemas";
 import type { AdapterState, GameInfo } from "../../src/adapter/types";
-import { identifyByHeader } from "../../src/identify/identify";
+import type { Identification } from "../../src/identify/identify";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { buildStatus, isUsable } from "../../src/resource/status";
@@ -10,7 +10,7 @@ const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
 const game: GameInfo = {
   platform: "gba",
-  crc32: "1a2b3c4d",
+  crc32: "1f1c08fb",
   sha1: null,
   romName: "Emerald",
   domains: { rom: 0x100000 },
@@ -71,34 +71,78 @@ describe("buildStatus", () => {
   test("no_game while identification is pending, with the ROM hashes known", () => {
     const result = status(connected);
     expect(result.state).toBe("no_game");
-    expect(result.rom).toMatchObject({ crc32: "1a2b3c4d", title: null });
+    expect(result.rom).toMatchObject({ crc32: "1f1c08fb", title: null });
   });
 
   test("unidentified keeps the header", () => {
-    const identification = identifyByHeader(
-      game,
-      { ...header, gameCode: "ZZZZ" },
-      registry,
-    );
+    const identification: Identification = {
+      kind: "unidentified",
+      reason: "no_match",
+      header: { ...header, gameCode: "ZZZZ" },
+    };
     const result = status(connected, identification as never);
     expect(result.state).toBe("unidentified");
     expect(result.rom).toMatchObject({ gameCode: "ZZZZ" });
     expect(result.game).toBeNull();
   });
 
-  test("identified by header carries the profile and an unchecked signature", () => {
-    const identification = identifyByHeader(game, header, registry);
-    const result = StatusResource.parse(
-      status(connected, identification as never),
-    );
-    expect(result.state).toBe("game");
-    expect(result.game).toMatchObject({
-      profileId: "emerald-us-1.0",
+  const profile = registry.get("emerald-us-1.0");
+  if (!profile) throw new Error("Emerald profile missing");
+
+  test.each([
+    ["exact", "match"],
+    ["exact", "mismatch"],
+    ["header", "match"],
+    ["header", "unchecked"],
+  ] as const)(
+    "identified by %s with signature %s carries both",
+    (match, signature) => {
+      const identification: Identification = {
+        kind: "identified",
+        profile,
+        match,
+        signature,
+        header,
+      };
+      const result = StatusResource.parse(
+        status(connected, identification as never),
+      );
+      expect(result.state).toBe("game");
+      expect(result.game).toMatchObject({
+        profileId: "emerald-us-1.0",
+        match,
+        signature,
+        generation: 3,
+      });
+      expect(result.game?.names.species).toBe("builtin");
+    },
+  );
+
+  test("a profile with no signature reports null", () => {
+    const identification: Identification = {
+      kind: "identified",
+      profile,
       match: "header",
-      signature: "unchecked",
-      generation: 3,
+      signature: null,
+      header,
+    };
+    expect(
+      StatusResource.parse(status(connected, identification as never)).game
+        ?.signature,
+    ).toBeNull();
+  });
+
+  test("rom carries RetroArch's content name and the hashes", () => {
+    const retroarch: AdapterState = {
+      ...connected,
+      game: { ...game, crc32: null, sha1: null, contentName: "Emerald (USA)" },
+    };
+    expect(status(retroarch).rom).toMatchObject({
+      contentName: "Emerald (USA)",
+      crc32: null,
+      sha1: null,
     });
-    expect(result.game?.names.species).toBe("builtin");
+    expect(status(connected).rom).toMatchObject({ contentName: null });
   });
 
   test("isUsable needs a connection and no problem", () => {
