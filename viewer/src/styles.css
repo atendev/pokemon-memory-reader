@@ -126,6 +126,7 @@ body {
   gap: 16px;
 }
 .mon-names {
+  flex: 1;
   min-width: 0;
 }
 .mon-title {
@@ -463,6 +464,10 @@ body {
   border-radius: 50%;
   background: var(--gray);
 }
+/* Before the type colours, so a type-tinted tile keeps its tint and an untyped one stays grey. */
+.art-tile {
+  background: var(--gray);
+}
 .type-fire {
   background: #ff6b35;
 }
@@ -769,4 +774,51 @@ body {
   .badge-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+/* Art sits in a box of its own size, so an image arriving or missing never moves the page. */
+.art {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.art img {
+  display: block;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.art-tile {
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.art-sprite.art-tile {
+  font-size: 24px;
+}
+.art-menu.art-tile {
+  border-radius: 8px;
+  font-size: 15px;
+}
+.art-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.art-item-icon,
+.art-type {
+  flex: none;
+  image-rendering: pixelated;
+}
+/* The icon is taller than a line of text; the negative margin keeps its row the text's height, so a missing icon doesn't move the card. */
+.art-item-icon {
+  margin: -4px 0;
+}
+.mon-head > .art {
+  align-self: center;
+}
+.tile > .art,
+.box-mon > .art {
+  align-self: flex-start;
 }

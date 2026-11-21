@@ -219,7 +219,9 @@ describe("a trainer battle with unrevealed mons", () => {
   test("the active tile is highlighted", () => {
     const html = render(battle);
     expect(html.match(/tile-active/g)).toHaveLength(1);
-    expect(html).toMatch(/tile tile-active"><span[^>]*>Poochyena/);
+    expect(html).toMatch(
+      /tile tile-active"(?:(?!<\/li>).)*?mon-title">Poochyena/,
+    );
   });
 
   test("the trainer card carries class, name, prize money, items and Pokémon left", () => {

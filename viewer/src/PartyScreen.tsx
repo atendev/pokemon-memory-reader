@@ -1,4 +1,5 @@
 import type { Party, Pokemon } from "@pokemon-memory-reader/api/schemas";
+import { ItemArt, SpeciesArt } from "./Art";
 import {
   cardTitle,
   type HpFields,
@@ -41,6 +42,14 @@ export function PartyCard({ mon }: { mon: Pokemon }) {
   return (
     <li className="card mon">
       <div className="mon-head">
+        <SpeciesArt
+          variant="sprite"
+          id={mon.species.id}
+          name={mon.species.name}
+          type={mon.types?.[0] ?? null}
+          shiny={mon.shiny}
+          egg={mon.isEgg}
+        />
         <div className="mon-names">
           <h3 className="headline mon-title">{title}</h3>
           {showSpecies ? (
@@ -53,7 +62,13 @@ export function PartyCard({ mon }: { mon: Pokemon }) {
       <dl className="facts footnote">
         <div>
           <dt className="muted">Item</dt>
-          <dd>{mon.heldItem ? refName(mon.heldItem) : "—"}</dd>
+          <dd>
+            {mon.heldItem ? (
+              <ItemArt id={mon.heldItem.id} name={mon.heldItem.name} />
+            ) : (
+              "—"
+            )}
+          </dd>
         </div>
         <div>
           <dt className="muted">Ability</dt>
