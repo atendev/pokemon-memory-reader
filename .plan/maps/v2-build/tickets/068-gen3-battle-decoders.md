@@ -20,21 +20,8 @@ Feed the tracker from Emerald, following spec §7.8, §6.4 and [the 015 amendmen
 - The battle is read while no client subscribes, so `lastBattle` is complete (spec §8.2).
 - The Emerald profile gains its `battle` block from the generator with a stable second run.
 
-## Handoff
+## Resolution
 
-Branch `t3/gen3-battle-decoders-1` (cut from `fded0b9`), SHA is the commit that adds this section (wip: slice 2). Attempt 2, audit round 0, no council yet.
+`gen3Battle` in `server/src/format/gen3/battle.ts` reads `gMain.inBattle` and `gBattleOutcome` every tick, and the whole frame (`gBattleTypeFlags`, `gBattleMons`, `gBattlerPartyIndexes`, `gEnemyParty`, weather, side statuses and timers) while the flag is set. `battle` joins `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas` and the app, so `GET /api/v2/battle` works. The read loop reads the flag with no client, so `lastBattle` is complete when first asked. The Emerald profile gained six battle symbols in `addresses` from the generator, and a second generator run is byte-identical. Double is bit 0 alone. Open question: `gSideTimers` is read at 12 bytes per side, while pret master lists 11 members. Report: [068 report](../assets/068-gen3-battle-decoders-report.md). Claude seat only, approved in round 3 at 8. Gemini and GPT seats skipped (out of quota).
 
-**Done.**
-- Slice 1 (`ae4d348`): Emerald `addresses` gain `gMain`, `gBattlerPartyIndexes`, `gBattleOutcome`, `gBattleWeather`, `gSideStatuses`, `gSideTimers`. The "battle block" is these keys, not a new profile key (put that in the report).
-- Slice 2 (this commit): `server/src/format/gen3/battle.ts` (`gen3Battle` with `probe` = flag + outcome and `frame`, `gen3Outcome`), `BattleDecoder`/`BattleProbe` in `format/types.ts`, `BoundBattle` and `declaredRegions` in `format/registry.ts`, `battle` in `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas`, `SNAPSHOT_TOPICS`, `docs/open-enums.md` regenerated, and the read loop (`readParts`, `feedBattle`, `Session.battle`/`battleOn`, flag read every tick, frame read while set, immediate second request when the probe reads set). Typecheck passes. `bun test`: 635 pass, 6 fail.
-- Verified against pret: BattlePokemon layout incl. `ppBonuses` 0x3B and `status1` 0x4C, flag bits (multi 6, inGamePartner 22), `inBattle` 0x439 bit 1, status and side bits. Open doubt: pret master's `SideTimer` lists 11 bytes while the 0x18 symbol size means 12 each; code uses 12 (opponent spikes only). Note in report, ask for a ROM fixture check.
-
-**Left, in order.**
-1. Fix the 5 expected test failures: `server/test/loop/read-loop.test.ts` (flag is now read every tick, so the "no read without demand" and `partyReads` helper need updating: party reads are ranges at ewram 0x244ec), `server/src/profile/registry.test.ts` (main batch parts are now `party` and `battle`; the tiny-caps test names the largest region, check it).
-2. Tests: new `server/test/gen3/battle.test.ts` (outcome mapping every §7.8 value plus unknown, battler fields, stat stages, weather, sides, wild vs trainer, double, validation fails), loop tests (inactive shape with `lastBattle: null`, synthetic single wild and double trainer via `GET battle`, no subscriber `lastBattle` complete, game change resets), app route test for `/api/v2/battle`. Update `server/test/support/emerald-memory.ts` for battle memory.
-3. Generator stable second run still holds; run `bun run lint`, `bun run typecheck`.
-4. Council (Claude seat only), decision report `assets/068-gen3-battle-decoders-report.md` with unslop, `wf-time.py close`, record, push, open PR vs `wayfinder/v2-build-master` if the repo uses PRs.
-
-Known failing and ignored: `core.test.ts` Lua check (host Lua 5.5).
-
-Read first: `server/src/format/gen3/battle.ts`, `server/src/loop/read-loop.ts` (`cycle`), `server/test/loop/read-loop.test.ts`.
+Timing: wall 17m, active 15m, user 0s, wait 58s, blocked 0s | implement 11m, audit 3m (3 rounds), gate 31s | tools 132 (9 subagent) | limits 0, compactions 0, handoffs 2 | ctx peak 156k | cost $4.87 sonnet-5-5 + $0.03 haiku-5-5
