@@ -84,6 +84,10 @@ export const TOPIC_NAMES = {
     meaning: "The adapter, ROM and game state. Always served.",
   },
   party: { meaning: "The player's party, in slot order." },
+  battle: {
+    meaning:
+      "The current battle, or whether none is active and the last one that ended.",
+  },
 } as const satisfies Record<string, MeaningRecord>;
 
 /**

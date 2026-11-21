@@ -18,5 +18,11 @@ export const gen3Addresses = z
     gBattleMons: gba,
     gBattleStruct: gbaAny,
     gBattleResources: gbaAny,
+    gMain: gba,
+    gBattlerPartyIndexes: gba,
+    gBattleOutcome: gba,
+    gBattleWeather: gba,
+    gSideStatuses: gba,
+    gSideTimers: gba,
   })
   .strict();

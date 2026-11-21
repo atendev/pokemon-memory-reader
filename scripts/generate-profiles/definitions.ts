@@ -44,6 +44,12 @@ export const definitions: readonly ProfileDefinition[] = [
       { key: "gBattleMons", symbol: "gBattleMons" },
       { key: "gBattleStruct", symbol: "gBattleStruct", pointer: true },
       { key: "gBattleResources", symbol: "gBattleResources", pointer: true },
+      { key: "gMain", symbol: "gMain" },
+      { key: "gBattlerPartyIndexes", symbol: "gBattlerPartyIndexes" },
+      { key: "gBattleOutcome", symbol: "gBattleOutcome" },
+      { key: "gBattleWeather", symbol: "gBattleWeather" },
+      { key: "gSideStatuses", symbol: "gSideStatuses" },
+      { key: "gSideTimers", symbol: "gSideTimers" },
     ],
     // 412 species is the length of `speciesData` in `gen3-en.json`, which a test pins.
     speciesInfo: { symbol: "gSpeciesInfo", speciesCount: 412 },

@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Battle } from "@pokemon-memory-reader/api/schemas";
 import type {
   Adapter,
   AdapterState,
   Range,
   ReadOutcome,
 } from "../../src/adapter/types";
+import { createApp } from "../../src/app/app";
 import type { BoundGame } from "../../src/format/registry";
 import { ok } from "../../src/format/types";
 import { silentLog } from "../../src/log";
@@ -12,6 +14,11 @@ import { createReadLoop, normalizePollHz } from "../../src/loop/read-loop";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
+import {
+  type BattleMonSpec,
+  endBattle,
+  writeBattle,
+} from "../gen3/battle-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
@@ -66,11 +73,20 @@ class MemoryAdapter implements Adapter {
     };
   }
 
-  /** Reads that asked for party bytes, as opposed to the header. */
+  /** Reads that asked for party bytes (gPlayerParty at EWRAM 0x244ec), as opposed to the header or the battle flag. */
   get partyReads(): number {
-    return this.reads.filter((r) => r.some((x) => x.domain === "ewram")).length;
+    return this.reads.filter((r) =>
+      r.some(
+        (x) =>
+          x.domain === "ewram" &&
+          x.offset <= PARTY_AT &&
+          x.offset + x.length > PARTY_AT,
+      ),
+    ).length;
   }
 }
+
+const PARTY_AT = 0x244ec;
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
@@ -97,7 +113,7 @@ function setup(pollHz = 20, bind?: (profile: unknown) => BoundGame) {
 }
 
 describe("read loop", () => {
-  test("identifies from the header and reads nothing else without demand", async () => {
+  test("identifies from the header and reads only the in-battle flag without demand", async () => {
     const { adapter, clock, loop } = setup();
     await flush();
     expect(loop.status().state).toBe("game");
@@ -106,7 +122,13 @@ describe("read loop", () => {
       await flush();
     }
     expect(adapter.partyReads).toBe(0);
-    expect(adapter.reads).toHaveLength(1);
+    const [header, ...ticks] = adapter.reads;
+    expect(header?.length).toBeGreaterThan(0);
+    expect(ticks.length).toBeGreaterThan(5);
+    for (const request of ticks) {
+      // The flag and the outcome byte, one byte each.
+      expect(request.map((x) => x.length)).toEqual([1, 1]);
+    }
   });
 
   test("a cold GET runs one extra read shared by concurrent callers", async () => {
@@ -219,6 +241,199 @@ describe("read loop", () => {
     expect(await loop.get("party")).toMatchObject({
       ok: false,
       code: "no_data",
+    });
+  });
+});
+
+const MON: BattleMonSpec = {
+  species: 277,
+  level: 5,
+  hp: 19,
+  maxHp: 20,
+  moves: [33],
+  pp: [35],
+  types: [12, 12],
+};
+const FOE: BattleMonSpec = { ...MON, species: 261, level: 3, types: [17, 17] };
+const FOE_MON = { ...TREECKO, species: 261, level: 3, nickname: "" };
+const TRAINER = 1 << 3;
+const DOUBLE = 1 << 0;
+
+const tick = async (clock: ManualClock, times = 2) => {
+  for (let i = 0; i < times; i++) {
+    clock.advance(50);
+    await flush();
+  }
+};
+
+const battle = async (loop: ReturnType<typeof setup>["loop"]) => {
+  const got = await loop.get("battle");
+  if (!got.ok) throw new Error(got.code);
+  return got.value;
+};
+
+describe("the battle resource in the loop", () => {
+  test("out of battle it is the inactive shape with no last battle", async () => {
+    const { loop } = setup();
+    await flush();
+    const value = await battle(loop);
+    expect(Battle.parse(value)).toEqual({ active: false, lastBattle: null });
+  });
+
+  test("a synthetic single wild battle is a valid active shape", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    writeBattle(adapter.memory, {
+      typeFlags: 0,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    });
+    await tick(clock);
+    const value = Battle.parse(await battle(loop));
+    if (!value.active) throw new Error("expected an active battle");
+    expect(value.kind).toBe("wild");
+    expect(value.format).toBe("single");
+    expect(value.battleId).toBe(1);
+    expect(value.player.active).toHaveLength(1);
+    expect(value.opponent.active[0]?.species.id).toBe(261);
+    expect(value.opponent.party).toHaveLength(1);
+  });
+
+  test("a synthetic double trainer battle is a valid active shape", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    writeBattle(adapter.memory, {
+      typeFlags: TRAINER | DOUBLE,
+      battlers: [MON, FOE, { ...MON, species: 280 }, { ...FOE, species: 263 }],
+      partyIndexes: [0, 0, 1, 1],
+      enemyParty: [FOE_MON, { ...FOE_MON, species: 263 }],
+    });
+    await tick(clock);
+    const value = Battle.parse(await battle(loop));
+    if (!value.active) throw new Error("expected an active battle");
+    expect(value.kind).toBe("trainer");
+    expect(value.format).toBe("double");
+    expect(value.player.active).toHaveLength(2);
+    expect(value.opponent.active).toHaveLength(2);
+    expect(value.opponent.party).toHaveLength(2);
+  });
+
+  test("a flag that reads set gets its frame in a second request within the tick", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    await tick(clock, 2);
+    writeBattle(adapter.memory, {
+      typeFlags: 0,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    });
+    const before = adapter.reads.length;
+    await tick(clock, 1);
+    const requests = adapter.reads.slice(before);
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.length).toBeGreaterThan(requests[0]?.length ?? 0);
+    expect((await battle(loop)).active).toBe(true);
+  });
+
+  test("the battle is read with no subscriber, so lastBattle is complete when first asked", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    writeBattle(adapter.memory, {
+      typeFlags: TRAINER,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    });
+    await tick(clock, 5);
+    endBattle(adapter.memory, 1);
+    await tick(clock, 2);
+
+    // Nothing has asked for the battle until now.
+    const value = Battle.parse(await battle(loop));
+    if (value.active) throw new Error("expected the battle to have ended");
+    expect(value.lastBattle).toMatchObject({
+      battleId: 1,
+      outcome: "won",
+      kind: "trainer",
+    });
+    expect(value.lastBattle?.opponentParty[0]?.species.id).toBe(261);
+  });
+
+  test("a second battle takes the next battleId and replaces lastBattle", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    const scene = {
+      typeFlags: 0,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    };
+    writeBattle(adapter.memory, scene);
+    await tick(clock);
+    endBattle(adapter.memory, 4);
+    await tick(clock);
+    writeBattle(adapter.memory, scene);
+    await tick(clock);
+    const value = await battle(loop);
+    expect(value).toMatchObject({ active: true, battleId: 2 });
+    endBattle(adapter.memory, 7);
+    await tick(clock);
+    expect(await battle(loop)).toMatchObject({
+      active: false,
+      lastBattle: { battleId: 2, outcome: "caught" },
+    });
+  });
+
+  test("a game change resets battleId and lastBattle", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    writeBattle(adapter.memory, {
+      typeFlags: 0,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    });
+    await tick(clock);
+    endBattle(adapter.memory, 1);
+    await tick(clock);
+    expect(await battle(loop)).toMatchObject({
+      lastBattle: { battleId: 1 },
+    });
+
+    adapter.memory = emeraldMemory([TREECKO]);
+    adapter.set({ ...CONNECTED, gameEpoch: 2 });
+    await flush();
+    expect(await battle(loop)).toEqual({ active: false, lastBattle: null });
+  });
+
+  test("GET /api/v2/battle serves the value from the loop", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    const app = createApp({ resources: loop });
+    const inactive = await app.request("/api/v2/battle");
+    expect(inactive.status).toBe(200);
+    expect(await inactive.json()).toEqual({ active: false, lastBattle: null });
+
+    writeBattle(adapter.memory, {
+      typeFlags: 0,
+      battlers: [MON, FOE],
+      partyIndexes: [0, 0],
+      enemyParty: [FOE_MON],
+    });
+    await tick(clock);
+    const active = await app.request("/api/v2/battle");
+    expect(Battle.parse(await active.json())).toMatchObject({ active: true });
+  });
+
+  test("a disconnected adapter refuses with disconnected", async () => {
+    const { adapter, loop } = setup();
+    await flush();
+    adapter.set({ ...CONNECTED, connection: "disconnected", game: null });
+    expect(await loop.get("battle")).toMatchObject({
+      ok: false,
+      code: "disconnected",
     });
   });
 });

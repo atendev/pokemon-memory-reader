@@ -52,3 +52,27 @@ test("without bridges the route answers 404", async () => {
     (await createApp({ resources: idle }).request("/bridges/mgba.lua")).status,
   ).toBe(404);
 });
+
+test("GET /api/v2/battle serves the resource, and a 503 carries the status", async () => {
+  const ok: Resources = {
+    status: () => status,
+    get: () =>
+      Promise.resolve({
+        ok: true,
+        value: { active: false, lastBattle: null },
+      } as never),
+  };
+  const served = await createApp({ resources: ok }).request("/api/v2/battle");
+  expect(served.status).toBe(200);
+  expect(await served.json()).toEqual({ active: false, lastBattle: null });
+
+  const refused: Resources = {
+    status: () => status,
+    get: () => Promise.resolve({ ok: false, code: "no_game", status }),
+  };
+  const response = await createApp({ resources: refused }).request(
+    "/api/v2/battle",
+  );
+  expect(response.status).toBe(503);
+  expect(ErrorBody.parse(await response.json()).error.code).toBe("no_game");
+});

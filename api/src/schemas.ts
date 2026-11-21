@@ -441,7 +441,7 @@ export const Battle = z.discriminatedUnion("active", [
 export type Battle = BattleType;
 
 /**
- * The resources the server serves so far, in the order of the topic record. `player`, `bag`, `battle`
+ * The resources the server serves so far, in the order of the topic record. `player`, `bag`
  * and `boxes` join the record and `resourceSchemas` as their decoders land, which is an additive
  * change inside `/api/v2`.
  */
@@ -451,6 +451,7 @@ export type Topic = TopicType;
 export const resourceSchemas = {
   status: StatusResource,
   party: Party,
+  battle: Battle,
 } satisfies Record<Topic, z.ZodType>;
 
 export type ResourceMap = ResourceMapType;

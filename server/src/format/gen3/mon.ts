@@ -56,15 +56,15 @@ const HIDDEN_POWER_TYPES: readonly Type[] = [
   "dark",
 ];
 
-const typeOf = (id: number): Type | null => TYPE_BY_ID[id] ?? null;
+export const typeOf = (id: number): Type | null => TYPE_BY_ID[id] ?? null;
 
 /** The species' types with a repeated type collapsed. null when a stored ID isn't in the type table. */
-function speciesTypes(ids: readonly number[]): Type[] | null {
+export function speciesTypes(ids: readonly number[]): Type[] | null {
   const types = [...new Set(ids)].map(typeOf);
   return types.every((type) => type !== null) ? types : null;
 }
 
-const ref = (id: number, name: string | null) => ({ id, name });
+export const ref = (id: number, name: string | null) => ({ id, name });
 
 /** Packs one bit of each IV, in Hidden Power's order: hp, atk, def, spe, spa, spd. */
 const ivBits = (ivs: Stats, bit: number): number =>
@@ -79,7 +79,7 @@ function hiddenPower(ivs: Stats): Pokemon["hiddenPower"] {
   return { type, power: Math.floor((ivBits(ivs, 1) * 40) / 63) + 30 };
 }
 
-function status(raw: number): Pokemon["status"] {
+export function status(raw: number): Pokemon["status"] {
   if (raw & 0x80) return "toxic";
   if (raw & 0x07) return "sleep";
   if (raw & 0x08) return "poison";

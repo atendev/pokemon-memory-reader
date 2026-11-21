@@ -217,7 +217,7 @@ describe("bridge caps", () => {
     expect(registry.get("emerald-us-1.0")).toBeUndefined();
     expect(problems).toHaveLength(1);
     expect(problems[0]?.source).toBe("builtin");
-    expect(problems[0]?.message).toContain("main batch needs 2 ranges");
+    expect(problems[0]?.message).toContain("main batch needs 12 ranges");
     expect(problems[0]?.message).toContain("largest region party.party");
     expect(problems[0]?.message).toContain("512 ranges and 100 bytes");
   });
@@ -229,7 +229,7 @@ describe("bridge caps", () => {
     expect(profile).toBeDefined();
     // Guards against a vacuous pass: the check really measured the party regions.
     const declared = declaredRegions(profile as Profile);
-    expect(declared.main.map((p) => p.part)).toEqual(["party"]);
+    expect(declared.main.map((p) => p.part)).toEqual(["party", "battle"]);
     expect(
       checkRequestCaps("main batch", declared.main, BRIDGE_CAPS),
     ).toBeNull();
