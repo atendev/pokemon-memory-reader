@@ -72,7 +72,7 @@ const STAGE = {
 } as const;
 const NEUTRAL_STAGE = 6;
 
-/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, INGAME_PARTNER 22). Double is bit 0 alone: the game sets DOUBLE beside TWO_OPPONENTS. */
+/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, INGAME_PARTNER 22). Double is bit 0 alone: `battle_setup.c` sets DOUBLE | TWO_OPPONENTS | TRAINER together for a two-opponent battle. */
 const TYPE = {
   double: 1 << 0,
   trainer: 1 << 3,

@@ -325,6 +325,12 @@ describe("a double trainer battle", () => {
     }
   });
 
+  test("the real two-opponent flags (DOUBLE | TWO_OPPONENTS | TRAINER) read as a double", () => {
+    expect(build({ typeFlags: DOUBLE | (1 << 15) | TRAINER }).format).toBe(
+      "double",
+    );
+  });
+
   test("a trainer flag without bit 0 is a single", () => {
     expect(build({ typeFlags: TRAINER }).format).toBe("single");
   });
