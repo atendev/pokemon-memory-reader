@@ -1,0 +1,187 @@
+{
+  "resources": {
+    "party": {
+      "pokemon": [
+        {
+          "species": {
+            "id": 277,
+            "dex": 252,
+            "name": "TREECKO"
+          },
+          "nickname": "LEAFY",
+          "ot": {
+            "name": "BRENDAN",
+            "id": 12345,
+            "secretId": 6789,
+            "gender": "male"
+          },
+          "isEgg": false,
+          "eggCycles": null,
+          "level": 5,
+          "experience": 135,
+          "friendship": 70,
+          "types": ["grass"],
+          "hp": 19,
+          "maxHp": 20,
+          "stats": {
+            "hp": 20,
+            "atk": 11,
+            "def": 12,
+            "spa": 14,
+            "spd": 15,
+            "spe": 13
+          },
+          "ivs": {
+            "hp": 31,
+            "atk": 30,
+            "def": 29,
+            "spe": 28,
+            "spa": 27,
+            "spd": 26
+          },
+          "evs": {
+            "hp": 0,
+            "atk": 0,
+            "def": 0,
+            "spa": 0,
+            "spd": 0,
+            "spe": 0
+          },
+          "status": "none",
+          "ability": {
+            "id": 65,
+            "name": "OVERGROW"
+          },
+          "heldItem": null,
+          "nature": "naive",
+          "ball": {
+            "id": 4,
+            "name": "POKé BALL"
+          },
+          "pokerus": "none",
+          "moves": [
+            {
+              "id": 33,
+              "name": "TACKLE",
+              "type": "normal",
+              "pp": 35,
+              "maxPp": 35,
+              "ppUps": 0
+            },
+            {
+              "id": 52,
+              "name": "EMBER",
+              "type": "fire",
+              "pp": 25,
+              "maxPp": 25,
+              "ppUps": 0
+            }
+          ],
+          "met": {
+            "location": {
+              "id": 9,
+              "name": "MAUVILLE CITY"
+            },
+            "level": 5,
+            "game": "emerald",
+            "timeOfDay": null
+          },
+          "personality": 264,
+          "language": 2,
+          "shiny": false,
+          "gender": "female",
+          "hiddenPower": {
+            "type": "bug",
+            "power": 62
+          }
+        },
+        {
+          "species": {
+            "id": 280,
+            "dex": 255,
+            "name": "TORCHIC"
+          },
+          "nickname": "SPARK",
+          "ot": {
+            "name": "MAY",
+            "id": 777,
+            "secretId": 888,
+            "gender": "male"
+          },
+          "isEgg": false,
+          "eggCycles": null,
+          "level": 12,
+          "experience": 1000,
+          "friendship": 70,
+          "types": ["fire"],
+          "hp": 30,
+          "maxHp": 34,
+          "stats": {
+            "hp": 34,
+            "atk": 11,
+            "def": 12,
+            "spa": 14,
+            "spd": 15,
+            "spe": 13
+          },
+          "ivs": {
+            "hp": 31,
+            "atk": 30,
+            "def": 29,
+            "spe": 28,
+            "spa": 27,
+            "spd": 26
+          },
+          "evs": {
+            "hp": 0,
+            "atk": 0,
+            "def": 0,
+            "spa": 0,
+            "spd": 0,
+            "spe": 0
+          },
+          "status": "none",
+          "ability": {
+            "id": 66,
+            "name": "BLAZE"
+          },
+          "heldItem": null,
+          "nature": "mild",
+          "ball": {
+            "id": 4,
+            "name": "POKé BALL"
+          },
+          "pokerus": "none",
+          "moves": [
+            {
+              "id": 33,
+              "name": "TACKLE",
+              "type": "normal",
+              "pp": 35,
+              "maxPp": 35,
+              "ppUps": 0
+            }
+          ],
+          "met": {
+            "location": {
+              "id": 9,
+              "name": "MAUVILLE CITY"
+            },
+            "level": 5,
+            "game": "emerald",
+            "timeOfDay": null
+          },
+          "personality": 305441741,
+          "language": 2,
+          "shiny": false,
+          "gender": "male",
+          "hiddenPower": {
+            "type": "bug",
+            "power": 62
+          }
+        }
+      ]
+    }
+  },
+  "verified": []
+}
