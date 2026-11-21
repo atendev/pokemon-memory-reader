@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { FakeBridge } from "../bridge/fake-bridge";
+import { FakeBridge, GBA_GAME } from "../bridge/fake-bridge";
 import { type BattleMonSpec, writeBattle } from "../gen3/battle-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
@@ -15,6 +15,8 @@ import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 const executable = process.env.PMR_EXECUTABLE;
 const suite = executable ? describe : describe.skip;
 
+/** Emerald US 1.0's real CRC32, so the game identifies as vanilla rather than modified. */
+const EMERALD_CRC32 = "1f1c08fb";
 const POOCHYENA = 261;
 const wildMon: BattleMonSpec = {
   species: POOCHYENA,
@@ -64,6 +66,7 @@ suite("the compiled executable on the fake bridge", () => {
       partyIndexes: [0, 0],
       enemyParty: [{ ...TREECKO, species: POOCHYENA, level: 3, nickname: "" }],
     });
+    bridge.game = { ...GBA_GAME, crc32: EMERALD_CRC32 };
     bridge.onRead = (read, socket) =>
       bridge.reply(socket, read.id, serve(memory, read.ranges));
     bridge.start();
