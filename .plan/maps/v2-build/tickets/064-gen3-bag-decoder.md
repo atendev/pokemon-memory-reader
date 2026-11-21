@@ -19,3 +19,11 @@ Emerald XORs item quantities with the low half of the save encryption key, so co
 - A test covers an empty pocket, a full pocket and an unknown item id.
 - The Emerald profile gains its `bag` block from the generator with a stable second run.
 - Type, schema and sync tests are in place. No ROM bytes are committed.
+
+## Answer
+
+Built the Gen 3 `bag` resource for Emerald. `gen3Bag` reads the five pockets (items, keyItems, balls, tmhm, berries) from save block 1 through pointer regions, so a moved `gSaveBlock1Ptr` is followed and a null pointer gives a 503 `no_data`. Each slot is a u16 item ID and a u16 quantity, and quantities are XORed with the low 16 bits of the key at save block 2 + 0xAC, which pokeemerald's `GetBagItemQuantity` confirms. Item ID 0 is skipped, quantity 0 and above 99 are kept, and an unknown ID keeps its number with a null name. The profile `bag` block holds two arrays, `pocketOffsets` and `pocketCapacities`, written by `generate:profiles` with a stable second run. The bag reuses `player.encryptionKeyOffset` for the key. `GET /api/v2/bag` and the `bag` topic join the app with the `PocketId`, `BagEntry`, `Pocket` and `Bag` types, schemas, sync pairs and `PAIRED` entries.
+
+Report: [decision report](../assets/064-gen3-bag-decoder-report.md). The Claude seat approved in round 1 (8). The Gemini and GPT seats were skipped (out of quota).
+
+Timing: wall 5m, active 5m, user 0s, wait 0s, blocked 0s | implement 3m, audit 59s (1 round), gate 40s | tools 46 (4 subagent) | limits 0, compactions 0, handoffs 0 | ctx peak 132k | cost $1.60 sonnet-5-5 + $0.01 haiku-5-5

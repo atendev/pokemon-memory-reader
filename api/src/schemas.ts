@@ -6,6 +6,8 @@ import type {
   AdapterInfo as AdapterInfoType,
   AdapterProblem,
   Badge as BadgeType,
+  BagEntry as BagEntryType,
+  Bag as BagType,
   BattleMode,
   BattleMove as BattleMoveType,
   Battler as BattlerType,
@@ -26,6 +28,8 @@ import type {
   Party as PartyType,
   Player as PlayerType,
   PlayTime as PlayTimeType,
+  PocketId as PocketIdType,
+  Pocket as PocketType,
   Pokemon as PokemonType,
   Ref as RefType,
   ResourceMap as ResourceMapType,
@@ -292,6 +296,51 @@ export const Player = z.looseObject({
 });
 export type Player = PlayerType;
 
+export const POCKET_IDS = [
+  "items",
+  "keyItems",
+  "balls",
+  "tmhm",
+  "berries",
+] as const satisfies readonly PocketIdType[];
+
+/** The bag pockets, a closed enum (amendment 017 §5). */
+export const PocketId = z.enum(POCKET_IDS);
+export type PocketId = PocketIdType;
+
+/** One item stack (amendment 017 §5). */
+export const BagEntry = z.looseObject({
+  item: Ref,
+  quantity: z
+    .int()
+    .describe(
+      "As stored, decrypted where the game encrypts it. Not capped in the schema, and 0 is kept in a slot pocket.",
+    ),
+});
+export type BagEntry = BagEntryType;
+
+/** One bag pocket (amendment 017 §5). */
+export const Pocket = z.looseObject({
+  id: PocketId,
+  capacity: z.int().describe("The most distinct entries the pocket can hold."),
+  items: z
+    .array(BagEntry)
+    .describe(
+      "In slot order, with empty slots skipped. [] for an empty pocket.",
+    ),
+});
+export type Pocket = PocketType;
+
+/** The `bag` resource (amendment 017 §5). */
+export const Bag = z.looseObject({
+  pockets: z
+    .array(Pocket)
+    .describe(
+      "Only the pockets the game has, in game order: Gen 3 has five, items, keyItems, balls, tmhm and berries.",
+    ),
+});
+export type Bag = BagType;
+
 const Hash = z.string().nullable();
 
 /** What the adapter reports about the loaded ROM. null when the adapter reports no ROM (amendment 020 §5). */
@@ -523,6 +572,7 @@ export const resourceSchemas = {
   status: StatusResource,
   party: Party,
   player: Player,
+  bag: Bag,
   battle: Battle,
   boxes: Boxes,
 } satisfies Record<Topic, z.ZodType>;

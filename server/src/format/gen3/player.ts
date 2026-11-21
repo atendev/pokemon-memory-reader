@@ -3,6 +3,7 @@ import type { Profile } from "../../profile/schema";
 import { BADGE_NAMES } from "../../reference/badges";
 import { type Region, region } from "../regions";
 import { fail, ok, type ResourceDecoder } from "../types";
+import { at } from "./save";
 import { PLAYER } from "./structs";
 
 interface PlayerRegions {
@@ -16,12 +17,6 @@ interface PlayerRegions {
 }
 
 const signed16 = (value: number) => (value >= 0x8000 ? value - 0x10000 : value);
-
-/** The profile's address moved by `add` bytes. A pointer entry adds to its target offset. */
-const at = (
-  address: Profile<"gen3">["addresses"]["gSaveBlock1"],
-  add: number,
-) => ({ ...address, offset: address.offset + add }) as typeof address;
 
 const badgeBytes = (flags: readonly number[]) => {
   const first = Math.min(...flags) >> 3;

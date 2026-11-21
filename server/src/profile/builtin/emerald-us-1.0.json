@@ -55,6 +55,22 @@
     "flagsOffset": 4720,
     "encryptionKeyOffset": 172
   },
+  "bag": {
+    "pocketOffsets": [
+      1376,
+      1496,
+      1616,
+      1680,
+      1936
+    ],
+    "pocketCapacities": [
+      30,
+      30,
+      16,
+      64,
+      46
+    ]
+  },
   "constants": {},
   "identify": {
     "sha1": [

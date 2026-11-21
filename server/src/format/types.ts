@@ -1,4 +1,9 @@
-import type { Boxes, Party, Player } from "@pokemon-memory-reader/api/schemas";
+import type {
+  Bag,
+  Boxes,
+  Party,
+  Player,
+} from "@pokemon-memory-reader/api/schemas";
 import type { DataFormatId, Profile } from "../profile/schema";
 import type { BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
@@ -47,6 +52,7 @@ export interface Decoder<F extends DataFormatId> {
   readonly party?: ResourceDecoder<Profile<F>, Regions, Party>;
   readonly boxes?: ResourceDecoder<Profile<F>, Regions, Boxes>;
   readonly player?: ResourceDecoder<Profile<F>, Regions, Player>;
+  readonly bag?: ResourceDecoder<Profile<F>, Regions, Bag>;
   readonly battle?: BattleDecoder<Profile<F>>;
 }
 

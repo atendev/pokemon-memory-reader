@@ -1,4 +1,5 @@
 import type { Decoder } from "../types";
+import { gen3Bag } from "./bag";
 import { gen3Battle } from "./battle";
 import { gen3Boxes } from "./box";
 import { gen3Party } from "./party";
@@ -9,4 +10,5 @@ export const gen3Decoder: Decoder<"gen3"> = {
   boxes: gen3Boxes,
   battle: gen3Battle,
   player: gen3Player,
+  bag: gen3Bag,
 };

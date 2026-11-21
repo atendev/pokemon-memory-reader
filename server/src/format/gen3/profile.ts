@@ -46,3 +46,18 @@ export const gen3Player = z
     encryptionKeyOffset: z.int().min(0).optional(),
   })
   .strict();
+
+/**
+ * The per-game values the `bag` decoder reads (amendment 017 §6). Both arrays hold the five pockets
+ * in game order: items, keyItems, balls, tmhm, berries. A hack that changes one pocket restates its
+ * whole array, since profile blocks merge one level deep (amendment 018). Quantities are XORed
+ * with the low 16 bits of the key at `player.encryptionKeyOffset` where the game has one.
+ */
+export const gen3Bag = z
+  .object({
+    /** Offset of each pocket's first slot in save block 1. A slot is a u16 item ID then a u16 quantity. */
+    pocketOffsets: z.array(z.int().min(0)).length(5),
+    /** The slot count of each pocket. */
+    pocketCapacities: z.array(z.int().min(1)).length(5),
+  })
+  .strict();

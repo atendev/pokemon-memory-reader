@@ -88,6 +88,9 @@ export const TOPIC_NAMES = {
     meaning:
       "The player's name, IDs, money, badges, map location and play time.",
   },
+  bag: {
+    meaning: "The player's bag pockets and the items in each, in game order.",
+  },
   battle: {
     meaning:
       "The current battle, or whether none is active and the last one that ended.",
