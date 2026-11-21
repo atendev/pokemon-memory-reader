@@ -1,14 +1,13 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
 import { parseArgs } from "../../src/cli";
 
-test("no flags run with the defaults", () => {
+test("no flags leave every override empty for the config file to fill", () => {
   expect(parseArgs([])).toEqual({
     kind: "run",
     options: {
-      port: DEFAULT_PORT,
-      host: DEFAULT_HOST,
-      openBrowser: true,
+      port: null,
+      host: null,
+      openBrowser: null,
       dataDir: null,
       debug: false,
     },

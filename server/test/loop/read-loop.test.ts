@@ -335,6 +335,75 @@ describe("pointer-derived regions in the loop", () => {
   });
 });
 
+describe("pollHz", () => {
+  /** Party reads over `ms` of clock time, advanced in 10 ms steps, after one cold read. */
+  async function readsOver(
+    loop: ReturnType<typeof setup>["loop"],
+    adapter: MemoryAdapter,
+    clock: ManualClock,
+    ms: number,
+  ) {
+    await loop.get("party");
+    const before = adapter.partyReads;
+    for (let i = 0; i < ms / 10; i++) {
+      clock.advance(10);
+      await flush();
+    }
+    return adapter.partyReads - before;
+  }
+
+  test("the configured rate sets the tick interval", async () => {
+    const slow = setup(5);
+    await flush();
+    const fast = setup(60);
+    await flush();
+    const slowReads = await readsOver(
+      slow.loop,
+      slow.adapter,
+      slow.clock,
+      1000,
+    );
+    const fastReads = await readsOver(
+      fast.loop,
+      fast.adapter,
+      fast.clock,
+      1000,
+    );
+    expect(slowReads).toBeLessThanOrEqual(6);
+    expect(fastReads).toBeGreaterThanOrEqual(40);
+  });
+
+  test("an out-of-range rate clamps to the nearest bound and warns", async () => {
+    const warnings: string[] = [];
+    const adapter = new MemoryAdapter();
+    const loop = createReadLoop({
+      adapter,
+      registry,
+      pollHz: 500,
+      clock: new ManualClock(),
+      log: { ...silentLog, warn: (m: string) => warnings.push(m) },
+    });
+    open.push(loop);
+    expect(warnings).toEqual(["pollHz 500 is out of range, using 60"]);
+  });
+
+  test("setPollHz changes the interval from the next tick", async () => {
+    const { adapter, clock, loop } = setup(5);
+    await flush();
+    await loop.get("party");
+    loop.setPollHz(60);
+    // The tick already waiting runs on the old 200 ms wait, then the new 16.7 ms interval holds.
+    clock.advance(200);
+    await flush();
+    const before = adapter.partyReads;
+    for (let i = 0; i < 100; i++) {
+      clock.advance(10);
+      await flush();
+    }
+    expect(adapter.partyReads - before).toBeGreaterThanOrEqual(40);
+  });
+});
+
 describe("normalizePollHz", () => {
   const warnings: string[] = [];
   const log = { ...silentLog, warn: (m: string) => warnings.push(m) };

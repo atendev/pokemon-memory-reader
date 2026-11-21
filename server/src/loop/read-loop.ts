@@ -3,6 +3,11 @@ import type {
   StatusResource,
   Topic,
 } from "@pokemon-memory-reader/api/schemas";
+import {
+  DEFAULT_POLL_HZ,
+  MAX_POLL_HZ,
+  MIN_POLL_HZ,
+} from "@pokemon-memory-reader/internal/config";
 import type { Adapter, ReadOutcome } from "../adapter/types";
 import type { Clock } from "../clock";
 import { type BoundGame, bindGame } from "../format/registry";
@@ -54,9 +59,6 @@ export interface ReadLoopDeps {
 type Decoded = Exclude<Topic, "status">;
 const DECODED: readonly Decoded[] = ["party"];
 
-const DEFAULT_POLL_HZ = 20;
-const MIN_POLL_HZ = 5;
-const MAX_POLL_HZ = 60;
 /** A resource is read while it had a GET in the last 5 s (spec §8.2). */
 const DEMAND_MS = 5000;
 const READ_TIMEOUT_MS = 250;
@@ -74,6 +76,12 @@ export function normalizePollHz(value: unknown, log: Log): number {
     log.warn(`pollHz ${value} is out of range, using ${clamped}`);
   return clamped;
 }
+
+export type ReadLoop = Resources & {
+  /** A live `pollHz` change, clamped like the one at startup. */
+  setPollHz(hz: number): void;
+  close(): Promise<void>;
+};
 
 /** Everything that belongs to one game on one connection. Any game change replaces it whole (spec §7.4). */
 interface Session {
@@ -106,13 +114,12 @@ const sessionFor = (adapter: Adapter): Session => ({
  * reads through it. Change detection and `stalled` (spec §8.6), SSE demand (spec §8.2) and box
  * requests (spec §8.3) slot in here.
  */
-export function createReadLoop(
-  deps: ReadLoopDeps,
-): Resources & { close(): Promise<void> } {
+export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   const { adapter, registry, clock, log } = deps;
   const bind = deps.bind ?? bindGame;
-  const pollHz = normalizePollHz(deps.pollHz, log);
-  const intervalMs = Math.max(1000 / pollHz, adapter.limits.minIntervalMs);
+  const intervalFor = (hz: number) =>
+    Math.max(1000 / normalizePollHz(hz, log), adapter.limits.minIntervalMs);
+  let intervalMs = intervalFor(deps.pollHz);
 
   let session = sessionFor(adapter);
   let slot: Promise<unknown> = Promise.resolve();
@@ -284,6 +291,10 @@ export function createReadLoop(
   return {
     status,
     get,
+    /** Takes effect from the next tick (spec §9.4). */
+    setPollHz(hz) {
+      intervalMs = intervalFor(hz);
+    },
     async close() {
       closed = true;
       cancelTick?.();

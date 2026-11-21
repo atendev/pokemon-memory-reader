@@ -1,4 +1,5 @@
 import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
+import { DEFAULT_POLL_HZ } from "@pokemon-memory-reader/internal/config";
 import type { HTMLBundle } from "bun";
 import type { Adapter } from "./adapter/types";
 import { createApp } from "./app/app";
@@ -14,7 +15,7 @@ export interface ServerOptions {
   readonly host?: string;
   /** Default 7425. 0 picks a free port. */
   readonly port?: number;
-  /** Default 20. */
+  /** Default 20, from the config's `pollHz`. */
   readonly pollHz?: number;
   /** Bridge source by name, served at `/bridges/<name>.lua`. */
   readonly bridges?: Readonly<Record<string, string>>;
@@ -27,16 +28,18 @@ export interface ServerOptions {
 export interface RunningServer {
   readonly host: string;
   readonly port: number;
+  /** Applies a live `pollHz` change from the next tick. */
+  setPollHz(hz: number): void;
   stop(): Promise<void>;
 }
 
-/** Wires the read loop to the HTTP app and starts listening. Config, flags and the data folder arrive with the config ticket. */
+/** Wires the read loop to the HTTP app and starts listening. */
 export function startServer(options: ServerOptions): RunningServer {
   const log = options.log ?? silentLog;
   const loop = createReadLoop({
     adapter: options.adapter,
     registry: options.registry,
-    pollHz: options.pollHz ?? 20,
+    pollHz: options.pollHz ?? DEFAULT_POLL_HZ,
     clock: options.clock ?? systemClock,
     log,
   });
@@ -50,6 +53,7 @@ export function startServer(options: ServerOptions): RunningServer {
   return {
     host: server.hostname ?? DEFAULT_HOST,
     port: server.port ?? DEFAULT_PORT,
+    setPollHz: loop.setPollHz,
     async stop() {
       await server.stop(true);
       await loop.close();

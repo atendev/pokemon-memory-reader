@@ -39,6 +39,45 @@ export function defaultDataFolder({
   }
 }
 
+export interface PathsInput extends DataFolderInput {
+  /** The `--data-dir` value, when given. */
+  readonly dataDirFlag?: string | null;
+}
+
+/** Where the program reads and writes (spec §9.1). Passed to `/settings` so the viewer can show them. */
+export interface DataPaths {
+  readonly dataFolder: string;
+  readonly configFile: string;
+  readonly profilesFolder: string;
+  readonly iconsFolder: string;
+  readonly iconCacheFolder: string;
+}
+
+/**
+ * Resolves every path. The data folder is `--data-dir`, then `PMR_DATA_DIR`, then the OS default.
+ * `config.json` lives in the data folder, except on Linux without an override, where it follows
+ * `XDG_CONFIG_HOME` (spec §9.1, §9.3).
+ */
+export function resolvePaths(input: PathsInput): DataPaths {
+  const { platform, env, home = homedir() } = input;
+  const override = input.dataDirFlag || env.PMR_DATA_DIR || null;
+  const dataFolder = override ?? defaultDataFolder({ platform, env, home });
+  const configFolder =
+    override === null && platform !== "win32" && platform !== "darwin"
+      ? join(
+          env.XDG_CONFIG_HOME || join(home, ".config"),
+          "pokemon-memory-reader",
+        )
+      : dataFolder;
+  return {
+    dataFolder,
+    configFile: join(configFolder, "config.json"),
+    profilesFolder: join(dataFolder, "profiles"),
+    iconsFolder: join(dataFolder, "icons"),
+    iconCacheFolder: join(dataFolder, "icon-cache"),
+  };
+}
+
 /** Creates the data folder and its subfolders. Throws when the folder can't be written. */
 export async function ensureDataFolder(root: string): Promise<void> {
   await mkdir(root, { recursive: true });
