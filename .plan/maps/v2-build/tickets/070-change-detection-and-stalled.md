@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wfm-v2-build-master-1795260524
+claimed_at: 2026-11-21T11:40:00Z
 ---
 
 # Change detection and the `stalled` flag
