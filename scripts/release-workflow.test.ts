@@ -9,6 +9,12 @@ const text = readFileSync(
   "utf8",
 );
 
+interface Row {
+  target?: string;
+  runner?: string;
+  ext?: string;
+}
+
 describe("release.yml", () => {
   test("every third-party action is pinned to a full commit SHA", () => {
     const uses = [...text.matchAll(/^\s*-?\s*uses:\s*(\S+)/gm)].map(
@@ -21,11 +27,15 @@ describe("release.yml", () => {
     expect(text).toContain('tags: ["v[0-9]+.[0-9]+.[0-9]+*"]');
   });
   test("the matrices match the target table", () => {
-    for (const t of TARGETS) {
-      expect(text).toContain(`target: ${t.bun},`);
-      expect(text).toContain(`runner: ${t.smokeRunner}, ext: ${t.ext}`);
-    }
-    expect(text.match(/target: bun-/g)).toHaveLength(TARGETS.length);
+    const workflow = Bun.YAML.parse(text) as {
+      jobs: Record<string, { strategy: { matrix: { include: Row[] } } }>;
+    };
+    const build = workflow.jobs.build?.strategy.matrix.include ?? [];
+    const smoke = workflow.jobs.smoke?.strategy.matrix.include ?? [];
+    expect(build.map((r) => r.target)).toEqual(TARGETS.map((t) => t.bun));
+    expect(smoke.map((r) => [r.runner, r.ext])).toEqual(
+      TARGETS.map((t) => [t.smokeRunner, t.ext]),
+    );
   });
   test("only a tag push creates a release, and a dry run uploads artifacts", () => {
     const create = text.indexOf("Create draft release");
