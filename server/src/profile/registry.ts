@@ -62,6 +62,7 @@ const OWN_FIELDS = [
 const MERGED_BLOCKS = [
   "addresses",
   "constants",
+  "player",
   "nameTables",
   "speciesData",
   "trainerTables",
