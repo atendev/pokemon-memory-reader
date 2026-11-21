@@ -115,8 +115,8 @@ describe("tiers", () => {
     }
   });
 
-  test("no dev dependency is embedded yet", () => {
-    expect([...EMBEDDED_DEV_PACKAGES]).toEqual([]);
+  test("tailwindcss is the one embedded dev dependency", () => {
+    expect([...EMBEDDED_DEV_PACKAGES]).toEqual(["tailwindcss"]);
   });
 });
 
@@ -558,12 +558,12 @@ describe("the walk", () => {
       const missing = collectNotices(
         options(dir, {
           roots: [],
-          embeddedDevPackages: ["tailwindcss"],
+          embeddedDevPackages: ["missing-pkg"],
           lockfilePath,
         }),
       );
       expect(missing.problems).toContain(
-        "EMBEDDED_DEV_PACKAGES names tailwindcss, which is not in the lockfile.",
+        "EMBEDDED_DEV_PACKAGES names missing-pkg, which is not in the lockfile.",
       );
     } finally {
       rmSync(dir, { recursive: true, force: true });

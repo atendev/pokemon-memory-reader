@@ -1,6 +1,6 @@
 import { APP_VERSION } from "./version";
 
-// CI injects these with `bun build --define`. A local build leaves them out.
+// CI injects these with `scripts/build-exe.ts`. A local build leaves them out.
 declare const PMR_TARGET: string | undefined;
 declare const PMR_COMMIT: string | undefined;
 

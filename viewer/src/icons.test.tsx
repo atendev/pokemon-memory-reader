@@ -296,11 +296,11 @@ describe("the other screens", () => {
 describe("the fallback tile's tint", () => {
   test("the grey base rule comes before the type colours, so a typed tile keeps its tint", async () => {
     const css = await Bun.file(new URL("./styles.css", import.meta.url)).text();
-    const base = css.indexOf(".art-tile {\n  background: var(--gray);");
+    const base = css.indexOf(".art-tile {\n    background: var(--color-gray);");
     expect(base).toBeGreaterThan(-1);
     expect(base).toBeLessThan(css.indexOf(".type-fire {"));
     expect(css).not.toMatch(
-      /\.art-tile \{[^}]*border-radius: 12px;\n {2}background/,
+      /\.art-tile \{[^}]*border-radius: 12px;\n {4}background/,
     );
   });
 });

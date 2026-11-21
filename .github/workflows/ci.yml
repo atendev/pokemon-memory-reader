@@ -89,10 +89,9 @@ jobs:
       # The release build embeds the generated notices file, so the executable can serve it at /about.
       - run: bun run notices
       - run: >-
-          bun build --compile --target=bun-linux-x64-baseline
-          --define 'PMR_TARGET="linux-x64-baseline"'
-          --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
-          --outfile out/pokemon-memory-reader server/src/main.ts
+          bun scripts/build-exe.ts --target=bun-linux-x64-baseline
+          --label linux-x64-baseline --commit "${GITHUB_SHA::7}"
+          --outfile out/pokemon-memory-reader
       - run: bun scripts/smoke.ts out/pokemon-memory-reader "$(jq -r .version server/package.json)"
       - run: bun test server/test/e2e
         env:
@@ -115,8 +114,7 @@ jobs:
       - run: |
           mkdir -p "$RUNNER_TEMP/rehost"
           cp "$(command -v bun)" "$RUNNER_TEMP/rehost/bun"
-          bun build --compile --compile-executable-path "$RUNNER_TEMP/rehost/bun" \
-            --define 'PMR_TARGET="linux-x64"' \
-            --define "PMR_COMMIT=\"${GITHUB_SHA::7}\"" \
-            --outfile out/pokemon-memory-reader-rehost server/src/main.ts
+          bun scripts/build-exe.ts --compile-executable-path "$RUNNER_TEMP/rehost/bun" \
+            --label linux-x64 --commit "${GITHUB_SHA::7}" \
+            --outfile out/pokemon-memory-reader-rehost
       - run: bun scripts/smoke.ts out/pokemon-memory-reader-rehost "$(jq -r .version server/package.json)"

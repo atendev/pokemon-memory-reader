@@ -21,7 +21,7 @@ import { appendSums, parseSums, sha256File } from "./lgpl-sources";
 export const PROGRAM = "pokemon-memory-reader";
 
 export interface Target {
-  /** The `--target` value for `bun build --compile` (spec §13.1). */
+  /** The `--target` value for `scripts/build-exe.ts` (spec §13.1). */
   bun: string;
   os: "windows" | "linux" | "macos";
   arch: "x64" | "arm64";

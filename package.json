@@ -15,7 +15,7 @@
     "lint": "biome ci .",
     "format": "biome check --write .",
     "typecheck": "bun run --workspaces typecheck && tsc --noEmit -p scripts",
-    "build:exe": "bun build --compile --outfile out/pokemon-memory-reader server/src/main.ts",
+    "build:exe": "bun scripts/build-exe.ts --outfile out/pokemon-memory-reader",
     "generate:profiles": "bun scripts/generate-profiles/main.ts",
     "generate:reference": "bun scripts/generate-reference/main.ts",
     "generate:icon-maps": "bun scripts/generate-icon-maps/main.ts",
@@ -30,10 +30,12 @@
     "@biomejs/biome": "2.6.7",
     "@types/bun": "1.4.2",
     "@types/spdx-expression-parse": "4.0.0",
+    "bun-plugin-tailwind": "0.1.2",
     "publint": "0.3.25",
     "spdx-exceptions": "2.5.0",
     "spdx-expression-parse": "4.0.0",
     "spdx-license-ids": "3.0.24",
+    "tailwindcss": "4.1.14",
     "typescript": "7.0.2"
   }
 }

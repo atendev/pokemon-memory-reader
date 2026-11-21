@@ -17,3 +17,9 @@ Surfaced by [Does `bun-plugin-tailwind` work under `--compile`?](./088-tailwind-
 - `build:exe`, both CI smoke jobs, `release.yml` and `docs/lgpl-relinking.md` use the one build script.
 - The third-party notices cover Tailwind if its license needs a banner, and the decision is in the report.
 - The viewer looks the same as before, and its component tests pass.
+
+## Answer
+
+`scripts/build-exe.ts` calls `Bun.build` with `bun-plugin-tailwind` and takes `--outfile`, `--target`, `--compile-executable-path`, `--label` and `--commit`. `build:exe`, both CI smoke jobs, `release.yml` and `docs/lgpl-relinking.md` use it. `styles.css` keeps its component rules in `@layer components`, with the tokens in `@theme` and only Tailwind's theme and utilities layers imported, so the look is unchanged. `tailwindcss` is pinned to 4.1.14 beside the plugin, and `bunfig.toml` loads the plugin for dev serving. Its MIT license needs more than the output banner, so `EMBEDDED_DEV_PACKAGES` lists `tailwindcss` and the notices file carries the text. `scripts/smoke.ts` fails on a stylesheet with raw Tailwind directives. Audit: Claude seat APPROVE at round 2 (8), Gemini and GPT not run. Report: [121 report](../assets/121-convert-viewer-to-tailwind-report.md).
+
+Timing: wall 6m, active 6m, user 0s, wait 0s, blocked 0s | implement 3m, audit 2m (2 rounds) | tools 51 (8 subagent) | limits 0, compactions 0, handoffs 0 | ctx peak 108k | cost $1.37 sonnet-5-5 + $0.02 haiku-5-5

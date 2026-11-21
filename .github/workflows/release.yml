@@ -138,10 +138,9 @@ jobs:
           LABEL: ${{ matrix.label }}
           EXE: ${{ matrix.exe }}
         run: >-
-          bun build --compile --target="$TARGET"
-          --define "PMR_TARGET=\"$LABEL\""
-          --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
-          --outfile "out/$EXE" server/src/main.ts
+          bun scripts/build-exe.ts --target="$TARGET"
+          --label "$LABEL" --commit "${GITHUB_SHA::7}"
+          --outfile "out/$EXE"
       # Ad-hoc signed, not notarized, no hardened runtime and no JIT entitlements (spec §13.1).
       - name: Sign (macOS)
         if: runner.os == 'macOS'
