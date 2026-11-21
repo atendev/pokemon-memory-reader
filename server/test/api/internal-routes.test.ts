@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { aboutBody } from "@pokemon-memory-reader/internal/about";
+import { adaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
 import { DEFAULT_SETTINGS } from "@pokemon-memory-reader/internal/config";
 import {
   INTERNAL_ERROR_CODES,
@@ -10,11 +11,14 @@ import {
   internalErrorBody,
 } from "@pokemon-memory-reader/internal/errors";
 import { settingsBody } from "@pokemon-memory-reader/internal/settings-route";
+import { createSelector } from "../../src/adapter/selector";
 import { type AboutInfo, createApp } from "../../src/app/app";
 import { ROUTES } from "../../src/app/route-table";
 import { readConfigFile, resolveConfig } from "../../src/config";
 import { resolvePaths } from "../../src/data-folder";
+import { silentLog } from "../../src/log";
 import type { RawReadResult, Resources } from "../../src/loop/read-loop";
+import { ManualClock } from "../bridge/manual-clock";
 
 const status = {
   state: "disconnected",
@@ -79,6 +83,13 @@ async function everything(
     resources: idle,
     bridges: { mgba: "-- mgba" },
     config: await loadConfig(),
+    selector: createSelector({
+      create: () => null,
+      endpoint: () => ({ host: "127.0.0.1", port: 1 }),
+      pin: "auto",
+      clock: new ManualClock(),
+      log: silentLog,
+    }),
     about: ABOUT,
     rawRead: read ?? (() => Promise.resolve(okRead)),
     listening: () => ({ host: "127.0.0.1", port: PORT }),
@@ -747,4 +758,22 @@ test("an internal error body carries no public status and rejects an unknown cod
   expect(
     internalErrorBody.parse({ error: { code: "no_rom", message: "x" } }),
   ).toEqual({ error: { code: "no_rom", message: "x" } });
+});
+
+test("GET /adapters answers the last known list, and a bad switch body is invalid_request", async () => {
+  const app = await everything();
+  const list = await app.request("/adapters", { headers: { Host: HOST } }, lan);
+  expect(list.status).toBe(200);
+  expect(adaptersBody.parse(await list.json()).mode).toBe("auto");
+  const bad = await app.request(
+    "/adapters/switch",
+    { ...put({ id: "nope" }), method: "POST" },
+    loopback,
+  );
+  expect(bad.status).toBe(400);
+  const post = { ...put({ id: "mgba" }), method: "POST" };
+  const refused = await app.request("/adapters/switch", post, loopback);
+  expect(internalErrorBody.parse(await refused.json()).error.code).toBe(
+    "adapter_not_usable",
+  );
 });

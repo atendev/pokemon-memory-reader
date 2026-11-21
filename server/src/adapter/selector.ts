@@ -119,7 +119,12 @@ export function createSelector(deps: SelectorDeps): Selector {
     const worst = problemAdapter();
     return worst === undefined
       ? { ...DISCONNECTED, gameEpoch: epoch }
-      : { ...worst.state, connection: "disconnected", game: null, gameEpoch: epoch };
+      : {
+          ...worst.state,
+          connection: "disconnected",
+          game: null,
+          gameEpoch: epoch,
+        };
   };
   const refreshFacade = (): void => {
     const next = facadeState();
@@ -186,11 +191,19 @@ export function createSelector(deps: SelectorDeps): Selector {
     if (s.problem === "busy")
       return { result: "busy", bridge: hello, problem: null, checkedAt };
     if (s.problem !== null)
-      return { result: "problem", bridge: hello, problem: s.problem, checkedAt };
+      return {
+        result: "problem",
+        bridge: hello,
+        problem: s.problem,
+        checkedAt,
+      };
     if (a.lastMiss !== undefined) {
       // RetroArch: a miss changes no state, and an answered probe leaves `disconnected` behind.
       const miss = a.lastMiss;
-      if (connected(a) || (rec.usableAt !== null && (miss === null || miss.at < rec.usableAt)))
+      if (
+        connected(a) ||
+        (rec.usableAt !== null && (miss === null || miss.at < rec.usableAt))
+      )
         return { result: "usable", bridge: null, problem: null, checkedAt };
       if (miss !== null)
         return {
@@ -240,7 +253,11 @@ export function createSelector(deps: SelectorDeps): Selector {
     }
   }
 
-  function onState(id: AdapterId, a: ManagedAdapter, state: AdapterState): void {
+  function onState(
+    id: AdapterId,
+    a: ManagedAdapter,
+    state: AdapterState,
+  ): void {
     if (closed || adapters.get(id) !== a) return;
     const rec = record(id);
     if (state.connection !== "connecting") {
@@ -359,7 +376,11 @@ export function createSelector(deps: SelectorDeps): Selector {
     busy = "switch";
     try {
       // A real connection with the hello and game checks, while the old adapter stays live.
-      const check = waitFor(target, limitOf(target), (s) => s.problem !== null || s.connection === "connected");
+      const check = waitFor(
+        target,
+        limitOf(target),
+        (s) => s.problem !== null || s.connection === "connected",
+      );
       target.setMode("live");
       const passed = connected(target) || (await check);
       if (!passed || !connected(target)) {
@@ -374,7 +395,8 @@ export function createSelector(deps: SelectorDeps): Selector {
       live = target;
       epoch += 1;
       underlying = target.state.gameEpoch;
-      for (const other of ordered()) if (other !== target) other.setMode("probe");
+      for (const other of ordered())
+        if (other !== target) other.setMode("probe");
       log.info("switched adapter", { to: id, from: old?.id ?? null });
       refreshFacade();
       return { ok: true, live: id };
