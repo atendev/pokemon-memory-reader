@@ -9,6 +9,7 @@ import { type Command, parseArgs, USAGE } from "./cli";
 import { systemClock } from "./clock";
 import { logConfigIssues, readConfigFile, resolveConfig } from "./config";
 import { ensureDataFolder, installBridges, resolvePaths } from "./data-folder";
+import { createIconService } from "./icons/service";
 import { consoleLog } from "./log";
 import { loadNotices } from "./notices";
 import { builtinProfiles } from "./profile/builtin";
@@ -111,6 +112,14 @@ async function run(
   const bridges = await generateBridges({ mgba: mgbaEndpoint });
   await installBridges(dataFolder, bridges, log);
 
+  const icons = createIconService({
+    paths,
+    registry,
+    settings: () => config.applied().icons,
+    log,
+  });
+  await icons.pruneCache();
+
   const adapter = createBridgeAdapter("mgba", mgbaEndpoint, {
     clock: systemClock,
     log,
@@ -126,6 +135,7 @@ async function run(
       port: settings.port,
       pollHz: settings.pollHz,
       bridges,
+      icons,
       viewer,
       config,
       about: {

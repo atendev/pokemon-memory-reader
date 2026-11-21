@@ -4,6 +4,8 @@ import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import { type Handler, Hono } from "hono";
 import type { Config } from "../config";
 import { checkPatch, saveSettings } from "../config-save";
+import { parseIconPath } from "../icons/keys";
+import type { IconService } from "../icons/service";
 import { type Log, silentLog } from "../log";
 import type {
   RawReadResult,
@@ -52,7 +54,7 @@ export interface AboutInfo extends Omit<AboutBody, "notices"> {
  *
  * The routes outside `/api/v2` register through `internalRoute`, which takes the guard class from
  * the route table. A group registers only when its dependency is given: `/events` with `stream`,
- * `/settings` with `config`, `/about` with `about`, and `/debug/read` with `rawRead`, which only `--debug` passes.
+ * `/settings` with `config`, `/about` with `about`, `/icons` with `icons`, and `/debug/read` with `rawRead`, which only `--debug` passes.
  */
 export function createApp(deps: {
   readonly resources: Resources;
@@ -63,6 +65,8 @@ export function createApp(deps: {
   readonly stream?: StreamHub;
   readonly config?: Config;
   readonly about?: AboutInfo;
+  /** Without it there is no `/icons` route. */
+  readonly icons?: IconService;
   readonly rawRead?: (
     address: string,
     length: number,
@@ -242,6 +246,31 @@ export function createApp(deps: {
     if (source === undefined) return c.notFound();
     return c.body(source, 200, { "Content-Type": "text/plain; charset=utf-8" });
   });
+
+  const { icons } = deps;
+  if (icons) {
+    // The key grammar admits only IDs and names, so no request path is ever joined to a filesystem path.
+    const headers = {
+      "Content-Type": "image/png",
+      "X-Content-Type-Options": "nosniff",
+      "Cache-Control": "no-cache",
+    };
+    internalRoute("GET", "/icons/*", async (c) => {
+      const key = parseIconPath(c.req.path);
+      const found = key ? await icons.get(key) : null;
+      if (!found)
+        return c.body(null, 404, {
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "no-cache",
+        });
+      const sent = (c.req.header("If-None-Match") ?? "")
+        .split(",")
+        .map((tag) => tag.trim().replace(/^W\//, ""));
+      if (sent.includes(found.etag) || sent.includes("*"))
+        return c.body(null, 304, { ...headers, ETag: found.etag });
+      return c.body(found.bytes, 200, { ...headers, ETag: found.etag });
+    });
+  }
 
   app.notFound((c) => c.json(failure("not_found", "No such resource."), 404));
   app.onError((error, c) => {
