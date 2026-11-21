@@ -18,6 +18,8 @@
     "build:exe": "bun build --compile --outfile out/pokemon-memory-reader server/src/main.ts",
     "generate:profiles": "bun scripts/generate-profiles/main.ts",
     "generate:reference": "bun scripts/generate-reference/main.ts",
+    "generate:icon-maps": "bun scripts/generate-icon-maps/main.ts",
+    "check-icon-map": "bun scripts/check-icon-map.ts",
     "notices": "bun scripts/notices.ts",
     "lgpl-sources": "bun scripts/lgpl-sources.ts",
     "test:local": "bun scripts/test-local.ts"

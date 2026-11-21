@@ -3,6 +3,8 @@ import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
 import type { IconKey } from "./keys";
 import {
+  GEN1_DEX,
+  GEN2_DEX,
   ITEM_SLUGS,
   isVanillaSpecies,
   POKEAPI_TYPE_IDS,
@@ -24,6 +26,8 @@ export const DEFAULT_MAPS: IconMaps = {
       return isVanillaSpecies(speciesId)
         ? (referenceData("gen3", "en")?.speciesData.dex(speciesId) ?? null)
         : null;
+    if (profile.dataFormat === "gen1") return GEN1_DEX[speciesId] ?? null;
+    if (profile.dataFormat === "gen2") return GEN2_DEX[speciesId] ?? null;
     return (
       referenceData(profile.dataFormat, profile.language)?.speciesData.dex(
         speciesId,
