@@ -8,7 +8,11 @@ const ready = <T,>(value: T) => ({ kind: "ready", value }) as const;
 describe("the empty states, shown while there is no game to read", () => {
   test("a fresh run is disconnected, so it tells the user to load the bridge and links the download", () => {
     const html = renderToStaticMarkup(
-      <Screen status={status("disconnected")} party={{ kind: "loading" }} />,
+      <Screen
+        route="party"
+        status={status("disconnected")}
+        party={{ kind: "loading" }}
+      />,
     );
     expect(html).toContain("Waiting for an emulator");
     expect(html).toContain('href="/bridges/mgba.lua"');
@@ -17,7 +21,11 @@ describe("the empty states, shown while there is no game to read", () => {
 
   test("a loaded emulator with no game explains it without install steps", () => {
     const html = renderToStaticMarkup(
-      <Screen status={status("no_game")} party={{ kind: "loading" }} />,
+      <Screen
+        route="party"
+        status={status("no_game")}
+        party={{ kind: "loading" }}
+      />,
     );
     expect(html).toContain("No game loaded");
     expect(html).not.toContain("/bridges/mgba.lua");
@@ -25,7 +33,7 @@ describe("the empty states, shown while there is no game to read", () => {
 
   test("an unreachable program says so", () => {
     const html = renderToStaticMarkup(
-      <Screen status={null} party={{ kind: "loading" }} />,
+      <Screen route="party" status={null} party={{ kind: "loading" }} />,
     );
     expect(html).toContain("Cannot reach the program");
   });
@@ -37,6 +45,7 @@ describe("the party screen", () => {
   test("shows six slots: cards for the members and placeholders for the rest", () => {
     const html = renderToStaticMarkup(
       <Screen
+        route="party"
         status={game}
         party={ready({ pokemon: [mon({ nickname: "LEAFY" }), mon()] })}
       />,
@@ -51,6 +60,7 @@ describe("the party screen", () => {
   test("falls back to #id for a missing species name and a dash for null fields", () => {
     const html = renderToStaticMarkup(
       <Screen
+        route="party"
         status={game}
         party={ready({
           pokemon: [
@@ -71,7 +81,11 @@ describe("the party screen", () => {
 
   test("shows a note instead of cards while the party is unavailable", () => {
     const html = renderToStaticMarkup(
-      <Screen status={game} party={{ kind: "unavailable", code: "no_data" }} />,
+      <Screen
+        route="party"
+        status={game}
+        party={{ kind: "unavailable", code: "no_data" }}
+      />,
     );
     expect(html).toContain("be read right now");
     expect(html).not.toContain('class="card mon"');
