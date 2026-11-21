@@ -1,0 +1,310 @@
+name: Release
+
+# A pushed v<semver> tag builds every target, smoke-tests the archives on their own runners and creates a DRAFT release (spec §13.6, §13.7).
+# Nothing here publishes: the owner publishes the draft after the RELEASING.md checklist.
+#
+# `workflow_dispatch` and `pull_request` are dry runs. They build, archive and smoke-test the same way and upload workflow
+# artifacts only, so CI can prove the pipeline without a tag. GitHub only offers `workflow_dispatch` for a workflow file on the
+# default branch, so the `pull_request` trigger, filtered to the files that shape a release, covers a feature branch (amendment 024 item 8).
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/check-release-ref.ts
+      - scripts/release-*
+      - scripts/notices/bun-runtime.json
+      - package.json
+      - server/package.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  # Runs the shared ref check (amendment 024). Every job after it takes its tag and version from here.
+  ref:
+    name: Ref check
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.check.outputs.version }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+      dry_run: ${{ steps.meta.outputs.dry_run }}
+    steps:
+      # Full history, so the ancestry test against origin/main and the prerelease branch can run.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - id: meta
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(jq -r .version server/package.json)" >> "$GITHUB_OUTPUT"
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - id: check
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          DRY_RUN: ${{ steps.meta.outputs.dry_run }}
+        run: |
+          flags=()
+          if [ "$DRY_RUN" = true ]; then flags+=(--dry-run); fi
+          bun scripts/check-release-ref.ts check --tag "$TAG" --kind app "${flags[@]}" --output "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: ref
+    # An ubuntu runner compiles Windows and Linux. A macOS arm runner compiles both macOS targets and ad-hoc signs them.
+    runs-on: ${{ matrix.builder }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              target: bun-windows-x64-baseline,
+              label: windows-x64-baseline,
+              archive: windows-x64,
+              exe: pokemon-memory-reader.exe,
+              builder: ubuntu-latest,
+            }
+          - {
+              target: bun-windows-arm64,
+              label: windows-arm64,
+              archive: windows-arm64,
+              exe: pokemon-memory-reader.exe,
+              builder: ubuntu-latest,
+            }
+          - {
+              target: bun-linux-x64-baseline,
+              label: linux-x64-baseline,
+              archive: linux-x64,
+              exe: pokemon-memory-reader,
+              builder: ubuntu-latest,
+            }
+          - {
+              target: bun-linux-arm64,
+              label: linux-arm64,
+              archive: linux-arm64,
+              exe: pokemon-memory-reader,
+              builder: ubuntu-latest,
+            }
+          - {
+              target: bun-darwin-x64-baseline,
+              label: darwin-x64-baseline,
+              archive: macos-x64,
+              exe: pokemon-memory-reader,
+              builder: macos-latest,
+            }
+          - {
+              target: bun-darwin-arm64,
+              label: darwin-arm64,
+              archive: macos-arm64,
+              exe: pokemon-memory-reader,
+              builder: macos-latest,
+            }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: test ! -e api/dist
+      # The build embeds the generated notices file, so the executable can serve it at /about, and the archive carries it.
+      - run: bun run notices
+      - name: Compile
+        env:
+          TARGET: ${{ matrix.target }}
+          LABEL: ${{ matrix.label }}
+          EXE: ${{ matrix.exe }}
+        run: >-
+          bun build --compile --target="$TARGET"
+          --define "PMR_TARGET=\"$LABEL\""
+          --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
+          --outfile "out/$EXE" server/src/main.ts
+      # Ad-hoc signed, not notarized, no hardened runtime and no JIT entitlements (spec §13.1).
+      - name: Sign (macOS)
+        if: runner.os == 'macOS'
+        env:
+          EXE: ${{ matrix.exe }}
+        run: |
+          codesign --force --sign - "out/$EXE"
+          codesign --verify --verbose "out/$EXE"
+      - name: Archive
+        env:
+          TARGET: ${{ matrix.target }}
+          EXE: ${{ matrix.exe }}
+          VERSION: ${{ needs.ref.outputs.version }}
+        run: bun scripts/release-archive.ts archive --target "$TARGET" --exe "out/$EXE" --version "$VERSION" --out dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: archive-${{ matrix.archive }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # Each archive is smoke-tested on its own kind of runner, and the jobs unpack the archive the release will upload, never a rebuild.
+  smoke:
+    name: Smoke ${{ matrix.archive }}
+    needs: [ref, build]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              archive: windows-x64,
+              runner: windows-latest,
+              ext: zip,
+              exe: pokemon-memory-reader.exe,
+            }
+          - {
+              archive: windows-arm64,
+              runner: windows-11-arm,
+              ext: zip,
+              exe: pokemon-memory-reader.exe,
+            }
+          - {
+              archive: linux-x64,
+              runner: ubuntu-latest,
+              ext: tar.gz,
+              exe: pokemon-memory-reader,
+            }
+          - {
+              archive: linux-arm64,
+              runner: ubuntu-24.04-arm,
+              ext: tar.gz,
+              exe: pokemon-memory-reader,
+            }
+          - {
+              archive: macos-x64,
+              runner: macos-latest,
+              ext: zip,
+              exe: pokemon-memory-reader,
+              rosetta: true,
+            }
+          - {
+              archive: macos-arm64,
+              runner: macos-latest,
+              ext: zip,
+              exe: pokemon-memory-reader,
+            }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: archive-${{ matrix.archive }}
+          path: archive
+      # darwin-x64 runs under Rosetta 2 on the Apple silicon runner (spec §13.1).
+      - name: Install Rosetta
+        if: matrix.rosetta
+        run: |
+          arch -x86_64 /usr/bin/true || softwareupdate --install-rosetta --agree-to-license
+          arch -x86_64 /usr/bin/true
+      - name: Unpack
+        if: runner.os != 'Windows'
+        env:
+          EXT: ${{ matrix.ext }}
+        run: |
+          mkdir unpacked
+          if [ "$EXT" = zip ]; then unzip -q archive/*.zip -d unpacked; else tar -xzf archive/*.tar.gz -C unpacked; fi
+          ls -l unpacked
+      - name: Unpack
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Expand-Archive -Path (Get-ChildItem archive/*.zip).FullName -DestinationPath unpacked
+          Get-ChildItem unpacked
+      - name: Smoke
+        shell: bash
+        env:
+          EXE: ${{ matrix.exe }}
+          VERSION: ${{ needs.ref.outputs.version }}
+        run: bun scripts/smoke.ts "unpacked/$EXE" "$VERSION"
+
+  # Collects the archives, the bridges and the LGPL sources, writes SHA256SUMS and the body, and creates the draft.
+  draft:
+    name: Draft release
+    needs: [ref, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: archive-*
+          merge-multiple: true
+          path: dist
+      - name: Bridges
+        run: bun scripts/release-archive.ts bridges --out dist
+      # The Bun, tinycc and WebKit source archives (LGPL-2.1 §6(d), amendment 042). A failed fetch fails the release.
+      - name: LGPL sources
+        run: bun scripts/lgpl-sources.ts build --out dist --sums dist/SHA256SUMS
+      - name: Checksums
+        run: bun scripts/release-archive.ts sums --dir dist
+      # The body comes from the changelog section. The signature evidence is added after the ref check, then the LGPL lines.
+      - name: Release body
+        env:
+          TAG: ${{ needs.ref.outputs.tag }}
+          DRY_RUN: ${{ needs.ref.outputs.dry_run }}
+        run: |
+          flags=()
+          if [ "$DRY_RUN" = true ]; then flags+=(--dry-run); fi
+          bun scripts/check-release-ref.ts body --tag "$TAG" --kind app --repo "$GITHUB_REPOSITORY" --out body.md "${flags[@]}"
+          bun scripts/release-body.ts body.md
+          bun scripts/lgpl-sources.ts body body.md --tag "$TAG"
+      # A dry run publishes nothing. The archives are already workflow artifacts, so this keeps the body, the bridges and the
+      # sums and leaves out the source archives, which are large and only matter to a real release.
+      - name: Upload dry run files
+        if: needs.ref.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-draft
+          path: |
+            body.md
+            dist/SHA256SUMS
+            dist/*.lua
+          if-no-files-found: error
+          retention-days: 7
+      - name: Create draft release
+        if: needs.ref.outputs.dry_run == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.ref.outputs.tag }}
+          PRERELEASE: ${{ needs.ref.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" dist/* --draft --verify-tag --title "$TAG" --notes-file body.md "${flags[@]}"
+      - name: Check the draft's LGPL assets
+        if: needs.ref.outputs.dry_run == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.ref.outputs.tag }}
+        run: bun scripts/lgpl-sources.ts check --online --release "$TAG" --repo "$GITHUB_REPOSITORY"
