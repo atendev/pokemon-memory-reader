@@ -161,6 +161,33 @@ describe("probe", () => {
     expect(lines.filter((l) => l.includes("can't read"))).toHaveLength(1);
   });
 
+  test("GET_STATUS ERROR is not a valid probe reply", async () => {
+    const fake = await startFake();
+    fake.status = "GET_STATUS ERROR";
+    const { adapter, clock } = makeAdapter(fake.port, "probe");
+    await until(() => fake.statuses.length === 1);
+    await settle();
+    clock.advance(1000);
+    expect(adapter.state.connection).toBe("disconnected");
+    expect(adapter.state.game).toBeNull();
+  });
+
+  test("a probe-mode adapter that keeps finding RetroArch backs off between probes", async () => {
+    const fake = await startFake();
+    const { clock } = makeAdapter(fake.port, "probe");
+    await until(() => fake.statuses.length === 1);
+    await settle();
+    clock.advance(500);
+    await until(() => fake.statuses.length === 2);
+    await settle();
+    // The second wait is 1000 ms, not 500 ms.
+    clock.advance(500);
+    await settle();
+    expect(fake.statuses).toHaveLength(2);
+    clock.advance(500);
+    await until(() => fake.statuses.length === 3);
+  });
+
   test("CONTENTLESS and an unread system are usable with no game", async () => {
     const fake = await startFake();
     fake.status = "GET_STATUS CONTENTLESS";
@@ -345,6 +372,19 @@ describe("reads", () => {
 });
 
 describe("disconnect", () => {
+  test("a closed adapter fails reads as disconnected", async () => {
+    const fake = await startFake();
+    const { adapter } = makeAdapter(fake.port);
+    await until(() => adapter.state.game !== null);
+    await adapter.close();
+    expect(
+      await adapter.read([{ domain: "iwram", offset: 0, length: 4 }], 250),
+    ).toEqual({
+      kind: "failed",
+      reason: "disconnected",
+    });
+  });
+
   test("30 s with no reply disconnects, and not a moment sooner", async () => {
     const fake = await startFake();
     const { adapter, clock } = makeAdapter(fake.port);

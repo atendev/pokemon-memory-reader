@@ -208,7 +208,6 @@ export function createRetroArchAdapter(
     cancelProbe?.();
     cancelProbe = null;
     phase = "up";
-    backoffMs = baseBackoffMs;
     badStatusLogged = false;
     shortLogged = false;
     statusKey = keyOf(reply);
@@ -242,6 +241,7 @@ export function createRetroArchAdapter(
   function applyMode(): void {
     if (phase !== "up") return;
     if (mode === "live") {
+      backoffMs = baseBackoffMs;
       armWatchdog();
       if (cancelCheck === null) scheduleCheck();
     } else {
@@ -277,8 +277,10 @@ export function createRetroArchAdapter(
     if (phase === "up" && mode === "live") armWatchdog();
     const status = parseStatus(text);
     if (status !== null) {
-      if (phase === "probing") onProbeOk(status);
-      else if (phase === "up") onStatus(status);
+      // GET_STATUS ERROR isn't a valid probe reply (amendment 026, point 1).
+      if (phase === "probing") {
+        if (status.kind !== "error") onProbeOk(status);
+      } else if (phase === "up") onStatus(status);
       return;
     }
     if (text.startsWith("GET_STATUS ")) {
@@ -543,6 +545,7 @@ export function createRetroArchAdapter(
       cancelProbe?.();
       cancelWatchdog?.();
       cancelCheck?.();
+      phase = "idle";
       for (const waiter of [...pending]) waiter.settle(null);
       pending.clear();
       socket?.close();
