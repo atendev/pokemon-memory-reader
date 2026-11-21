@@ -61,6 +61,7 @@ const pikachu: IconKey = {
 };
 const UPSTREAM_25 = "pokemon/versions/generation-iii/emerald/25.png";
 const DEFAULT_ID = `pokeapi-${ICON_SPRITES_SHA}`;
+const FALLBACK_URL = `https://raw.githubusercontent.com/PokeAPI/sprites/${ICON_SPRITES_SHA}/sprites/`;
 const DEFAULT_URL = `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@${ICON_SPRITES_SHA}/sprites/`;
 
 let root: string;
@@ -409,7 +410,78 @@ test("a 5xx or 429 backs the source off, and another 4xx is a remembered miss", 
   await second.service.get(pikachu);
   await second.service.get(pikachu);
   await second.service.get({ ...pikachu, id: 26 });
-  expect(forbidden.calls.length).toBe(2);
+  expect(forbidden.calls.length).toBe(3);
+});
+
+/** An upstream whose answer depends on the host, so jsDelivr and raw GitHub can disagree. */
+function splitUpstream(jsdelivr: number, raw: Response) {
+  const calls: string[] = [];
+  const fetchImpl = (async (url: string) => {
+    calls.push(url);
+    return url.startsWith(DEFAULT_URL)
+      ? new Response(null, { status: jsdelivr })
+      : raw.clone();
+  }) as unknown as typeof fetch;
+  return { fetch: fetchImpl, calls, peak: () => 1 };
+}
+
+test("a jsDelivr 403 is retried on raw GitHub, served, and cached", async () => {
+  const upstream = splitUpstream(403, ok(A));
+  const { service } = setup({ upstream });
+  expect((await service.get(pikachu))?.bytes).toEqual(A);
+  expect(upstream.calls).toEqual([
+    `${DEFAULT_URL}${UPSTREAM_25}`,
+    `${FALLBACK_URL}${UPSTREAM_25}`,
+  ]);
+  expect((await service.get(pikachu))?.bytes).toEqual(A);
+  expect(upstream.calls.length).toBe(2);
+});
+
+test("a 403 on both sources is a remembered miss, and a 404 never asks the second source", async () => {
+  const both = splitUpstream(403, new Response(null, { status: 403 }));
+  const first = setup({ upstream: both });
+  expect(await first.service.get(pikachu)).toBeNull();
+  expect(await first.service.get(pikachu)).toBeNull();
+  expect(both.calls.length).toBe(2);
+
+  const gone = splitUpstream(404, ok(A));
+  const second = setup({ upstream: gone });
+  expect(await second.service.get(pikachu)).toBeNull();
+  expect(gone.calls).toEqual([`${DEFAULT_URL}${UPSTREAM_25}`]);
+});
+
+test("a 5xx from the second source backs the whole source off", async () => {
+  const { clock } = fakeClock();
+  const upstream = splitUpstream(403, new Response(null, { status: 503 }));
+  const { service } = setup({ upstream, clock });
+  expect(await service.get(pikachu)).toBeNull();
+  await service.get({ ...pikachu, id: 26 });
+  expect(upstream.calls.length).toBe(2);
+});
+
+test("a mirror has no second source, and local or off mode never fetches", async () => {
+  const mirror = fakeUpstream({
+    [UPSTREAM_25]: new Response(null, { status: 403 }),
+  });
+  const withMirror = setup({
+    upstream: mirror,
+    settings: {
+      mode: "online",
+      baseUrl: "https://mirror.example/sprites-copy",
+    },
+  });
+  expect(await withMirror.service.get(pikachu)).toBeNull();
+  expect(mirror.calls.length).toBe(1);
+
+  for (const mode of ["local", "off"] as const) {
+    const upstream = splitUpstream(403, ok(A));
+    const { service } = setup({
+      upstream,
+      settings: { mode, baseUrl: null },
+    });
+    expect(await service.get(pikachu)).toBeNull();
+    expect(upstream.calls).toEqual([]);
+  }
 });
 
 test("a fetch that takes longer than the timeout counts as a network error", async () => {

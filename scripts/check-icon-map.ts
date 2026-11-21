@@ -1,5 +1,9 @@
 import { mappedUpstreamPaths } from "../server/src/icons/coverage";
-import { resolveSource, upstreamUrl } from "../server/src/icons/source";
+import {
+  fallbackUrl,
+  resolveSource,
+  upstreamUrl,
+} from "../server/src/icons/source";
 
 /** Sends a HEAD request for every upstream path the icon maps can reach and lists the ones that don't resolve. Dev-time and networked, so CI never runs it. */
 const CONCURRENCY = 6;
@@ -11,21 +15,29 @@ const source = resolveSource(baseUrl);
 const paths = mappedUpstreamPaths();
 
 /** jsDelivr sometimes refuses a HEAD for a file it serves, so a refusal other than 404 is checked again with a one-byte GET. */
+async function probe(url: string): Promise<string | null> {
+  const head = await fetch(url, { method: "HEAD" });
+  if (head.ok) return null;
+  if (head.status === 404) return String(head.status);
+  if (head.status === 429 || head.status >= 500) return String(head.status);
+  const get = await fetch(url, { headers: { range: "bytes=0-0" } });
+  await get.body?.cancel();
+  return get.ok ? null : String(get.status);
+}
+
+/** A 403 from the first source is asked of the second, the way the `/icons` route does. */
 async function resolves(path: string): Promise<string | null> {
-  const url = upstreamUrl(source, path);
   let reason = "";
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     try {
-      const head = await fetch(url, { method: "HEAD" });
-      if (head.ok) return null;
-      reason = String(head.status);
-      if (head.status === 404) return reason;
-      if (head.status !== 429 && head.status < 500) {
-        const get = await fetch(url, { headers: { range: "bytes=0-0" } });
-        await get.body?.cancel();
-        if (get.ok) return null;
-        if (get.status === 404) return String(get.status);
+      reason = (await probe(upstreamUrl(source, path))) ?? "";
+      if (reason === "") return null;
+      const second = reason === "403" ? fallbackUrl(source, path) : null;
+      if (second !== null) {
+        reason = (await probe(second)) ?? "";
+        if (reason === "") return null;
       }
+      if (reason === "404") return reason;
     } catch (error) {
       reason = String(error);
     }
