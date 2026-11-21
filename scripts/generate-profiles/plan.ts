@@ -22,6 +22,8 @@ export interface GeneratorInput {
     readonly pretSha1s: readonly string[];
     readonly noIntro: NoIntro;
     readonly symbols: ReadonlyMap<string, SymbolInfo>;
+    /** Local symbols by name, for the signature anchors. Absent when no definition has an anchor. */
+    readonly locals?: ReadonlyMap<string, readonly SymbolInfo[]>;
   }>;
   readonly held: ReadonlyArray<{
     readonly held: HeldBackDefinition;
@@ -67,12 +69,12 @@ export function planGeneration(input: GeneratorInput): {
 
   const files = new Map<string, string>();
   const noted = [];
-  for (const { definition, hashes, symbols } of resolved) {
+  for (const { definition, hashes, symbols, locals } of resolved) {
     const level = levels.get(definition.id);
     if (!level) throw new Error(`no evidence level for ${definition.id}`);
     files.set(
       `${definition.id}.json`,
-      renderProfile(buildProfile(definition, symbols, hashes, level)),
+      renderProfile(buildProfile(definition, symbols, hashes, level, locals)),
     );
     noted.push({ id: definition.id, name: definition.name, level });
   }

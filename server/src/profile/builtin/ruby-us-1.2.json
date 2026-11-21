@@ -1,0 +1,108 @@
+{
+  "id": "ruby-us-1.2",
+  "kind": "official",
+  "name": "Pokémon Ruby (US 1.2)",
+  "dataFormat": "gen3",
+  "language": "en",
+  "artVersion": "ruby-sapphire",
+  "addresses": {
+    "gPlayerParty": "0x03004360",
+    "gPlayerPartyCount": "0x03004350",
+    "gEnemyParty": "0x030045c0",
+    "gEnemyPartyCount": "0x030045b8",
+    "gSaveBlock1": "0x02025734",
+    "gSaveBlock2": "0x02024ea4",
+    "gPokemonStorage": "0x020300a0",
+    "gBattleTypeFlags": "0x020239f8",
+    "gBattleMons": "0x02024a80",
+    "gBattleStruct": "0x02000000",
+    "gMain": "0x03001770",
+    "gBattlerPartyIndexes": "0x02024a6a",
+    "gBattleOutcome": "0x02024d26",
+    "gBattleWeather": "0x02024db8",
+    "gSideStatuses": "0x02024c7a",
+    "gSideTimers": "0x02024c80",
+    "gTrainerBattleOpponent_A": "0x0202ff5e",
+    "gMapHeader": "0x0202e828"
+  },
+  "player": {
+    "badgeFlags": [
+      2055,
+      2056,
+      2057,
+      2058,
+      2059,
+      2060,
+      2061,
+      2062
+    ],
+    "moneyOffset": 1168,
+    "flagsOffset": 4640
+  },
+  "bag": {
+    "pocketOffsets": [
+      1376,
+      1456,
+      1536,
+      1600,
+      1856
+    ],
+    "pocketCapacities": [
+      20,
+      20,
+      16,
+      64,
+      46
+    ]
+  },
+  "constants": {
+    "inBattleOffset": 1085,
+    "sideTimerSpikesOffset": 6,
+    "moneyMultiplierOffset": 90198,
+    "trainerMoneyEntrySize": 4
+  },
+  "identify": {
+    "sha1": [
+      "5b64eacf892920518db4ec664e62a086dd5f5bc8"
+    ],
+    "crc32": [
+      "aeac73e6"
+    ],
+    "header": {
+      "gameCode": "AXVE",
+      "revision": 2
+    },
+    "signature": [
+      {
+        "address": "0x08026ce4",
+        "bytes": "44b11f08"
+      },
+      {
+        "address": "0x0839f4fc",
+        "bytes": "fb831f08"
+      }
+    ]
+  },
+  "trainerTables": {
+    "trainers": {
+      "base": "0x081f0514",
+      "count": 694
+    },
+    "classNames": {
+      "base": "0x081f0220",
+      "count": 58
+    },
+    "money": {
+      "base": "0x081f9908",
+      "count": 55
+    }
+  },
+  "fixture": "none",
+  "provenance": {
+    "kind": "pret",
+    "repo": "pret/pokeruby",
+    "commit": "78b19905a760095bc45eab2e36906c6e8c208dce",
+    "symbolFile": "pokeruby_rev2.sym",
+    "signatureEvidence": "unconfirmed"
+  }
+}

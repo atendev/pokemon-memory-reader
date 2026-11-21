@@ -5,7 +5,7 @@ import { buildProfile, renderIndex, renderProfile } from "./build";
 import { definitions } from "./definitions";
 import { parseLedger, rateSignatureEvidence } from "./evidence";
 import { parseNoIntroDat, parsePretSha1, resolveHashes } from "./hashes";
-import { parseSymFile } from "./sym";
+import { parseLocalSymbols, parseSymFile, requireAnchor } from "./sym";
 
 const excerpt = readFileSync(
   join(import.meta.dir, "fixtures/pokeemerald.excerpt.sym"),
@@ -176,7 +176,7 @@ describe("hash lists", () => {
 
   test("parseNoIntroDat lowercases hashes and ignores entries it cannot read", () => {
     const dat = parseNoIntroDat(noIntroDat);
-    expect(dat.size).toBe(7);
+    expect(dat.size).toBe(13);
     expect([
       ...(dat.get("f3ae088181bf583e55daf962a92bb46f4f1d07b7") ?? []),
     ]).toEqual(["1f1c08fb"]);
@@ -252,5 +252,118 @@ describe("the pokefirered profiles", () => {
         "unconfirmed",
       ),
     ).toThrow("gTrainerBattleOpponent_A");
+  });
+});
+
+describe("the pokeruby profiles", () => {
+  const read = (name: string) =>
+    readFileSync(join(import.meta.dir, "fixtures", name), "utf8");
+  const builds = [
+    ["ruby-us-1.0", "pokeruby"],
+    ["ruby-us-1.1", "pokeruby_rev1"],
+    ["ruby-us-1.2", "pokeruby_rev2"],
+    ["sapphire-us-1.0", "pokesapphire"],
+    ["sapphire-us-1.1", "pokesapphire_rev1"],
+    ["sapphire-us-1.2", "pokesapphire_rev2"],
+  ] as const;
+  const definitionOf = (id: string) => {
+    const def = definitions.find((d) => d.id === id);
+    if (!def) throw new Error(`no definition ${id}`);
+    return def;
+  };
+  const hashesOf = (name: string) =>
+    resolveHashes(
+      parsePretSha1(read(`${name}.rom.sha1`), `${name}.sha1`),
+      parseNoIntroDat(noIntroDat),
+      { pret: `pret/pokeruby ${name}.sha1`, noIntro: "excerpt.dat" },
+    );
+
+  for (const [id, name] of builds) {
+    test(`${id} matches its committed file`, () => {
+      const text = read(`${name}.excerpt.sym`);
+      const built = renderProfile(
+        buildProfile(
+          definitionOf(id),
+          parseSymFile(text),
+          hashesOf(name),
+          "unconfirmed",
+          parseLocalSymbols(text),
+        ),
+      );
+      const committed = readFileSync(
+        join(import.meta.dir, `../../server/src/profile/builtin/${id}.json`),
+        "utf8",
+      );
+      expect(built).toBe(committed);
+    });
+  }
+
+  test("an anchor symbol with the wrong size fails, so a moved word cannot slip through", () => {
+    const text = read("pokeruby.excerpt.sym").replace(
+      /^(\w+ l) 000002e0 (atk93_tryKO)$/m,
+      "$1 000002e4 $2",
+    );
+    expect(() =>
+      buildProfile(
+        definitionOf("ruby-us-1.0"),
+        parseSymFile(text),
+        hashesOf("pokeruby"),
+        "unconfirmed",
+        parseLocalSymbols(text),
+      ),
+    ).toThrow("atk93_tryKO is 0x2e4 bytes, not 0x2e0");
+  });
+
+  test("a missing or repeated anchor symbol fails", () => {
+    const anchor = { symbol: "atk93_tryKO", size: 0x2e0 };
+    expect(() => requireAnchor(new Map(), new Map(), anchor)).toThrow(
+      "atk93_tryKO is missing",
+    );
+    const twice = parseLocalSymbols(
+      "08000000 l 000002e0 atk93_tryKO\n08001000 l 000002e0 atk93_tryKO\n",
+    );
+    expect(() => requireAnchor(new Map(), twice, anchor)).toThrow(
+      "appears 2 times",
+    );
+    const global = new Map([["atk93_tryKO", { address: 1, size: 0x2e0 }]]);
+    expect(requireAnchor(global, new Map(), anchor).address).toBe(1);
+  });
+
+  test("parseLocalSymbols keeps local symbols only and ignores globals", () => {
+    const locals = parseLocalSymbols(
+      "08026b78 l 000002e0 atk93_tryKO\n081f8320 g 00001207 gMoveNames\n",
+    );
+    expect([...locals.keys()]).toEqual(["atk93_tryKO"]);
+  });
+
+  test("a hand-written table count needs a size-0 symbol, and a size-0 table needs a count", () => {
+    const def = definitionOf("ruby-us-1.0");
+    const text = read("pokeruby.excerpt.sym");
+    const run = (definition: typeof def, symbols: string) =>
+      buildProfile(
+        definition,
+        parseSymFile(symbols),
+        hashesOf("pokeruby"),
+        "unconfirmed",
+        parseLocalSymbols(symbols),
+      );
+    expect(() =>
+      run(
+        {
+          ...def,
+          trainerTables: {
+            ...def.trainerTables,
+            money: { symbol: "gTrainerMoney", entrySize: 4 },
+          },
+        },
+        text,
+      ),
+    ).toThrow("gTrainerMoney has a size of 0");
+    expect(() =>
+      run(
+        def,
+        text.replace(/^(\w+ g) 00000000 (gTrainerMoney)$/m, "$1 000000dc $2"),
+      ),
+    ).toThrow("drop the hand-written count 55");
   });
 });

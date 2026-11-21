@@ -17,7 +17,8 @@ export const gen3Addresses = z
     gBattleTypeFlags: gba,
     gBattleMons: gba,
     gBattleStruct: gbaAny,
-    gBattleResources: gbaAny,
+    /** Absent on Ruby and Sapphire. No decoder reads it. */
+    gBattleResources: gbaAny.optional(),
     gMain: gba,
     gBattlerPartyIndexes: gba,
     gBattleOutcome: gba,
@@ -64,3 +65,29 @@ export const gen3Bag = z
     pocketCapacities: z.array(z.int().min(1)).length(5),
   })
   .strict();
+
+/**
+ * The per-game layout values the battle decoders read (spec §5, "per-game constants, hand-written"). Each
+ * is absent in Emerald and FireRed, which use the defaults below. Ruby and Sapphire differ in all four.
+ */
+export const gen3Constants = z
+  .object({
+    /** Offset of the byte in `gMain` whose bit 1 is `inBattle`. */
+    inBattleOffset: z.int().min(0).optional(),
+    /** Offset of `spikesAmount` in the 12-byte `struct SideTimer`. */
+    sideTimerSpikesOffset: z.int().min(0).max(11).optional(),
+    /** Offset of `moneyMultiplier` in `gBattleStruct`. */
+    moneyMultiplierOffset: z.int().min(0).optional(),
+    /** Byte size of one `gTrainerMoneyTable` entry (a class ID, a value and any padding). */
+    trainerMoneyEntrySize: z.int().min(2).max(16).optional(),
+  })
+  .strict()
+  .default({});
+
+/** The Emerald and FireRed values for every key of `gen3Constants`. */
+export const GEN3_CONSTANT_DEFAULTS = {
+  inBattleOffset: 0x439,
+  sideTimerSpikesOffset: 10,
+  moneyMultiplierOffset: 0x4a,
+  trainerMoneyEntrySize: 2,
+} as const;

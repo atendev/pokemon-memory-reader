@@ -30,3 +30,55 @@ export function requireSymbol(
     throw new Error(`symbol ${name} is missing from the symbol file`);
   return symbol;
 }
+
+/**
+ * The local symbols of a pret `.sym` file by exact name, for signature anchors only (amendment 036
+ * item 4). A name can repeat, so each maps to every entry in file order.
+ */
+export function parseLocalSymbols(
+  text: string,
+): ReadonlyMap<string, readonly SymbolInfo[]> {
+  const locals = new Map<string, SymbolInfo[]>();
+  for (const line of text.split("\n")) {
+    const match = LINE.exec(line.trim());
+    if (match === null || match[2] === "g") continue;
+    const name = match[4] ?? "";
+    const entries = locals.get(name) ?? [];
+    entries.push({
+      address: Number.parseInt(match[1] ?? "", 16),
+      size: Number.parseInt(match[3] ?? "", 16),
+    });
+    locals.set(name, entries);
+  }
+  return locals;
+}
+
+/**
+ * Finds an anchor symbol by exact name among the local and the global symbols. It must appear exactly
+ * once and have exactly `size` bytes, so a pret change that moves the word inside the anchor fails the run.
+ */
+export function requireAnchor(
+  globals: ReadonlyMap<string, SymbolInfo>,
+  locals: ReadonlyMap<string, readonly SymbolInfo[]>,
+  anchor: { readonly symbol: string; readonly size: number },
+): SymbolInfo {
+  const global = globals.get(anchor.symbol);
+  const found = [
+    ...(global ? [global] : []),
+    ...(locals.get(anchor.symbol) ?? []),
+  ];
+  const [only] = found;
+  if (only === undefined)
+    throw new Error(
+      `anchor symbol ${anchor.symbol} is missing from the symbol file`,
+    );
+  if (found.length > 1)
+    throw new Error(
+      `anchor symbol ${anchor.symbol} appears ${found.length} times in the symbol file`,
+    );
+  if (only.size !== anchor.size)
+    throw new Error(
+      `anchor symbol ${anchor.symbol} is 0x${only.size.toString(16)} bytes, not 0x${anchor.size.toString(16)}, so the signature word may have moved`,
+    );
+  return only;
+}

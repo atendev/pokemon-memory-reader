@@ -10,6 +10,7 @@ import type {
   TrainerFill,
 } from "../types";
 import { ref } from "./mon";
+import { GEN3_CONSTANT_DEFAULTS } from "./profile";
 import { at } from "./save";
 
 /** `struct Trainer` in pokeemerald (`include/data.h`): 40 bytes with the class at +1, a 12-byte name at +4 and four u16 starting items at +0x10. */
@@ -24,14 +25,15 @@ const TRAINER = {
 
 /** Each `gTrainerClassNames` entry is a 13-byte name. */
 const CLASS_NAME_SIZE = 13;
-/** Each `gTrainerMoneyTable` entry is a class ID and a value byte. The table ends at a class ID of 0xFF. */
-const MONEY_ENTRY = { size: 2, terminator: 0xff } as const;
-
-/** `gBattleStruct->moneyMultiplier` (pokeemerald `struct BattleStruct`), a u8. */
-const MONEY_MULTIPLIER_OFFSET = 0x4a;
+/** Each `gTrainerMoneyTable` entry is a class ID and a value byte, padded to `constants.trainerMoneyEntrySize` (2 in Emerald and FireRed, 4 in Ruby and Sapphire). The table ends at a class ID of 0xFF. */
+const MONEY_TERMINATOR = 0xff;
 
 type Gen3Profile = Profile<"gen3">;
 type Tables = Gen3Profile["trainerTables"];
+
+const moneyEntrySize = (profile: Gen3Profile): number =>
+  profile.constants.trainerMoneyEntrySize ??
+  GEN3_CONSTANT_DEFAULTS.trainerMoneyEntrySize;
 
 const trainerRegion = (id: number): string => `trainer:${id}`;
 
@@ -59,14 +61,14 @@ function trainerRegions(
 }
 
 /** Both tables are read whole, so a class ID read from a trainer entry needs no second request. */
-function classTables(tables: Tables): Record<string, Region> {
-  const { classNames, money } = tables;
+function classTables(profile: Gen3Profile): Record<string, Region> {
+  const { classNames, money } = profile.trainerTables;
   return {
     ...(classNames && {
       classNames: region(classNames.base, classNames.count * CLASS_NAME_SIZE),
     }),
     ...(money && {
-      money: region(money.base, money.count * MONEY_ENTRY.size),
+      money: region(money.base, money.count * moneyEntrySize(profile)),
     }),
   };
 }
@@ -91,13 +93,14 @@ function moneyValue(
   table: Bytes,
   count: number,
   classId: number,
+  entrySize: number,
 ): number | null {
   let terminator: number | null = null;
   for (let index = 0; index < count; index++) {
-    const entryClass = table.u8(index * MONEY_ENTRY.size);
-    const value = table.u8(index * MONEY_ENTRY.size + 1);
+    const entryClass = table.u8(index * entrySize);
+    const value = table.u8(index * entrySize + 1);
     if (entryClass === classId) return value;
-    if (entryClass === MONEY_ENTRY.terminator && terminator === null)
+    if (entryClass === MONEY_TERMINATOR && terminator === null)
       terminator = value;
   }
   return terminator;
@@ -144,7 +147,12 @@ function fillTrainer(
   const moneyBytes = rom.money;
   const value =
     classId !== null && moneyBytes && tables.money
-      ? moneyValue(moneyBytes, tables.money.count, classId)
+      ? moneyValue(
+          moneyBytes,
+          tables.money.count,
+          classId,
+          moneyEntrySize(ctx.profile),
+        )
       : null;
   const mons = frame.opponent.party.filter((mon) => mon.trainer === index);
   const lastMon = mons.reduce<(typeof mons)[number] | null>(
@@ -174,7 +182,11 @@ const extras: ResourceDecoder<
 > = {
   regions: (profile) => ({
     moneyMultiplier: region(
-      at(profile.addresses.gBattleStruct, MONEY_MULTIPLIER_OFFSET),
+      at(
+        profile.addresses.gBattleStruct,
+        profile.constants.moneyMultiplierOffset ??
+          GEN3_CONSTANT_DEFAULTS.moneyMultiplierOffset,
+      ),
       1,
     ),
   }),
@@ -199,7 +211,7 @@ export const gen3Trainers: TrainerFill<Gen3Profile> = {
         profile.trainerTables,
         frame.opponent.trainers.map((trainer) => trainer.id),
       ),
-      ...classTables(profile.trainerTables),
+      ...classTables(profile),
     };
   },
 
@@ -211,7 +223,7 @@ export const gen3Trainers: TrainerFill<Gen3Profile> = {
         : trainerRegions(profile.trainerTables, [last])[trainerRegion(last)];
     return {
       ...(entry && { trainerA: entry, trainerB: entry }),
-      ...classTables(profile.trainerTables),
+      ...classTables(profile),
     };
   },
 

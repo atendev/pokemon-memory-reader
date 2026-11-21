@@ -27,11 +27,12 @@ import {
   type Result,
 } from "../types";
 import { decodePartyMon, ref, speciesTypes, status } from "./mon";
+import { GEN3_CONSTANT_DEFAULTS } from "./profile";
 import { PARTY_MAX, PARTY_MON } from "./structs";
 import { gen3Trainers } from "./trainers";
 
-/** `gMain.inBattle` is bit 1 of the byte at +0x439 (pokeemerald `struct Main`). */
-const IN_BATTLE = { offset: 0x439, mask: 0x02 } as const;
+/** `gMain.inBattle` is bit 1 of one byte of `struct Main`, at +0x439 in Emerald and FireRed. The profile's `constants.inBattleOffset` moves the byte. */
+const IN_BATTLE_MASK = 0x02;
 
 /** Layout of `struct BattlePokemon` (0x58 bytes, pokeemerald `include/pokemon.h`). */
 const BATTLE_MON = {
@@ -104,8 +105,8 @@ const SIDE = {
   safeguard: 0x20,
   mist: 0x100,
 } as const;
-/** `gSideTimers` holds one 12-byte `struct SideTimer` per side, with `spikesAmount` at +10. */
-const SIDE_TIMER = { size: 12, spikesAmount: 10 } as const;
+/** `gSideTimers` holds one 12-byte `struct SideTimer` per side, with `spikesAmount` at +10 in Emerald and FireRed. The profile's `constants.sideTimerSpikesOffset` moves it. */
+const SIDE_TIMER_SIZE = 12;
 
 /** `gBattleWeather` bits (pokeemerald `B_WEATHER_*`): temporary, downpour and permanent rain, sandstorm, sun, hail. */
 const WEATHER = {
@@ -154,7 +155,16 @@ interface FrameRegions extends ProbeRegions {
 const probeRegions = (profile: Profile<"gen3">): ProbeRegions => {
   const { gMain, gBattleOutcome } = profile.addresses;
   return {
-    flag: region({ ...gMain, offset: gMain.offset + IN_BATTLE.offset }, 1),
+    flag: region(
+      {
+        ...gMain,
+        offset:
+          gMain.offset +
+          (profile.constants.inBattleOffset ??
+            GEN3_CONSTANT_DEFAULTS.inBattleOffset),
+      },
+      1,
+    ),
     outcome: region(gBattleOutcome, 1),
   };
 };
@@ -176,11 +186,11 @@ const frameRegions = (profile: Profile<"gen3">): FrameRegions => {
     ),
     weather: region(a.gBattleWeather, 2),
     sideStatuses: region(a.gSideStatuses, 4),
-    sideTimers: region(a.gSideTimers, 2 * SIDE_TIMER.size),
+    sideTimers: region(a.gSideTimers, 2 * SIDE_TIMER_SIZE),
   };
 };
 
-const flagSet = (flag: Bytes): boolean => (flag.u8(0) & IN_BATTLE.mask) !== 0;
+const flagSet = (flag: Bytes): boolean => (flag.u8(0) & IN_BATTLE_MASK) !== 0;
 
 function weather(raw: number): BattleField["weather"] {
   if (raw & WEATHER.rain) return "rain";
@@ -190,11 +200,14 @@ function weather(raw: number): BattleField["weather"] {
   return "none";
 }
 
-function side(statuses: number, timers: Bytes, index: number) {
+function side(
+  statuses: number,
+  timers: Bytes,
+  index: number,
+  spikesOffset: number,
+) {
   const has = (bit: number) => (statuses & bit) !== 0;
-  const spikesAmount = timers.u8(
-    index * SIDE_TIMER.size + SIDE_TIMER.spikesAmount,
-  );
+  const spikesAmount = timers.u8(index * SIDE_TIMER_SIZE + spikesOffset);
   return {
     reflect: has(SIDE.reflect),
     lightScreen: has(SIDE.lightScreen),
@@ -380,6 +393,9 @@ function decodeFrame(
       ? [slices.opponentA.u16le(0), slices.opponentB.u16le(0)]
       : [slices.opponentA.u16le(0)];
   const tableless = (typeFlags & TABLELESS_TYPES) !== 0;
+  const spikesOffset =
+    ctx.profile.constants.sideTimerSpikesOffset ??
+    GEN3_CONSTANT_DEFAULTS.sideTimerSpikesOffset;
   return ok({
     kind: isTrainer ? "trainer" : "wild",
     format: isDouble ? "double" : "single",
@@ -405,8 +421,8 @@ function decodeFrame(
       weather: weather(slices.weather.u16le(0)),
       terrain: null,
       sides: {
-        player: side(statuses[0], slices.sideTimers, 0),
-        opponent: side(statuses[1], slices.sideTimers, 1),
+        player: side(statuses[0], slices.sideTimers, 0, spikesOffset),
+        opponent: side(statuses[1], slices.sideTimers, 1, spikesOffset),
       },
     },
     ...(tableless && { tableDerived: false as const }),
