@@ -16,7 +16,12 @@ import type { ProfileRegistry } from "../profile/registry";
 import type { IconKey } from "./keys";
 import { DEFAULT_MAPS, type IconMaps, planIcon } from "./plan";
 import { isServablePng, MAX_ICON_BYTES } from "./png";
-import { type IconSource, resolveSource, upstreamUrl } from "./source";
+import {
+  fallbackUrl,
+  type IconSource,
+  resolveSource,
+  upstreamUrl,
+} from "./source";
 
 type Png = Uint8Array<ArrayBuffer>;
 
@@ -182,6 +187,9 @@ export function createIconService(options: IconServiceOptions): IconService {
     }
   }
 
+  const send = (url: string) =>
+    doFetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+
   async function download(
     source: IconSource,
     path: string,
@@ -191,9 +199,13 @@ export function createIconService(options: IconServiceOptions): IconService {
     try {
       let response: Response;
       try {
-        response = await doFetch(upstreamUrl(source, path), {
-          signal: AbortSignal.timeout(timeoutMs),
-        });
+        response = await send(upstreamUrl(source, path));
+        const second =
+          response.status === 403 ? fallbackUrl(source, path) : null;
+        if (second !== null) {
+          await response.body?.cancel();
+          response = await send(second);
+        }
       } catch (error) {
         backoffUntil.set(source.id, clock.now() + BACKOFF_MS);
         log.warn(
