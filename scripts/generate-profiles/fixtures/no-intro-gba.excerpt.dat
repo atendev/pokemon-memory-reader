@@ -25,3 +25,27 @@ game (
 	serial "AXPD"
 	rom ( name "Pokemon - Saphir-Edition (Germany).gba" size 16777216 crc 6FCD7A98 md5 43906C58AFAF0760F62EC698EF10EAFC sha1 5A087835009D552D4C5C1F96BE3BE3206E378153 serial "AXPD" )
 )
+game (
+	name "Pokemon - FireRed Version (USA, Europe)"
+	region "USA"
+	serial "BPRE"
+	rom ( name "Pokemon - FireRed Version (USA, Europe).gba" size 16777216 crc DD88761C md5 E26EE0D44E809351C8CE2D73C7400CDD sha1 41CB23D8DCCC8EBD7C649CD8FBB58EEACE6E2FDC serial "BPRE" )
+)
+game (
+	name "Pokemon - FireRed Version (USA, Europe) (Rev 1)"
+	region "USA"
+	serial "BPRE"
+	rom ( name "Pokemon - FireRed Version (USA, Europe) (Rev 1).gba" size 16777216 crc 84EE4776 md5 51901A6E40661B3914AA333C802E24E8 sha1 DD5945DB9B930750CB39D00C84DA8571FEEBF417 serial "BPRE" )
+)
+game (
+	name "Pokemon - LeafGreen Version (USA, Europe)"
+	region "USA"
+	serial "BPGE"
+	rom ( name "Pokemon - LeafGreen Version (USA, Europe).gba" size 16777216 crc D69C96CC md5 612CA9473451FA42B51D1711031ED5F6 sha1 574FA542FFEBB14BE69902D1D36F1EC0A4AFD71E serial "BPGE" )
+)
+game (
+	name "Pokemon - LeafGreen Version (USA, Europe) (Rev 1)"
+	region "USA"
+	serial "BPGE"
+	rom ( name "Pokemon - LeafGreen Version (USA, Europe) (Rev 1).gba" size 16777216 crc DAFFECEC md5 9D33A02159E018D09073E700E1FD10FD sha1 7862C67BDECBE21D1D69CE082CE34327E1C6ED5E serial "BPGE" )
+)

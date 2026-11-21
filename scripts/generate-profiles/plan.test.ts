@@ -24,6 +24,24 @@ const committed = parseLedger(
 );
 const BUILTIN = join(import.meta.dir, "../../server/src/profile/builtin");
 
+/** The four pokefirered builds, each with its symbol and SHA-1 excerpt from the pinned commits. */
+const FIXTURE_NAMES: Record<string, string> = {
+  "firered-us-1.0": "pokefirered",
+  "firered-us-1.1": "pokefirered_rev1",
+  "leafgreen-us-1.0": "pokeleafgreen",
+  "leafgreen-us-1.1": "pokeleafgreen_rev1",
+};
+const frlg = definitions.filter((definition) => definition.id in FIXTURE_NAMES);
+const frlgBuilt = frlg.map((definition) => {
+  const name = FIXTURE_NAMES[definition.id];
+  return {
+    definition,
+    pretSha1s: parsePretSha1(fixture(`${name}.rom.sha1`), `${name}.sha1`),
+    noIntro,
+    symbols: parseSymFile(fixture(`${name}.excerpt.sym`)),
+  };
+});
+
 // A second pokeemerald revision whose SHA-1 is a real No-Intro entry in the excerpt (Spanish Sapphire Rev 1).
 const second = {
   ...emerald,
@@ -99,6 +117,7 @@ describe("the committed output", () => {
     const { files } = planGeneration({
       built: [
         { definition: emerald, pretSha1s: emeraldSha1, noIntro, symbols },
+        ...frlgBuilt,
       ],
       held: [],
       ledger: committed,
@@ -106,5 +125,57 @@ describe("the committed output", () => {
     expect(readFileSync(join(BUILTIN, NOTES_FILE), "utf8")).toBe(
       files.get(NOTES_FILE) ?? "",
     );
+  });
+});
+
+describe("the FireRed and LeafGreen builds", () => {
+  const { files, messages } = planGeneration({
+    built: frlgBuilt,
+    held: [],
+    ledger: [],
+  });
+  const profile = (id: string) => JSON.parse(files.get(`${id}.json`) ?? "{}");
+
+  test("all four generate, with no held-back builds", () => {
+    expect(frlg).toHaveLength(4);
+    expect(messages).toEqual([]);
+    for (const { id } of frlg) expect(files.has(`${id}.json`)).toBe(true);
+  });
+
+  test("identify by the shared Game Freak signature and the right game code and revision", () => {
+    const headers = frlg.map(({ id }) => profile(id).identify.header);
+    expect(headers).toEqual([
+      { gameCode: "BPRE", revision: 0 },
+      { gameCode: "BPRE", revision: 1 },
+      { gameCode: "BPGE", revision: 0 },
+      { gameCode: "BPGE", revision: 1 },
+    ]);
+    for (const { id } of frlg) {
+      expect(profile(id).identify.signature).toHaveLength(3);
+      expect(profile(id).identify.sha1).toHaveLength(1);
+    }
+  });
+
+  test("have no second opposing trainer address", () => {
+    for (const { id } of frlg) {
+      expect(profile(id).addresses.gTrainerBattleOpponent_A).toBeDefined();
+      expect(profile(id).addresses.gTrainerBattleOpponent_B).toBeUndefined();
+    }
+  });
+
+  test("derive the trainer table counts from the pokefirered strides of 40, 13 and 2 bytes", () => {
+    const { trainerTables } = profile("firered-us-1.0");
+    expect(trainerTables.trainers.count * 40).toBe(0x7418);
+    expect(trainerTables.classNames.count * 13).toBe(0x56f);
+    expect(trainerTables.money.count * 2).toBe(0x1a4);
+  });
+
+  test("move the ROM tables between builds and keep the RAM addresses", () => {
+    const [a, b] = [profile("firered-us-1.0"), profile("firered-us-1.1")];
+    expect(a.addresses.gPlayerParty).toEqual(b.addresses.gPlayerParty);
+    expect(a.trainerTables.trainers.base).not.toBe(
+      b.trainerTables.trainers.base,
+    );
+    expect(a.trainerTables.trainers.count).toBe(b.trainerTables.trainers.count);
   });
 });

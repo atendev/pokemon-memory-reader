@@ -176,7 +176,7 @@ describe("hash lists", () => {
 
   test("parseNoIntroDat lowercases hashes and ignores entries it cannot read", () => {
     const dat = parseNoIntroDat(noIntroDat);
-    expect(dat.size).toBe(3);
+    expect(dat.size).toBe(7);
     expect([
       ...(dat.get("f3ae088181bf583e55daf962a92bb46f4f1d07b7") ?? []),
     ]).toEqual(["1f1c08fb"]);
@@ -197,5 +197,60 @@ describe("hash lists", () => {
     expect(() => resolveHashes([sha1], parseNoIntroDat(clash), source)).toThrow(
       "different CRC32",
     );
+  });
+});
+
+describe("the pokefirered profiles", () => {
+  const read = (name: string) =>
+    readFileSync(join(import.meta.dir, "fixtures", name), "utf8");
+  const builds = [
+    ["firered-us-1.0", "pokefirered"],
+    ["firered-us-1.1", "pokefirered_rev1"],
+    ["leafgreen-us-1.0", "pokeleafgreen"],
+    ["leafgreen-us-1.1", "pokeleafgreen_rev1"],
+  ] as const;
+
+  for (const [id, name] of builds) {
+    test(`${id} matches its committed file`, () => {
+      const def = definitions.find((d) => d.id === id);
+      if (!def) throw new Error(`no definition ${id}`);
+      const frHashes = resolveHashes(
+        parsePretSha1(read(`${name}.rom.sha1`), `${name}.sha1`),
+        parseNoIntroDat(noIntroDat),
+        { pret: `pret/pokefirered ${name}.sha1`, noIntro: "excerpt.dat" },
+      );
+      const built = renderProfile(
+        buildProfile(
+          def,
+          parseSymFile(read(`${name}.excerpt.sym`)),
+          frHashes,
+          "unconfirmed",
+        ),
+      );
+      const committed = readFileSync(
+        join(import.meta.dir, `../../server/src/profile/builtin/${id}.json`),
+        "utf8",
+      );
+      expect(built).toBe(committed);
+    });
+  }
+
+  test("a pokefirered excerpt without gTrainerBattleOpponent_A fails, and B is not required", () => {
+    const def = definitions.find((d) => d.id === "firered-us-1.0");
+    if (!def) throw new Error("no definition");
+    const text = read("pokefirered.excerpt.sym");
+    const frHashes = resolveHashes(
+      parsePretSha1(read("pokefirered.rom.sha1"), "firered.sha1"),
+      parseNoIntroDat(noIntroDat),
+      { pret: "pret/pokefirered firered.sha1", noIntro: "excerpt.dat" },
+    );
+    expect(() =>
+      buildProfile(
+        def,
+        parseSymFile(text.replace(/^.* gTrainerBattleOpponent_A\n/m, "")),
+        frHashes,
+        "unconfirmed",
+      ),
+    ).toThrow("gTrainerBattleOpponent_A");
   });
 });
