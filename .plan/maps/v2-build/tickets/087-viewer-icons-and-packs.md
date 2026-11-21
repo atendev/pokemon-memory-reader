@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [081, 086]
+claimed_by: wfm-v2-build-master-1795260524
+claimed_at: 2026-11-21T12:31:46Z
 ---
 
 # Viewer icon use and icon packs
