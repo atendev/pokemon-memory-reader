@@ -6,6 +6,27 @@ Version 2 is a rewrite in progress and doesn't run yet. It will be one executabl
 
 The v1 Lua script is frozen at the [`v1-lua`](https://github.com/atendev/pokemon-memory-reader/tree/v1-lua) tag, and its downloads stay on the [releases page](https://github.com/atendev/pokemon-memory-reader/releases). v1 was released under the GPL-3.0 text in its `LICENSE` file.
 
+## Running a downloaded build
+
+Releases ship one archive per OS. Unpack it and start the program. Windows and macOS warn about it on first run because the program isn't signed by a paid certificate.
+
+### Windows SmartScreen
+
+The Windows build is unsigned, so SmartScreen shows "Windows protected your PC" the first time you start it. This is expected. To continue:
+
+1. Select **More info** on the blue dialog.
+2. Select **Run anyway**.
+
+You only do this once per downloaded file. It is the same for Windows on arm64. Some antivirus tools also flag executables compiled with Bun. If yours does, compare the file against `SHA256SUMS` on the release page before you allow it.
+
+### macOS quarantine
+
+The macOS builds are ad-hoc signed and not notarized. After unpacking, run `xattr -d com.apple.quarantine <file>` once, then start the program.
+
+### Supported targets
+
+Windows x64 and Linux x64 are the supported targets. Linux arm64, macOS (x64 and arm64) and Windows arm64 are best effort.
+
 ## Development
 
 v2 is a Bun workspace with `server/`, `viewer/`, `api/`, `internal/` and `bridges/`. Use the Bun version pinned in `package.json`.

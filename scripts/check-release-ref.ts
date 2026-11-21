@@ -178,7 +178,10 @@ export function buildBody(input: BodyInput): string {
     }
     main = `Dry run build of ${input.tag}. ${CHANGELOG_FILE[input.kind]} has no section for ${parsed.version} yet.`;
   }
-  const body = `${main.trimEnd()}\n\n${input.notes.trim()}\n`;
+  const notes = input.notes
+    .replaceAll("{{repo}}", input.repo)
+    .replaceAll("{{tag}}", input.tag);
+  const body = `${main.trimEnd()}\n\n${notes.trim()}\n`;
   const problems = lintBodyLinks(body, input.repo, input.tag);
   if (problems.length > 0) throw new Error(problems.join("\n"));
   return body;
