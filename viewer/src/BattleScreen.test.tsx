@@ -450,4 +450,34 @@ describe("an unrevealed opponent battler", () => {
       ),
     ).toBe(true);
   });
+
+  test("fails closed for a null partySlot or a slot with no party entry", () => {
+    for (const partySlot of [null, 9]) {
+      const orphan = { ...battle.opponent.active[0], partySlot };
+      expect(isHiddenBattler(battle as never, orphan as never, false)).toBe(
+        true,
+      );
+      expect(isHiddenBattler(battle as never, orphan as never, true)).toBe(
+        false,
+      );
+    }
+  });
+
+  test("renders the battler card once the page address turns the setting on", () => {
+    const html = withLocation("?showUnrevealed=1", () => render(battle));
+    expect(html).toContain("Mewtwo");
+    expect(html).not.toContain("battler-hidden");
+  });
 });
+
+function withLocation<T>(search: string, run: () => T): T {
+  const scope = globalThis as { window?: unknown };
+  const before = scope.window;
+  scope.window = { location: { search, hash: "" } };
+  try {
+    return run();
+  } finally {
+    if (before === undefined) delete scope.window;
+    else scope.window = before;
+  }
+}

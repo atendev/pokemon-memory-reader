@@ -361,17 +361,20 @@ function Field({ field }: { field: ActiveBattle["field"] }) {
   );
 }
 
-/** An opponent battler is unrevealed when its party mon is, and the setting is off. */
+/**
+ * An opponent battler is hidden unless the setting is on or its party mon is revealed. A null
+ * `partySlot` or a slot with no party entry fails closed, like the party tiles.
+ */
 export function isHiddenBattler(
   battle: ActiveBattle,
   battler: Battler,
   show: boolean,
 ): boolean {
-  if (show || battler.partySlot === null) return false;
+  if (show) return false;
   const mon = battle.opponent.party.find(
     (m) => m.partySlot === battler.partySlot,
   );
-  return mon !== undefined && !mon.revealed;
+  return mon === undefined || !mon.revealed;
 }
 
 function ActiveView({ battle }: { battle: ActiveBattle }) {
