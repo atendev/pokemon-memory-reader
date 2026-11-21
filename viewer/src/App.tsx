@@ -16,6 +16,7 @@ import { BattleScreen } from "./BattleScreen";
 import { BoxesScreen } from "./BoxesScreen";
 import { ConnectionScreen } from "./ConnectionScreen";
 import { useSidebarCollapsed } from "./collapse";
+import { IdentificationNotes } from "./IdentificationNotes";
 import { IconFailures } from "./icons";
 import { PartyScreen } from "./PartyScreen";
 import { Placeholder } from "./Placeholder";
@@ -86,17 +87,42 @@ export function Screen({
   if (GAME_SCREENS.includes(route) && status?.state !== "game") {
     return <ConnectionScreen status={status} {...connection} />;
   }
+  const notes = <IdentificationNotes game={status?.game} />;
   if (route === "party") {
     if (party.kind === "unavailable" && party.code === "unsupported") {
       return <ConnectionScreen status={status} unsupported {...connection} />;
     }
-    return <PartyScreen party={party} />;
+    return (
+      <>
+        {notes}
+        <PartyScreen party={party} />
+      </>
+    );
   }
-  if (route === "battle") return <BattleScreen battle={battle} />;
+  if (route === "battle") {
+    return (
+      <>
+        {notes}
+        <BattleScreen battle={battle} />
+      </>
+    );
+  }
   if (route === "boxes") {
-    return <BoxesScreen boxes={boxes} generation={status?.game?.generation} />;
+    return (
+      <>
+        {notes}
+        <BoxesScreen boxes={boxes} generation={status?.game?.generation} />
+      </>
+    );
   }
-  if (route === "trainer") return <TrainerScreen player={player} bag={bag} />;
+  if (route === "trainer") {
+    return (
+      <>
+        {notes}
+        <TrainerScreen player={player} bag={bag} />
+      </>
+    );
+  }
   const screen = SCREENS.find((s) => s.id === route);
   return <Placeholder title={screen?.label ?? "Page not found"} />;
 }
