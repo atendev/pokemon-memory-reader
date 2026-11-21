@@ -116,11 +116,22 @@ export interface Adapter {
  */
 export type AdapterMode = "probe" | "hold" | "live";
 
+/** A probe that got no answer: nothing listening (`refused`) or silence (`no_reply`), and when it ended. */
+export interface ProbeMiss {
+  readonly kind: "refused" | "no_reply";
+  readonly at: number;
+}
+
 /** What the selector uses. One long-lived instance per configured emulator. */
 export interface ManagedAdapter extends Adapter {
   readonly id: AdapterId;
   /** mgba 0, retroarch 1, bizhawk 2 (spec §3.3). */
   readonly priority: number;
+  /**
+   * The last probe that ended without an answer, for an adapter whose state can't show it (RetroArch,
+   * where a miss changes nothing). null after a probe that answered. Bridge adapters leave it out.
+   */
+  readonly lastMiss?: ProbeMiss | null;
   setMode(mode: AdapterMode): void;
   close(): Promise<void>;
 }

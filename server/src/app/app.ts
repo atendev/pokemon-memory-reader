@@ -1,7 +1,9 @@
 import { API_BASE_PATH } from "@pokemon-memory-reader/api/client";
 import type { ErrorBody, Topic } from "@pokemon-memory-reader/api/schemas";
 import type { AboutBody } from "@pokemon-memory-reader/internal/about";
+import { switchRequest } from "@pokemon-memory-reader/internal/adapters-route";
 import { type Handler, Hono } from "hono";
+import type { Selector } from "../adapter/selector";
 import type { Config } from "../config";
 import { checkPatch, saveSettings } from "../config-save";
 import { parseIconPath } from "../icons/keys";
@@ -64,6 +66,8 @@ export function createApp(deps: {
   /** The SSE hub. Without it `/api/v2/events` is a 404. */
   readonly stream?: StreamHub;
   readonly config?: Config;
+  /** Without it there are no `/adapters` routes. */
+  readonly selector?: Selector;
   readonly about?: AboutInfo;
   /** Without it there is no `/icons` route. */
   readonly icons?: IconService;
@@ -197,6 +201,27 @@ export function createApp(deps: {
       if (!saved.ok) return internalError(c, saved.code, saved.message);
       // A write guard passed, so the peer is loopback and may see the paths.
       return c.json(await settingsBody(config, { loopback: true }));
+    });
+  }
+
+  const { selector } = deps;
+  if (selector) {
+    internalRoute("GET", "/adapters", (c) => c.json(selector.list()));
+    internalRoute("POST", "/adapters/probe", async (c) => {
+      const result = await selector.probeNow();
+      return result.ok
+        ? c.json(result.body)
+        : internalError(c, result.code, result.message);
+    });
+    internalRoute("POST", "/adapters/switch", async (c) => {
+      const raw: unknown = await c.req.json().catch(() => undefined);
+      const request = switchRequest.safeParse(raw);
+      if (!request.success)
+        return internalError(c, "invalid_request", "id must be an adapter id.");
+      const result = await selector.switchTo(request.data.id);
+      return result.ok
+        ? c.json({ live: result.live })
+        : internalError(c, result.code, result.message);
     });
   }
 

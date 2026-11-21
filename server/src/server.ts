@@ -1,6 +1,7 @@
 import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
 import { DEFAULT_POLL_HZ } from "@pokemon-memory-reader/internal/config";
 import type { HTMLBundle } from "bun";
+import type { Selector } from "./adapter/selector";
 import type { Adapter } from "./adapter/types";
 import { type AboutInfo, createApp } from "./app/app";
 import { createStreamHub } from "./app/stream";
@@ -12,7 +13,10 @@ import { createReadLoop } from "./loop/read-loop";
 import type { ProfileRegistry } from "./profile/registry";
 
 export interface ServerOptions {
+  /** The adapter the loop reads. With `selector`, pass `selector.adapter`. */
   readonly adapter: Adapter;
+  /** Adds the `/adapters` routes. */
+  readonly selector?: Selector;
   readonly registry: ProfileRegistry;
   /** Default 127.0.0.1. */
   readonly host?: string;
@@ -65,6 +69,7 @@ export function startServer(options: ServerOptions): RunningServer {
     bridges: options.bridges,
     log,
     config: options.config,
+    selector: options.selector,
     about: options.about,
     icons: options.icons,
     ...(options.debug ? { rawRead: loop.rawRead } : {}),

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { aboutBody } from "@pokemon-memory-reader/internal/about";
+import { adaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
 import { DEFAULT_SETTINGS } from "@pokemon-memory-reader/internal/config";
 import {
   INTERNAL_ERROR_CODES,
@@ -10,14 +11,17 @@ import {
   internalErrorBody,
 } from "@pokemon-memory-reader/internal/errors";
 import { settingsBody } from "@pokemon-memory-reader/internal/settings-route";
+import { createSelector } from "../../src/adapter/selector";
 import { type AboutInfo, createApp } from "../../src/app/app";
 import { ROUTES } from "../../src/app/route-table";
 import { readConfigFile, resolveConfig } from "../../src/config";
 import { resolvePaths } from "../../src/data-folder";
 import { createIconService } from "../../src/icons/service";
+import { silentLog } from "../../src/log";
 import type { RawReadResult, Resources } from "../../src/loop/read-loop";
 import { builtinProfiles } from "../../src/profile/builtin/index";
 import { loadProfiles } from "../../src/profile/registry";
+import { ManualClock } from "../bridge/manual-clock";
 
 const status = {
   state: "disconnected",
@@ -99,6 +103,13 @@ async function everything(
     resources: idle,
     bridges: { mgba: "-- mgba" },
     config: await loadConfig(),
+    selector: createSelector({
+      create: () => null,
+      endpoint: () => ({ host: "127.0.0.1", port: 1 }),
+      pin: "auto",
+      clock: new ManualClock(),
+      log: silentLog,
+    }),
     about: ABOUT,
     icons: iconService("local"),
     rawRead: read ?? (() => Promise.resolve(okRead)),
@@ -848,4 +859,32 @@ test("with mode off the route is a 404 even when the pack has the file", async (
 test("without an icon service there is no icons route", async () => {
   const app = createApp({ resources: idle });
   expect((await app.request(ICON)).status).toBe(404);
+});
+
+test("GET /adapters answers the last known list, and a bad switch body is invalid_request", async () => {
+  const app = await everything();
+  const list = await app.request("/adapters", { headers: { Host: HOST } }, lan);
+  expect(list.status).toBe(200);
+  expect(adaptersBody.parse(await list.json()).mode).toBe("auto");
+  const bad = await app.request(
+    "/adapters/switch",
+    { ...put({ id: "nope" }), method: "POST" },
+    loopback,
+  );
+  expect(bad.status).toBe(400);
+  const post = { ...put({ id: "mgba" }), method: "POST" };
+  const refused = await app.request("/adapters/switch", post, loopback);
+  expect(internalErrorBody.parse(await refused.json()).error.code).toBe(
+    "adapter_not_usable",
+  );
+});
+
+test("POST /adapters/probe returns the list body and needs the write guard", async () => {
+  const app = await everything();
+  const post = { ...put({}), method: "POST" };
+  const ok = await app.request("/adapters/probe", post, loopback);
+  expect(ok.status).toBe(200);
+  expect(adaptersBody.parse(await ok.json()).mode).toBe("auto");
+  const lanPeer = await app.request("/adapters/probe", post, lan);
+  expect(lanPeer.status).toBe(403);
 });

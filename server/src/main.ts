@@ -3,6 +3,8 @@ import { join } from "node:path";
 import viewer from "../../viewer/src/index.html";
 import { LGPL_COMPONENTS } from "../../viewer/src/lgpl";
 import { createBridgeAdapter } from "./adapter/bridge/adapter";
+import { createRetroArchAdapter } from "./adapter/retroarch/adapter";
+import { createSelector } from "./adapter/selector";
 import { generateBridges } from "./bridges";
 import { buildCommit, buildTarget, versionLine } from "./build-info";
 import { type Command, parseArgs, USAGE } from "./cli";
@@ -120,16 +122,25 @@ async function run(
   });
   await icons.pruneCache();
 
-  const adapter = createBridgeAdapter("mgba", mgbaEndpoint, {
+  const adapterDeps = { clock: systemClock, log };
+  const selector = createSelector({
+    create: (id) =>
+      id === "mgba"
+        ? createBridgeAdapter("mgba", settings.adapters.mgba, adapterDeps)
+        : id === "retroarch"
+          ? createRetroArchAdapter(settings.adapters.retroarch, adapterDeps)
+          : null,
+    endpoint: (id) => config.applied().adapters[id],
+    pin: settings.adapter,
     clock: systemClock,
     log,
   });
-  adapter.setMode("live");
 
   let server: ReturnType<typeof startServer>;
   try {
     server = startServer({
-      adapter,
+      adapter: selector.adapter,
+      selector,
       registry,
       host: settings.host,
       port: settings.port,
@@ -158,7 +169,7 @@ async function run(
     } else {
       console.error(`Cannot start the server: ${(error as Error).message}`);
     }
-    await adapter.close();
+    await selector.close();
     return exitAfterFatal(1);
   }
 
@@ -176,6 +187,7 @@ async function run(
 
   config.onLive((live, changed) => {
     if (changed.includes("pollHz")) server.setPollHz(live.pollHz);
+    if (changed.includes("adapter")) selector.setPin(live.adapter);
   });
 
   let stopping = false;
@@ -190,8 +202,8 @@ async function run(
     }, SHUTDOWN_MS);
     try {
       await server.stop();
-      step = "the adapter";
-      await adapter.close();
+      step = "the adapters";
+      await selector.close();
     } catch (error) {
       log.error(`shutdown failed while stopping ${step}`, { error });
       process.exit(1);

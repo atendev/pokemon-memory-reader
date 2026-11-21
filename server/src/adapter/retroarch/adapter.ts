@@ -7,6 +7,7 @@ import type {
   Endpoint,
   GameInfo,
   ManagedAdapter,
+  ProbeMiss,
   Range,
   ReadOutcome,
 } from "../types";
@@ -98,6 +99,7 @@ export function createRetroArchAdapter(
   let headerKey: string | undefined;
   let badStatusLogged = false;
   let shortLogged = false;
+  let lastMiss: ProbeMiss | null = null;
 
   function update(change: Partial<AdapterState>): void {
     const next = { ...state, ...change };
@@ -161,7 +163,7 @@ export function createRetroArchAdapter(
           },
           // An ICMP port-unreachable lands here: nothing is listening (amendment 026, point 2).
           error() {
-            if (phase === "probing") failProbe();
+            if (phase === "probing") failProbe("refused");
           },
         },
       });
@@ -188,16 +190,17 @@ export function createRetroArchAdapter(
     const open = await ensureSocket();
     if (shutDown) return;
     if (open === null) {
-      failProbe();
+      failProbe("no_reply");
       return;
     }
-    cancelProbe = clock.setTimeout(failProbe, probeTimeoutMs);
+    cancelProbe = clock.setTimeout(() => failProbe("no_reply"), probeTimeoutMs);
     send("GET_STATUS");
   }
 
   /** No reply, or nothing listening. Not a problem: the adapter stays disconnected (spec §4.7). */
-  function failProbe(): void {
+  function failProbe(kind: "refused" | "no_reply"): void {
     if (phase !== "probing") return;
+    lastMiss = { kind, at: clock.now() };
     cancelProbe?.();
     cancelProbe = null;
     phase = "idle";
@@ -207,6 +210,7 @@ export function createRetroArchAdapter(
   function onProbeOk(reply: StatusReply): void {
     cancelProbe?.();
     cancelProbe = null;
+    lastMiss = null;
     phase = "up";
     badStatusLogged = false;
     shortLogged = false;
@@ -513,6 +517,9 @@ export function createRetroArchAdapter(
     priority: 1,
     // The adapter spike may raise these (spec §15).
     limits: { minIntervalMs: 0, mergeGap: 32 },
+    get lastMiss() {
+      return lastMiss;
+    },
     get state() {
       return state;
     },
