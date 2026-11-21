@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [087]
+claimed_by: wfm-v2-build-master-1795265782
+claimed_at: 2026-11-21T15:00:00Z
 ---
 
 # Item icons on the Trainer and bag screen
