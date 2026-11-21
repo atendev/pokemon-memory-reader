@@ -452,6 +452,7 @@ export const resourceSchemas = {
   status: StatusResource,
   party: Party,
   battle: Battle,
+  boxes: Boxes,
 } satisfies Record<Topic, z.ZodType>;
 
 export type ResourceMap = ResourceMapType;

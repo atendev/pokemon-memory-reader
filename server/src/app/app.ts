@@ -16,11 +16,12 @@ const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
 const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = [
   "party",
   "battle",
+  "boxes",
 ];
 
 /**
- * The HTTP app (spec §7). Only the status and party snapshots and the bridge downloads are
- * served. The SSE route, the remaining resources, `/openapi.json` and the settings routes join it
+ * The HTTP app (spec §7). Only the status, party, battle and boxes snapshots and the bridge
+ * downloads are served. The SSE route, the remaining resources, `/openapi.json` and the settings routes join it
  * as their tickets land. The viewer is served by `Bun.serve` itself (see `startServer`).
  */
 export function createApp(deps: {
@@ -47,6 +48,11 @@ export function createApp(deps: {
     return c.body(null, 204);
   });
 
+  const failure = (code: string, message: string): ErrorBody => ({
+    error: { code, message },
+    status: resources.status(),
+  });
+
   app.get(`${API_BASE_PATH}/status`, (c) => c.json(resources.status()));
 
   for (const topic of SNAPSHOT_TOPICS) {
@@ -61,6 +67,18 @@ export function createApp(deps: {
     });
   }
 
+  app.get(`${API_BASE_PATH}/boxes/:n`, async (c) => {
+    const snapshot = await resources.box(c.req.param("n"));
+    if (snapshot.ok) return c.json(snapshot.value);
+    if (snapshot.code === "not_found")
+      return c.json(failure("not_found", "No such box."), 404);
+    const body: ErrorBody = {
+      error: { code: snapshot.code, message: MESSAGES[snapshot.code] },
+      status: snapshot.status,
+    };
+    return c.json(body, 503);
+  });
+
   // Looked up in the map and never joined to a path, so no request reaches the filesystem (spec §4.11).
   const bridges = new Map(Object.entries(deps.bridges ?? {}));
   app.get("/bridges/:file", (c) => {
@@ -72,10 +90,6 @@ export function createApp(deps: {
     return c.body(source, 200, { "Content-Type": "text/plain; charset=utf-8" });
   });
 
-  const failure = (code: string, message: string): ErrorBody => ({
-    error: { code, message },
-    status: resources.status(),
-  });
   app.notFound((c) => c.json(failure("not_found", "No such resource."), 404));
   app.onError((error, c) => {
     log.error("request failed", { error });

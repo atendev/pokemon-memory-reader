@@ -234,4 +234,27 @@ describe("bridge caps", () => {
       checkRequestCaps("main batch", declared.main, BRIDGE_CAPS),
     ).toBeNull();
   });
+
+  test("the Emerald box request is measured and fits the 64 KiB bridge cap", () => {
+    const { registry } = load([]);
+    const declared = declaredRegions(registry.get("emerald-us-1.0") as Profile);
+    // The box request is no longer empty: it holds the whole PokemonStorage block (0x83D0 bytes).
+    expect(declared.boxes.map((p) => p.part)).toEqual(["boxes"]);
+    expect(declared.boxes[0]?.regions.storage?.length).toBe(0x83d0);
+    expect(
+      checkRequestCaps("box request", declared.boxes, BRIDGE_CAPS),
+    ).toBeNull();
+  });
+
+  test("a box request over the byte cap fails the profile load and names the box request", () => {
+    const caps = { ...BRIDGE_CAPS, maxBytes: 0x8000 };
+    const { registry, problems } = loadProfiles({
+      builtin: [base],
+      user: [],
+      caps,
+    });
+    expect(registry.get("emerald-us-1.0")).toBeUndefined();
+    expect(problems[0]?.message).toContain("box request needs");
+    expect(problems[0]?.message).toContain("largest region boxes.storage");
+  });
 });

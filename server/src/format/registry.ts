@@ -1,9 +1,10 @@
-import type { Party } from "@pokemon-memory-reader/api/schemas";
+import type { Boxes, Party } from "@pokemon-memory-reader/api/schemas";
 import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
 import type { BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
 import { gen3Decoder } from "./gen3";
+import { STORAGE } from "./gen3/structs";
 import type { Regions, Slices } from "./regions";
 import type {
   BattleProbe,
@@ -27,9 +28,15 @@ export interface BoundBattle {
   readonly frame: BoundPart<BattleTick>;
 }
 
+/** The box reader, with the box count the format fixes so `/boxes/:n` can refuse an out-of-range `n` before any read (amendment 020 §3). */
+export interface BoundBoxes extends BoundPart<Boxes> {
+  readonly count: number;
+}
+
 /** What the read loop reads and decodes for the loaded game. A part left out makes its resource 503 `unsupported` (spec §7.2). */
 export interface BoundGame {
   readonly party?: BoundPart<Party>;
+  readonly boxes?: BoundBoxes;
   readonly battle?: BoundBattle;
 }
 
@@ -54,8 +61,7 @@ export interface DeclaredPart {
 /**
  * What the loaded game's decoders read, split into the main batch and the box request (amendment
  * 026 §6). It needs no reference data, so a profile is measured the same whether or not its
- * language has any. Gen 3 has a box decoder, but the box request stays empty until the loop reads
- * boxes (ticket 066).
+ * language has any.
  */
 export function declaredRegions(profile: Profile): {
   readonly main: readonly DeclaredPart[];
@@ -77,7 +83,10 @@ export function declaredRegions(profile: Profile): {
               ]
             : []),
         ],
-        boxes: [],
+        boxes:
+          gen3Decoder.boxes && profile.features.boxes
+            ? [{ part: "boxes", regions: gen3Decoder.boxes.regions(profile) }]
+            : [],
       };
     default:
       return { main: [], boxes: [] };
@@ -102,9 +111,14 @@ export function bindGame(profile: Profile): BoundGame {
           locations: reference.locations(profile.artVersion),
         },
       };
-      const { party, battle } = gen3Decoder;
+      const { party, battle, boxes } = gen3Decoder;
       return {
         ...(party && { party: bind(party, profile, ctx) }),
+        // A profile that turns `features.boxes` off has no box reader, so its boxes 503 `unsupported` (spec §7.2).
+        ...(boxes &&
+          profile.features.boxes && {
+            boxes: { ...bind(boxes, profile, ctx), count: STORAGE.boxCount },
+          }),
         ...(battle && {
           battle: {
             probe: bind(battle.probe, profile, ctx),
