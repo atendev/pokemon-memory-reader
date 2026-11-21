@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { definitions, heldBack } from "./definitions";
 import { parseLedger } from "./evidence";
-import { parseNoIntroDat, parsePretSha1 } from "./hashes";
+import { brokenChain, parseNoIntroDat, parsePretSha1 } from "./hashes";
 import { NOTES_FILE, planGeneration } from "./plan";
 import { parseSymFile } from "./sym";
 
@@ -177,5 +177,33 @@ describe("the FireRed and LeafGreen builds", () => {
       b.trainerTables.trainers.base,
     );
     expect(a.trainerTables.trainers.count).toBe(b.trainerTables.trainers.count);
+  });
+
+  test("every pokefirered SHA-1 has a No-Intro entry, so none is held back", () => {
+    for (const build of frlgBuilt)
+      expect(brokenChain(build.pretSha1s, noIntro)).toEqual([]);
+  });
+
+  test("a FireRed revision with a broken chain is held back by the existing mechanism, with no file and no failure", () => {
+    const [firered] = frlg;
+    if (!firered) throw new Error("no FireRed definition");
+    const held = {
+      id: firered.id,
+      name: firered.name,
+      repo: firered.source.repo,
+      sha1: firered.sha1,
+      noIntro: firered.noIntro,
+      reason: "test",
+    };
+    const bogus = "0".repeat(40);
+    const out = planGeneration({
+      built: frlgBuilt.filter((b) => b.definition.id !== firered.id),
+      held: [{ held, pretSha1s: [bogus], noIntro }],
+      ledger: [],
+    });
+    expect(out.messages[0]).toContain(`held back ${firered.id}`);
+    expect(out.messages[0]).toContain(bogus);
+    expect(out.files.has(`${firered.id}.json`)).toBe(false);
+    expect(out.files.get("index.ts")).not.toContain(firered.id);
   });
 });
