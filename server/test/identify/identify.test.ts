@@ -1,7 +1,17 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { GameInfo } from "../../src/adapter/types";
 import { headerRange, parseHeader } from "../../src/identify/header";
-import { identification } from "../../src/identify/identify";
+import {
+  identification,
+  type PickInputs,
+  type SessionPick,
+} from "../../src/identify/identify";
+import type { PickKey } from "../../src/identify/pick-keys";
+import { openPickStore } from "../../src/identify/pick-store";
+import { type Log, silentLog } from "../../src/log";
 import { runJob } from "../../src/loop/job";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
@@ -411,5 +421,302 @@ describe("identification job", () => {
       );
       expect(result).toBeNull();
     });
+  });
+});
+
+describe("manual picks", () => {
+  const tamperedRevision = (revision: number) => {
+    const memory = emeraldMemory([TREECKO]);
+    memory.rom[0xbc] = revision;
+    return memory;
+  };
+
+  const read = async (
+    ranges: Parameters<typeof serve>[1],
+    memory = emeraldMemory([TREECKO]),
+  ) => ({
+    kind: "data" as const,
+    slices: ranges.map((r) => serve(memory, [r])),
+  });
+
+  /** A store that holds `entries` and answers lookups only. */
+  const holding = (entries: Record<string, string>): PickInputs["store"] => ({
+    lookup: (keys) => {
+      for (const key of keys) {
+        const profileId = entries[key];
+        if (profileId) return { key, profileId };
+      }
+      return null;
+    },
+  });
+
+  const run = (
+    game: GameInfo,
+    entries: Record<string, string>,
+    options: {
+      registry?: typeof registry;
+      memory?: ReturnType<typeof emeraldMemory>;
+      session?: SessionPick | null;
+      log?: Log;
+    } = {},
+  ) =>
+    runJob(
+      identification(game, options.registry ?? registry, {
+        store: holding(entries),
+        session: options.session ?? null,
+        log: options.log ?? silentLog,
+      }),
+      (ranges) => read(ranges, options.memory),
+    );
+
+  const modified = gba({ crc32: "deadbeef" });
+
+  test("a ROM key pick identifies a modified ROM and reports the keys that hold it", async () => {
+    const result = await run(modified, { "crc32:deadbeef": "emerald-us-1.0" });
+    expect(result).toMatchObject({
+      kind: "identified",
+      match: "manual",
+      pick: { scope: "rom", keys: ["crc32:deadbeef"] },
+      header: { gameCode: "BPEE" },
+    });
+    expect(result?.kind === "identified" && result.profile.id).toBe(
+      "emerald-us-1.0",
+    );
+  });
+
+  test("a SHA-1 key pick is found before a CRC32 one", async () => {
+    const result = await run(gba({ sha1: "aa", crc32: "deadbeef" }), {
+      "sha1:aa": "emerald-us-1.0",
+    });
+    expect(result).toMatchObject({
+      match: "manual",
+      pick: { keys: ["sha1:aa", "crc32:deadbeef"] },
+    });
+  });
+
+  test("a header key pick identifies a ROM the emulator gave no hash for", async () => {
+    const memory = emeraldMemory([TREECKO]);
+    memory.rom[0xbc] = 7;
+    const result = await run(
+      gba(),
+      { "header:gba:BPEE:7:POKEMON EMER": "emerald-us-1.0" },
+      { memory },
+    );
+    expect(result).toMatchObject({
+      kind: "identified",
+      match: "manual",
+      pick: { scope: "rom", keys: ["header:gba:BPEE:7:POKEMON EMER"] },
+    });
+  });
+
+  test("a content name key pick identifies a ROM with no hash and no readable header", async () => {
+    const result = await run(gba({ domains: {}, contentName: "Hack" }), {
+      "name:gba:Hack": "emerald-us-1.0",
+    });
+    expect(result).toMatchObject({
+      kind: "identified",
+      match: "manual",
+      signature: "unchecked",
+      pick: { keys: ["name:gba:Hack"] },
+    });
+  });
+
+  test("an unpicked unidentified ROM stays unidentified", async () => {
+    expect(await run(modified, {})).toMatchObject({
+      kind: "unidentified",
+      reason: "modified_rom",
+    });
+  });
+
+  test("an automatic match never consults the pick", async () => {
+    const result = await run(
+      gba({ crc32: EMERALD_CRC32 }),
+      {
+        "crc32:1f1c08fb": "emerald-signed",
+      },
+      { registry: withBoth.registry },
+    );
+    expect(result).toMatchObject({ kind: "identified", match: "exact" });
+  });
+
+  test("a pick judged against a failed signature still loads, marked mismatch", async () => {
+    const result = await run(
+      gba({ crc32: "deadbeef" }),
+      { "crc32:deadbeef": "emerald-signed" },
+      { registry: withBoth.registry },
+    );
+    expect(result).toMatchObject({
+      kind: "identified",
+      match: "manual",
+      signature: "mismatch",
+    });
+  });
+
+  test("a pick naming a profile that isn't loaded is skipped with a warning", async () => {
+    const warnings: string[] = [];
+    const result = await run(
+      modified,
+      { "crc32:deadbeef": "gone" },
+      { log: { ...silentLog, warn: (m) => void warnings.push(m) } },
+    );
+    expect(result?.kind).toBe("unidentified");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("gone");
+  });
+
+  test("a pick naming a profile of another platform is skipped", async () => {
+    const result = await run(gba({ platform: "gb", crc32: "deadbeef" }), {
+      "crc32:deadbeef": "emerald-us-1.0",
+    });
+    expect(result?.kind).toBe("unidentified");
+  });
+
+  describe("base-game picks", () => {
+    test("a base pick identifies a modified ROM of a base game's header, and names it by base key", async () => {
+      const result = await run(modified, {
+        "base:emerald-us-1.0": "emerald-us-1.0",
+      });
+      expect(result).toMatchObject({
+        kind: "identified",
+        match: "manual",
+        pick: { scope: "base", keys: ["base:emerald-us-1.0"] },
+      });
+    });
+
+    test("an unidentified ROM reports its eligible base profiles", async () => {
+      const result = await run(modified, {});
+      expect(
+        result?.kind === "unidentified" && result.eligible?.map((p) => p.id),
+      ).toEqual(["emerald-us-1.0"]);
+    });
+
+    test("a base game whose signature fails is not eligible and its base pick is ignored", async () => {
+      const result = await run(
+        gba({ crc32: "deadbeef" }),
+        { "base:emerald-signed": "emerald-signed" },
+        { registry: withBoth.registry, memory: tamperedRevision(2) },
+      );
+      expect(result).toMatchObject({ kind: "unidentified" });
+      expect(result?.kind === "unidentified" && result.eligible).toEqual([]);
+    });
+
+    test("a base pick works when the signature matches", async () => {
+      const memory = tamperedRevision(2);
+      memory.rom.set([1, 2, 3, 4], 0x1bc);
+      const result = await run(
+        gba({ crc32: "deadbeef" }),
+        { "base:emerald-signed": "emerald-signed" },
+        { registry: withBoth.registry, memory },
+      );
+      expect(result).toMatchObject({
+        match: "manual",
+        signature: "match",
+        pick: { scope: "base" },
+      });
+    });
+
+    test("a base pick needs a hash from the emulator, or it isn't offered", async () => {
+      const result = await run(gba(), {
+        "base:emerald-us-1.0": "emerald-us-1.0",
+      });
+      expect(result).toMatchObject({ kind: "identified", match: "header" });
+    });
+
+    test("several base candidates with entries stay unidentified, one with an entry wins", async () => {
+      const memory = tamperedRevision(1);
+      memory.rom.set([1, 2, 3, 4], 0x1bc);
+      const game = gba({ crc32: "deadbeef" });
+      const both = await run(
+        game,
+        { "base:emerald-unsigned": "x", "base:emerald-strict": "x" },
+        { registry: sharedHeader.registry, memory },
+      );
+      expect(both?.kind).toBe("unidentified");
+      const one = await run(
+        game,
+        { "base:emerald-strict": "x" },
+        { registry: sharedHeader.registry, memory },
+      );
+      expect(one).toMatchObject({
+        kind: "identified",
+        pick: { keys: ["base:emerald-strict"] },
+      });
+    });
+
+    test("a ROM key pick wins over a base pick", async () => {
+      const result = await run(modified, {
+        "base:emerald-us-1.0": "emerald-us-1.0",
+        "crc32:deadbeef": "emerald-us-1.0",
+      });
+      expect(result).toMatchObject({ pick: { scope: "rom" } });
+    });
+  });
+
+  describe("a session pick", () => {
+    test("applies when no entry exists, with the keys it would be saved under", async () => {
+      const result = await run(
+        modified,
+        {},
+        { session: { profileId: "emerald-us-1.0", scope: "rom" } },
+      );
+      expect(result).toMatchObject({
+        match: "manual",
+        pick: { scope: "rom", keys: ["crc32:deadbeef"] },
+      });
+    });
+
+    test("a base session pick needs an eligible profile", async () => {
+      const ok = await run(
+        modified,
+        {},
+        { session: { profileId: "emerald-us-1.0", scope: "base" } },
+      );
+      expect(ok).toMatchObject({
+        pick: { scope: "base", keys: ["base:emerald-us-1.0"] },
+      });
+      const no = await run(
+        gba({ crc32: "deadbeef" }),
+        {},
+        {
+          session: { profileId: "emerald-signed", scope: "base" },
+          registry: withBoth.registry,
+        },
+      );
+      expect(no?.kind).toBe("unidentified");
+    });
+
+    test("with no key available the pick has no keys, so forgetting has nothing to remove", async () => {
+      const result = await run(
+        gba({ domains: {} }),
+        {},
+        { session: { profileId: "emerald-us-1.0", scope: "rom" } },
+      );
+      expect(result).toMatchObject({ match: "manual", pick: { keys: [] } });
+    });
+  });
+
+  test("a pick saved through the real store identifies after a restart", async () => {
+    const folder = await mkdtemp(join(tmpdir(), "identify-picks-"));
+    try {
+      const path = join(folder, "manual-picks.json");
+      const first = await openPickStore(path, silentLog);
+      await first.save(["crc32:deadbeef"], "emerald-us-1.0");
+      const second = await openPickStore(path, silentLog);
+      const result = await runJob(
+        identification(modified, registry, {
+          store: second,
+          session: null,
+          log: silentLog,
+        }),
+        (ranges) => read(ranges),
+      );
+      expect(result).toMatchObject({ match: "manual" });
+      const keys: readonly PickKey[] = ["crc32:deadbeef"];
+      await second.forget(keys);
+      const third = await openPickStore(path, silentLog);
+      expect(third.lookup(keys)).toBeNull();
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
   });
 });

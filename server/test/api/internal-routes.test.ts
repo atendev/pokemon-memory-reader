@@ -10,6 +10,7 @@ import {
   INTERNAL_ERROR_STATUS,
   internalErrorBody,
 } from "@pokemon-memory-reader/internal/errors";
+import { pickBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import { settingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import { createSelector } from "../../src/adapter/selector";
 import { type AboutInfo, createApp } from "../../src/app/app";
@@ -96,6 +97,19 @@ function iconService(mode: "online" | "local" | "off") {
   });
 }
 
+const PICKED = {
+  key: "sha1:abc",
+  scope: "rom",
+  profileId: "emerald",
+  saved: true,
+  reason: null,
+} as const;
+
+const picksStub = {
+  pick: () => Promise.resolve({ ok: true, value: PICKED } as const),
+  forget: () => Promise.resolve({ ok: true } as const),
+};
+
 async function everything(
   read?: (address: string, length: number) => Promise<RawReadResult>,
 ) {
@@ -112,6 +126,7 @@ async function everything(
     }),
     about: ABOUT,
     icons: iconService("local"),
+    picks: picksStub,
     rawRead: read ?? (() => Promise.resolve(okRead)),
     listening: () => ({ host: "127.0.0.1", port: PORT }),
   });
@@ -185,6 +200,8 @@ test("the route table gives each route the expected class", () => {
     ROUTES.find((r) => r.method === method && r.path === path)?.guard;
   expect(classOf("GET", "/settings")).toBe("open");
   expect(classOf("PUT", "/settings")).toBe("write");
+  expect(classOf("POST", "/manual-picks")).toBe("write");
+  expect(classOf("POST", "/manual-picks/forget")).toBe("write");
   expect(classOf("GET", "/about")).toBe("open");
   expect(classOf("GET", "/about/third-party-notices.txt")).toBe("open");
   expect(classOf("GET", "/debug/read")).toBe("debug");
@@ -887,4 +904,121 @@ test("POST /adapters/probe returns the list body and needs the write guard", asy
   expect(adaptersBody.parse(await ok.json()).mode).toBe("auto");
   const lanPeer = await app.request("/adapters/probe", post, lan);
   expect(lanPeer.status).toBe(403);
+});
+
+// Manual picks
+
+const postJson = (body: unknown, headers: Record<string, string> = {}) => ({
+  ...put(body, headers),
+  method: "POST",
+});
+
+test("POST /manual-picks answers the server's pick body, and a bad body is invalid_request", async () => {
+  const app = await everything();
+  const ok = await app.request(
+    "/manual-picks",
+    postJson({ profileId: "emerald", scope: "rom" }),
+    loopback,
+  );
+  expect(ok.status).toBe(200);
+  expect(pickBody.parse(await ok.json()).key).toBe("sha1:abc");
+  for (const bad of [
+    {},
+    { profileId: "emerald" },
+    { profileId: "", scope: "rom" },
+    { profileId: "e", scope: "all" },
+  ]) {
+    const response = await app.request(
+      "/manual-picks",
+      postJson(bad),
+      loopback,
+    );
+    expect(response.status).toBe(400);
+    expect(internalErrorBody.parse(await response.json()).error.code).toBe(
+      "invalid_request",
+    );
+  }
+});
+
+test("POST /manual-picks/forget answers an empty body, and a loop refusal keeps its code", async () => {
+  const app = await everything();
+  const ok = await app.request("/manual-picks/forget", postJson({}), loopback);
+  expect(ok.status).toBe(200);
+  expect(await ok.json()).toEqual({});
+  const refusing = createApp({
+    resources: idle,
+    config: await loadConfig(),
+    picks: {
+      ...picksStub,
+      forget: () =>
+        Promise.resolve({
+          ok: false,
+          code: "forget_not_allowed",
+          message: "No pick to forget.",
+        } as const),
+    },
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  const refused = await refusing.request(
+    "/manual-picks/forget",
+    postJson({}),
+    loopback,
+  );
+  expect(refused.status).toBe(409);
+  expect(internalErrorBody.parse(await refused.json()).error.code).toBe(
+    "forget_not_allowed",
+  );
+});
+
+test.each([
+  ["/manual-picks", { profileId: "emerald", scope: "rom" }],
+  ["/manual-picks/forget", {}],
+])(
+  "a write to %s without the guard is refused and never reaches the loop",
+  async (path, body) => {
+    let calls = 0;
+    const app = createApp({
+      resources: idle,
+      config: await loadConfig(),
+      picks: {
+        pick: () => {
+          calls += 1;
+          return picksStub.pick();
+        },
+        forget: () => {
+          calls += 1;
+          return picksStub.forget();
+        },
+      },
+      listening: () => ({ host: "127.0.0.1", port: PORT }),
+    });
+    const attempts = [
+      [postJson(body), lan],
+      [postJson(body, { Host: "evil.example:7425" }), loopback],
+      [postJson(body, { "Content-Type": "text/plain" }), loopback],
+      [postJson(body, { Origin: "http://evil.example" }), loopback],
+    ] as const;
+    for (const [init, env] of attempts) {
+      const response = await app.request(path, init, env);
+      expect(response.status).toBe(403);
+      expect(internalErrorBody.parse(await response.json()).error.code).toBe(
+        "write_forbidden",
+      );
+    }
+    expect(calls).toBe(0);
+  },
+);
+
+test("without a picks dependency the manual-picks routes do not exist", async () => {
+  const app = createApp({
+    resources: idle,
+    config: await loadConfig(),
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  const response = await app.request(
+    "/manual-picks",
+    postJson({ profileId: "emerald", scope: "rom" }),
+    loopback,
+  );
+  expect(response.status).toBe(404);
 });
