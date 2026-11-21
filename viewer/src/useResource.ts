@@ -5,9 +5,11 @@ import {
   PmrApiError,
 } from "@pokemon-memory-reader/api/client";
 import type {
+  Bag,
   Battle,
   Boxes,
   Party,
+  Player,
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -54,6 +56,8 @@ const loadStatus = () => getStatus(options);
 const loadParty = () => getParty(options);
 const loadBattle = () => get("battle", options);
 const loadBoxes = () => get("boxes", options);
+const loadPlayer = () => get("player", options);
+const loadBag = () => get("bag", options);
 
 export function useStatus(): Loaded<StatusResource> {
   return usePolled(loadStatus, true);
@@ -78,6 +82,18 @@ export function useBattle(enabled: boolean): Loaded<Battle> {
  */
 export function useBoxes(enabled: boolean): Loaded<Boxes> {
   return usePolled(loadBoxes, enabled);
+}
+
+/**
+ * The player and the bag are requested only while the Trainer & bag screen is open, like the
+ * boxes. Until the SSE stream lands these are polls.
+ */
+export function usePlayer(enabled: boolean): Loaded<Player> {
+  return usePolled(loadPlayer, enabled);
+}
+
+export function useBag(enabled: boolean): Loaded<Bag> {
+  return usePolled(loadBag, enabled);
 }
 
 function subscribeHash(onChange: () => void): () => void {

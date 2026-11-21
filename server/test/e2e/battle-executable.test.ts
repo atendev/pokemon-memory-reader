@@ -4,14 +4,16 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { FakeBridge, GBA_GAME } from "../bridge/fake-bridge";
+import { writeBag } from "../gen3/bag-encode";
 import { type BattleMonSpec, writeBattle } from "../gen3/battle-encode";
 import { encodeMon, storageBytes } from "../gen3/encode";
+import { writePlayer } from "../gen3/player-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
 /**
- * Runs the compiled executable against the fake bridge with a synthetic wild battle and PC box in
- * memory, and checks the `battle` and `boxes` resources and the Battle and Boxes screens' code in
- * the served viewer. It needs a built
+ * Runs the compiled executable against the fake bridge with a synthetic wild battle, PC box, player and
+ * bag in memory, and checks those resources and the Battle, Boxes and Trainer & bag screens' code
+ * in the served viewer. It needs a built
  * executable, so it runs only when `PMR_EXECUTABLE` names one (the compile-smoke CI job sets it).
  */
 const executable = process.env.PMR_EXECUTABLE;
@@ -20,9 +22,9 @@ const suite = executable ? describe : describe.skip;
 /** Emerald US 1.0's real CRC32, so the game identifies as vanilla rather than modified. */
 const EMERALD_CRC32 = "1f1c08fb";
 const POOCHYENA = 261;
-/** gPokemonStorage is a pointer word at IWRAM 0x5d94. The block sits above the battle structs, which end near 0x25000. */
+/** gPokemonStorage is a pointer word at IWRAM 0x5d94. The block sits above the battle structs and the save blocks, and clear of `gMapHeader` at 0x37318. */
 const STORAGE_POINTER = 0x5d94;
-const STORAGE_AT = 0x30000;
+const STORAGE_AT = 0x37400;
 const wildMon: BattleMonSpec = {
   species: POOCHYENA,
   level: 3,
@@ -70,6 +72,27 @@ suite("the compiled executable on the fake bridge", () => {
       battlers: [player, wildMon],
       partyIndexes: [0, 0],
       enemyParty: [{ ...TREECKO, species: POOCHYENA, level: 3, nickname: "" }],
+    });
+    writePlayer(memory, {
+      name: "ASH",
+      trainerId: 4242,
+      secretId: 99,
+      money: 5500,
+      key: 0x1234,
+      badges: [0, 2],
+      hours: 7,
+      minutes: 8,
+      seconds: 9,
+      x: 11,
+      y: 12,
+      mapGroup: 0,
+      mapNumber: 9,
+      section: 0,
+    });
+    writeBag(memory, {
+      key: 0x1234,
+      items: [{ id: 13, quantity: 7 }],
+      balls: [{ id: 4, quantity: 3 }],
     });
     memory.ewram.set(
       storageBytes({
@@ -173,7 +196,61 @@ suite("the compiled executable on the fake bridge", () => {
     expect(one.slots[2]?.nickname).toBe("BOXED");
   }, 30_000);
 
-  test("serves a viewer that carries the Battle and Boxes screens", async () => {
+  test("serves the player and the bag the fake bridge holds", async () => {
+    const poll = async <T>(path: string): Promise<T | null> => {
+      const deadline = Date.now() + 20_000;
+      while (Date.now() < deadline) {
+        try {
+          const response = await fetch(`${base}${path}`);
+          if (response.ok) return (await response.json()) as T;
+        } catch {}
+        await Bun.sleep(100);
+      }
+      return null;
+    };
+    const player = await poll<{
+      name: string;
+      trainerId: number;
+      secretId: number | null;
+      money: number;
+      badges: { obtained: boolean }[];
+      location: { mapNumber: number; x: number; y: number };
+      playTime: { hours: number; minutes: number; seconds: number };
+    }>("/api/v2/player");
+    expect(player?.name).toBe("ASH");
+    expect(player?.trainerId).toBe(4242);
+    expect(player?.secretId).toBe(99);
+    expect(player?.money).toBe(5500);
+    expect(player?.badges.filter((b) => b.obtained)).toHaveLength(2);
+    expect(player?.location).toMatchObject({ mapNumber: 9, x: 11, y: 12 });
+    expect(player?.playTime).toMatchObject({
+      hours: 7,
+      minutes: 8,
+      seconds: 9,
+    });
+    const bag = await poll<{
+      pockets: {
+        id: string;
+        capacity: number;
+        items: { item: { id: number }; quantity: number }[];
+      }[];
+    }>("/api/v2/bag");
+    expect(bag?.pockets.map((p) => p.id)).toEqual([
+      "items",
+      "keyItems",
+      "balls",
+      "tmhm",
+      "berries",
+    ]);
+    expect(bag?.pockets[0]?.items).toMatchObject([
+      { item: { id: 13 }, quantity: 7 },
+    ]);
+    expect(bag?.pockets[2]?.items).toMatchObject([
+      { item: { id: 4 }, quantity: 3 },
+    ]);
+  }, 30_000);
+
+  test("serves a viewer that carries the Battle, Boxes and Trainer & bag screens", async () => {
     const html = await (await fetch(`${base}/`)).text();
     const assets = [...html.matchAll(/(?:src|href)="([^"]+\.js)"/g)].map(
       (m) => m[1] as string,
@@ -190,5 +267,7 @@ suite("the compiled executable on the fake bridge", () => {
     expect(code).toContain("Reading the boxes");
     expect(code).toContain("marked corrupt");
     expect(code).toContain("only as fresh as the last in-game save");
+    expect(code).toContain("Reading the trainer");
+    expect(code).toContain("no bag pockets");
   });
 });
