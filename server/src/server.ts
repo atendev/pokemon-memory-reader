@@ -11,6 +11,7 @@ import type { IconService } from "./icons/service";
 import { type Log, silentLog } from "./log";
 import { createReadLoop } from "./loop/read-loop";
 import type { ProfileRegistry } from "./profile/registry";
+import type { UpdateChecker } from "./update/check";
 
 export interface ServerOptions {
   /** The adapter the loop reads. With `selector`, pass `selector.adapter`. */
@@ -32,6 +33,8 @@ export interface ServerOptions {
   readonly config?: Config;
   /** Without it there are no `/about` routes. */
   readonly about?: AboutInfo;
+  /** Without it there is no `/update` route. */
+  readonly update?: Pick<UpdateChecker, "state">;
   /** The `/icons` lookup. Without it there is no `/icons` route. */
   readonly icons?: IconService;
   /** `--debug`: adds `/debug/read`. */
@@ -71,6 +74,7 @@ export function startServer(options: ServerOptions): RunningServer {
     config: options.config,
     selector: options.selector,
     about: options.about,
+    update: options.update,
     icons: options.icons,
     ...(options.debug ? { rawRead: loop.rawRead } : {}),
     // The Host checks read the address the server really listens on, which port 0 only picks once it is up.

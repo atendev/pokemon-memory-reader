@@ -21,6 +21,7 @@ export const ROUTES: readonly RouteEntry[] = [
   { method: "POST", path: "/adapters/switch", guard: "write" },
   { method: "GET", path: "/about", guard: "open" },
   { method: "GET", path: "/about/third-party-notices.txt", guard: "open" },
+  { method: "GET", path: "/update", guard: "open" },
   { method: "GET", path: "/debug/read", guard: "debug" },
   { method: "GET", path: "/bridges/:file", guard: "static" },
   { method: "GET", path: "/icons/*", guard: "static" },
