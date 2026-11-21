@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -22,6 +22,10 @@ const suite = executable ? describe : describe.skip;
 /** Emerald US 1.0's real CRC32, so the game identifies as vanilla rather than modified. */
 const EMERALD_CRC32 = "1f1c08fb";
 const POOCHYENA = 261;
+/** Gen 3 internal species 277 is Treecko, National Dex 252. Eight PNG magic bytes and a little padding: the route checks the signature and size, not the image. */
+const PACK_PNG = Uint8Array.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4,
+]);
 /** gPokemonStorage is a pointer word at IWRAM 0x5d94. The block sits above the battle structs and the save blocks, and clear of `gMapHeader` at 0x37318. */
 const STORAGE_POINTER = 0x5d94;
 const STORAGE_AT = 0x37400;
@@ -117,7 +121,15 @@ suite("the compiled executable on the fake bridge", () => {
       JSON.stringify({
         version: 1,
         adapters: { mgba: { host: "127.0.0.1", port: bridge.port } },
+        icons: { mode: "local", baseUrl: null },
       }),
+    );
+    await mkdir(join(dataDir, "icons", "pokemon", "emerald"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(dataDir, "icons", "pokemon", "emerald", "252.png"),
+      PACK_PNG,
     );
     const port = await freePort();
     base = `http://127.0.0.1:${port}`;
@@ -250,6 +262,39 @@ suite("the compiled executable on the fake bridge", () => {
     ]);
   }, 30_000);
 
+  test("serves the icon pack the viewer's URLs ask for, and reports the mode the viewer reads", async () => {
+    const poll = async <T>(path: string): Promise<T | null> => {
+      const deadline = Date.now() + 20_000;
+      while (Date.now() < deadline) {
+        try {
+          const response = await fetch(`${base}${path}`);
+          if (response.ok) return (await response.json()) as T;
+        } catch {}
+        await Bun.sleep(100);
+      }
+      return null;
+    };
+    const deadline = Date.now() + 20_000;
+    let profileId: string | undefined;
+    while (!profileId && Date.now() < deadline) {
+      profileId = (
+        await poll<{ game: { profileId: string } | null }>("/api/v2/status")
+      )?.game?.profileId;
+      if (!profileId) await Bun.sleep(100);
+    }
+    expect(profileId).toBe("emerald-us-1.0");
+    const found = await fetch(`${base}/icons/${profileId}/pokemon/277`);
+    expect(found.status).toBe(200);
+    expect(found.headers.get("content-type")).toBe("image/png");
+    expect(new Uint8Array(await found.arrayBuffer())).toEqual(PACK_PNG);
+    const missing = await fetch(`${base}/icons/${profileId}/pokemon/261`);
+    expect(missing.status).toBe(404);
+    const settings = (await (await fetch(`${base}/settings`)).json()) as {
+      settings: { icons: { value: { mode: string } } };
+    };
+    expect(settings.settings.icons.value.mode).toBe("local");
+  }, 30_000);
+
   test("serves a viewer that carries the Battle, Boxes and Trainer & bag screens", async () => {
     const html = await (await fetch(`${base}/`)).text();
     const assets = [...html.matchAll(/(?:src|href)="([^"]+\.js)"/g)].map(
@@ -269,5 +314,6 @@ suite("the compiled executable on the fake bridge", () => {
     expect(code).toContain("only as fresh as the last in-game save");
     expect(code).toContain("Reading the trainer");
     expect(code).toContain("no bag pockets");
+    expect(code).toContain("/icons/");
   });
 });

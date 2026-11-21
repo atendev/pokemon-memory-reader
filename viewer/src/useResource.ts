@@ -13,6 +13,7 @@ import type {
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { type IconMode, parseIconMode } from "./icons";
 
 /** Until the SSE stream lands, the viewer polls the snapshot routes. */
 export const POLL_MS = 1000;
@@ -23,7 +24,11 @@ export type Loaded<T> =
   /** `code` is the 503 code, or null when the program could not be reached. */
   | { readonly kind: "unavailable"; readonly code: string | null };
 
-function usePolled<T>(load: () => Promise<T>, enabled: boolean): Loaded<T> {
+function usePolled<T>(
+  load: () => Promise<T>,
+  enabled: boolean,
+  intervalMs = POLL_MS,
+): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ kind: "loading" });
   useEffect(() => {
     if (!enabled) {
@@ -40,14 +45,14 @@ function usePolled<T>(load: () => Promise<T>, enabled: boolean): Loaded<T> {
         const code = error instanceof PmrApiError ? error.code : null;
         if (live) setState({ kind: "unavailable", code });
       }
-      if (live) timer = setTimeout(tick, POLL_MS);
+      if (live) timer = setTimeout(tick, intervalMs);
     };
     void tick();
     return () => {
       live = false;
       clearTimeout(timer);
     };
-  }, [load, enabled]);
+  }, [load, enabled, intervalMs]);
   return state;
 }
 
@@ -94,6 +99,26 @@ export function usePlayer(enabled: boolean): Loaded<Player> {
 
 export function useBag(enabled: boolean): Loaded<Bag> {
   return usePolled(loadBag, enabled);
+}
+
+/** `icons.mode` changes apply live, but a settings read stats the icon cache, so it is polled slowly. */
+export const ICON_MODE_POLL_MS = 5000;
+
+async function loadIconMode(): Promise<IconMode> {
+  const response = await fetch("/settings");
+  if (!response.ok) throw new Error(`settings answered ${response.status}`);
+  const mode = parseIconMode(await response.json());
+  if (mode === null) throw new Error("settings carry no icon mode");
+  return mode;
+}
+
+/**
+ * The icon mode, read from `GET /settings` while a game is identified. It is null until the first
+ * answer and again if settings can't be read, so no icon is requested on a guess (spec §11.9).
+ */
+export function useIconMode(enabled: boolean): IconMode | null {
+  const mode = usePolled(loadIconMode, enabled, ICON_MODE_POLL_MS);
+  return mode.kind === "ready" ? mode.value : null;
 }
 
 function subscribeHash(onChange: () => void): () => void {

@@ -1,5 +1,6 @@
 import type { Box, Boxes } from "@pokemon-memory-reader/api/schemas";
 import { useState } from "react";
+import { SpeciesArt } from "./Art";
 import {
   boxName,
   gridColumns,
@@ -71,6 +72,13 @@ export function BoxGrid({
               aria-label={`Slot ${number}: ${cardTitle(mon)}, level ${orDash(mon.level)}`}
               onClick={() => onSelect?.(slot)}
             >
+              <SpeciesArt
+                variant="menu"
+                id={mon.species.id}
+                name={mon.species.name}
+                type={mon.types?.[0] ?? null}
+                egg={mon.isEgg}
+              />
               <span className="footnote box-mon-name">{cardTitle(mon)}</span>
               <span className="caption muted tabular">
                 Lv. {orDash(mon.level)}

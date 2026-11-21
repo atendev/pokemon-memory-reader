@@ -4,7 +4,9 @@ import type {
   Battler,
   OpponentMon,
   Trainer,
+  Type,
 } from "@pokemon-memory-reader/api/schemas";
+import { ItemArt, SpeciesArt, TypeArt } from "./Art";
 import {
   fieldBadges,
   lastBattleSummary,
@@ -25,15 +27,12 @@ function Title({ children }: { children: string }) {
   );
 }
 
-function Types({ types }: { types: readonly string[] | null }) {
+function Types({ types }: { types: readonly Type[] | null }) {
   if (types === null || types.length === 0) return <span>—</span>;
   return (
     <span className="types">
       {types.map((type) => (
-        <span key={type} className="type">
-          <span className={`type-dot type-${type}`} aria-hidden="true" />
-          {type}
-        </span>
+        <TypeArt key={type} type={type} />
       ))}
     </span>
   );
@@ -47,6 +46,12 @@ function BattlerCard({ battler, full }: { battler: Battler; full: boolean }) {
   return (
     <li className="card mon battler">
       <div className="mon-head">
+        <SpeciesArt
+          variant="sprite"
+          id={battler.species.id}
+          name={battler.species.name}
+          type={battler.types?.[0] ?? null}
+        />
         <div className="mon-names">
           <h4 className="headline mon-title">{refName(battler.species)}</h4>
           {battler.owner === "partner" ? (
@@ -69,7 +74,13 @@ function BattlerCard({ battler, full }: { battler: Battler; full: boolean }) {
         </div>
         <div>
           <dt className="muted">Item</dt>
-          <dd>{battler.heldItem ? refName(battler.heldItem) : "—"}</dd>
+          <dd>
+            {battler.heldItem ? (
+              <ItemArt id={battler.heldItem.id} name={battler.heldItem.name} />
+            ) : (
+              "—"
+            )}
+          </dd>
         </div>
         {full ? (
           <div>
@@ -258,6 +269,13 @@ function BallIcon() {
 function Tile({ mon, active }: { mon: OpponentMon; active: boolean }) {
   return (
     <li className={active ? "tile tile-active" : "tile"}>
+      <SpeciesArt
+        variant="menu"
+        id={mon.species.id}
+        name={mon.species.name}
+        type={mon.types?.[0] ?? null}
+        egg={mon.isEgg}
+      />
       <span className="headline mon-title">{refName(mon.species)}</span>
       <span className="footnote muted tabular">Lv. {orDash(mon.level)}</span>
       <HpBar mon={mon} />
