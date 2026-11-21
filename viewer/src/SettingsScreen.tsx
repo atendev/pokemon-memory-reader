@@ -159,7 +159,7 @@ function ToggleInput({
   );
 }
 
-const PROBE_TEXT: Readonly<Record<string, string>> = {
+export const PROBE_TEXT: Readonly<Record<string, string>> = {
   live: "Connected",
   usable: "Ready",
   busy: "In use by another program",
@@ -169,7 +169,7 @@ const PROBE_TEXT: Readonly<Record<string, string>> = {
   not_probed: "Not checked",
 };
 
-const PROBLEM_TEXT: Readonly<Record<string, string>> = {
+export const PROBLEM_TEXT: Readonly<Record<string, string>> = {
   unknown_bridge: "an unknown bridge answered",
   protocol_mismatch: "the bridge is the wrong version",
   bridge_error: "the bridge reported an error",

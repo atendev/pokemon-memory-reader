@@ -3,6 +3,7 @@ import { join } from "node:path";
 import viewer from "../../viewer/src/index.html";
 import { LGPL_COMPONENTS } from "../../viewer/src/lgpl";
 import { createBridgeAdapter } from "./adapter/bridge/adapter";
+import { PROTOCOL } from "./adapter/bridge/constants";
 import { createRetroArchAdapter } from "./adapter/retroarch/adapter";
 import { createSelector } from "./adapter/selector";
 import { generateBridges } from "./bridges";
@@ -183,6 +184,7 @@ async function run(
         target: buildTarget(),
         commit: buildCommit(),
         versionLine: versionLine(),
+        protocol: PROTOCOL,
         lgpl: LGPL_COMPONENTS,
         notices: await loadNotices(),
       },

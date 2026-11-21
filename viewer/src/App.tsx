@@ -6,6 +6,8 @@ import type {
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import type { AboutBody } from "@pokemon-memory-reader/internal/about";
+import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
+import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import type { UpdateBody } from "@pokemon-memory-reader/internal/update";
 import { useMemo } from "react";
 import { About } from "./About";
@@ -22,7 +24,13 @@ import { SettingsScreen } from "./SettingsScreen";
 import { Sidebar } from "./Sidebar";
 import { TrainerScreen } from "./TrainerScreen";
 import { UpdateBanner } from "./UpdateBanner";
-import { type Polled, useAbout, useUpdate } from "./useInternal";
+import {
+  type Polled,
+  useAbout,
+  useAdapters,
+  useSettings,
+  useUpdate,
+} from "./useInternal";
 import {
   type Loaded,
   useBag,
@@ -56,6 +64,8 @@ export function Screen({
   bag = LOADING,
   about = LOADING,
   update = LOADING,
+  settings = LOADING,
+  adapters = LOADING,
 }: {
   route: Route;
   status: StatusResource | null;
@@ -66,16 +76,19 @@ export function Screen({
   bag?: Loaded<Bag>;
   about?: Polled<AboutBody>;
   update?: Polled<UpdateBody>;
+  settings?: Polled<SettingsBody>;
+  adapters?: Polled<AdaptersBody>;
 }) {
+  const connection = { settings, adapters, about };
   if (route === "about") return <About about={about} update={update} />;
   if (route === "settings") return <SettingsScreen status={status} />;
   if (route === "not_found") return <Placeholder title="Page not found" />;
   if (GAME_SCREENS.includes(route) && status?.state !== "game") {
-    return <ConnectionScreen status={status} />;
+    return <ConnectionScreen status={status} {...connection} />;
   }
   if (route === "party") {
     if (party.kind === "unavailable" && party.code === "unsupported") {
-      return <ConnectionScreen status={status} unsupported />;
+      return <ConnectionScreen status={status} unsupported {...connection} />;
     }
     return <PartyScreen party={party} />;
   }
@@ -108,7 +121,12 @@ export function App() {
     }),
     [inGame, known?.game?.profileId, known?.game?.generation, iconMode],
   );
-  const about = useAbout(route === "about");
+  const connecting =
+    GAME_SCREENS.includes(route) &&
+    (!inGame || (party.kind === "unavailable" && party.code === "unsupported"));
+  const about = useAbout(route === "about" || connecting);
+  const settings = useSettings(connecting);
+  const adapters = useAdapters(connecting);
   const update = useUpdate();
   const [collapsed, toggle] = useSidebarCollapsed();
   return (
@@ -133,6 +151,8 @@ export function App() {
               player={player}
               bag={bag}
               about={about.state}
+              settings={settings.state}
+              adapters={adapters.state}
               update={update}
             />
           </IconsProvider>

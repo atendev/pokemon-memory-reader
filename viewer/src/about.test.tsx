@@ -39,6 +39,7 @@ describe("the About version and update cards", () => {
       target: "linux-x64",
       commit: "abc1234",
       versionLine: "pokemon-memory-reader 2.0.0 (linux-x64, abc1234)",
+      protocol: 1,
       lgpl: LGPL_COMPONENTS,
       notices: true,
     },

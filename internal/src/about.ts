@@ -13,6 +13,8 @@ export const aboutBody = z.object({
   commit: z.string(),
   /** The `--version` text (spec §9.3). */
   versionLine: z.string(),
+  /** The bridge protocol number this program speaks, so the viewer can tell an older bridge from a newer one. */
+  protocol: z.number().int(),
   lgpl: z.array(lgplComponent).readonly(),
   /** False in a dev build without the generated notices file, so About says notices ship with release builds. */
   notices: z.boolean(),

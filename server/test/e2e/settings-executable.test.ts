@@ -104,11 +104,13 @@ suite("the Settings and About screens on the compiled executable", () => {
     const body = await poll<{
       version: string;
       versionLine: string;
+      protocol: number;
       commit: string;
       lgpl: unknown[];
     }>("/about");
     expect(body?.version).toMatch(/^\d+\.\d+\.\d+/);
     expect(body?.versionLine).toContain(body?.version as string);
+    expect(body?.protocol).toBe(1);
     expect(body?.lgpl.length).toBeGreaterThan(0);
   }, 30_000);
 
