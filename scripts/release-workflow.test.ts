@@ -55,6 +55,13 @@ describe("release.yml", () => {
     expect(c).toBeGreaterThan(b);
     expect(text.indexOf("scripts/check-release-ref.ts check")).toBeLessThan(a);
   });
+  test("the coverage guard runs before the body steps", () => {
+    const guard = text.indexOf("bun scripts/coverage.ts --check");
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(
+      text.indexOf("scripts/check-release-ref.ts body"),
+    );
+  });
   test("the build runs notices before compiling", () => {
     expect(text.indexOf("bun run notices")).toBeLessThan(
       text.indexOf("bun build --compile"),
@@ -63,7 +70,7 @@ describe("release.yml", () => {
 });
 
 describe("the body chain", () => {
-  test("a body ends up with the changelog, the evidence and the LGPL lines", () => {
+  test("a body ends up with the changelog, the evidence, the coverage lists and the LGPL lines", () => {
     const dir = mkdtempSync(join(tmpdir(), "release-chain-"));
     try {
       const body = join(dir, "body.md");
@@ -90,6 +97,8 @@ describe("the body chain", () => {
       expect(out).toContain("Dry run build of v2.0.0-alpha.0");
       expect(out).toContain("SmartScreen");
       expect(out).toContain("### Signature evidence");
+      expect(out).toContain("### Fixture coverage");
+      expect(out).toContain("#### Tier 2 gaps");
       expect(out).toContain("### Source for the LGPL libraries");
       writeFileSync(join(dir, "done"), "");
     } finally {

@@ -18,6 +18,8 @@ on:
       - scripts/lgpl-sources.ts
       - scripts/smoke.ts
       - scripts/notices.ts
+      - docs/coverage.md
+      - server/test/support/coverage-guard.ts
       - server/src/bridges/**
       - server/src/main.ts
       - scripts/notices/bun-runtime.json
@@ -272,7 +274,10 @@ jobs:
         run: bun scripts/lgpl-sources.ts build --out dist --sums dist/SHA256SUMS
       - name: Checksums
         run: bun scripts/release-archive.ts sums --dir dist
-      # The body comes from the changelog section. The signature evidence is added after the ref check, then the LGPL lines.
+      # The coverage guard must pass and `docs/coverage.md` must be fresh, so the lists in the body match the repo.
+      - name: Coverage guard
+        run: bun scripts/coverage.ts --check
+      # The body comes from the changelog section. The signature evidence and the guard's lists are added after the ref check, then the LGPL lines.
       - name: Release body
         env:
           TAG: ${{ needs.ref.outputs.tag }}

@@ -217,6 +217,11 @@ export function checkCoverage(inputs: CoverageInputs): CoverageReport {
   };
 }
 
+/** The headings of the two lists `docs/coverage.md` ends with. The draft release body (`scripts/release-body.ts`) reads them by these names. */
+export const NO_FIXTURE_HEADING =
+  "Profiles and primary revisions with no fixture";
+export const TIER2_GAPS_HEADING = "Tier 2 gaps";
+
 const cell = (text: string) => text.replaceAll("|", "\\|");
 const code = (items: readonly string[]) =>
   items.length === 0 ? "none" : items.map((item) => `\`${item}\``).join(", ");
@@ -288,8 +293,8 @@ export function renderCoverage(
       "",
       ...(items.length === 0 ? ["None."] : items.map((item) => `- ${item}`)),
     );
-  list("Profiles and primary revisions with no fixture", report.noFixture);
-  list("Tier 2 gaps", report.tier2Gaps);
+  list(NO_FIXTURE_HEADING, report.noFixture);
+  list(TIER2_GAPS_HEADING, report.tier2Gaps);
   list("Failures", report.failures);
   return `${lines.join("\n")}\n`;
 }
