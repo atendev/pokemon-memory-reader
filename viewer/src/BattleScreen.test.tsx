@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 import type { Battle } from "@pokemon-memory-reader/api/schemas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Screen } from "./App";
+import { IconsProvider } from "./Art";
 import {
   BattleScreen,
   isHiddenBattler,
   OpponentPartyView,
 } from "./BattleScreen";
+import { IconFailures, type IconSettings } from "./icons";
 import { activeBattle, battler, opponentMon, status, trainer } from "./testing";
 
 const ready = (value: Battle) => ({ kind: "ready", value }) as const;
@@ -483,3 +485,144 @@ function withLocation<T>(search: string, run: () => T): T {
     else scope.window = before;
   }
 }
+
+const EMERALD: IconSettings = {
+  profileId: "emerald-us-1.0",
+  generation: 3,
+  mode: "online",
+};
+
+const renderWithIcons = (
+  battle: Battle,
+  settings: IconSettings = EMERALD,
+  failures = new IconFailures(),
+) =>
+  renderToStaticMarkup(
+    <IconsProvider settings={settings} failures={failures}>
+      <BattleScreen battle={ready(battle)} />
+    </IconsProvider>,
+  );
+
+/** Every `src` and `alt` in the markup, so a test can check no image attribute names a species. */
+function imageAttributes(html: string): string[] {
+  return [...html.matchAll(/<img[^>]*>/g)].map((match) => match[0]);
+}
+
+describe("the Battle screen's art", () => {
+  const revealed = activeBattle({
+    kind: "trainer",
+    player: {
+      active: [
+        battler({ types: ["grass"], heldItem: { id: 13, name: "Potion" } }),
+      ],
+      partner: null,
+    },
+    opponent: {
+      active: [
+        battler({
+          owner: "opponent",
+          partySlot: 0,
+          species: { id: 261, dex: 261, name: "Poochyena" },
+          types: ["dark"],
+        }),
+      ],
+      party: [opponentMon({ partySlot: 0, trainer: 0, revealed: true })],
+      trainers: [trainer({ id: 1, name: "JOEY" })],
+    },
+  });
+
+  test("revealed battlers and the player's side show a sprite and a type icon", () => {
+    const html = renderWithIcons(revealed);
+    expect(html).toContain('src="/icons/emerald-us-1.0/pokemon/252"');
+    expect(html).toContain('src="/icons/emerald-us-1.0/pokemon/261"');
+    expect(html).toContain('src="/icons/emerald-us-1.0/type/grass"');
+    expect(html).toContain('src="/icons/emerald-us-1.0/type/dark"');
+    expect(html).toContain('src="/icons/emerald-us-1.0/item/13"');
+  });
+
+  test("a missing icon falls back to a tinted tile and a type dot, with no image left", () => {
+    const failures = new IconFailures();
+    for (const url of [
+      "/icons/emerald-us-1.0/pokemon/252",
+      "/icons/emerald-us-1.0/pokemon/261",
+      "/icons/emerald-us-1.0/icon/261",
+      "/icons/emerald-us-1.0/type/grass",
+      "/icons/emerald-us-1.0/type/dark",
+      "/icons/emerald-us-1.0/item/13",
+    ])
+      failures.fail(url);
+    const html = renderWithIcons(revealed, EMERALD, failures);
+    expect(imageAttributes(html)).toHaveLength(0);
+    expect(html).toContain("art-tile type-grass");
+    expect(html).toContain("type-dot type-dark");
+    expect(html).toContain("Poochyena");
+  });
+
+  test("with icons off or no game, the screen makes no image request", () => {
+    for (const settings of [
+      { ...EMERALD, mode: "off" as const },
+      { ...EMERALD, mode: null },
+      { ...EMERALD, profileId: null },
+    ])
+      expect(imageAttributes(renderWithIcons(revealed, settings))).toHaveLength(
+        0,
+      );
+  });
+
+  const hidden = activeBattle({
+    kind: "trainer",
+    opponent: {
+      active: [
+        battler({
+          owner: "opponent",
+          partySlot: 1,
+          species: SECRET.species,
+          level: SECRET.level,
+          types: ["psychic"],
+          moves: [{ id: 94, name: "Psychic", pp: 10, maxPp: 16 }],
+        }),
+      ],
+      party: [
+        opponentMon({ partySlot: 0, trainer: 0, revealed: true }),
+        opponentMon({ ...SECRET, partySlot: 1, trainer: 0, revealed: false }),
+        opponentMon({ ...SECRET, partySlot: 2, trainer: 0, revealed: false }),
+      ],
+      trainers: [trainer({ id: 1, name: "JOEY" })],
+    },
+  });
+
+  test("an unrevealed opponent battler renders no sprite, alt text, icon URL or type icon naming its species", () => {
+    const html = renderWithIcons(hidden);
+    expect(html).toContain("battler-hidden");
+    for (const word of SECRET_WORDS) expect(html).not.toContain(word);
+    expect(html).not.toMatch(/\/icons\/[^"]*\/(pokemon|icon)\/150/);
+    expect(html).not.toContain("/type/psychic");
+    expect(html).not.toContain("art-tile type-psychic");
+    for (const tag of imageAttributes(html)) {
+      expect(tag).not.toContain("150");
+      expect(tag).not.toContain("Mewtwo");
+      expect(tag).not.toContain("psychic");
+    }
+  });
+
+  test("unrevealed tiles request no image at all", () => {
+    const html = renderWithIcons(hidden);
+    const tiles = html.match(/<li class="tile tile-hidden">.*?<\/li>/g) ?? [];
+    expect(tiles).toHaveLength(2);
+    for (const tile of tiles) expect(tile).not.toContain("<img");
+  });
+
+  test("the player's own sprite still shows next to an unrevealed opponent", () => {
+    expect(renderWithIcons(hidden)).toContain(
+      'src="/icons/emerald-us-1.0/pokemon/252"',
+    );
+  });
+
+  test("with the page address turning the setting on, the sprite appears", () => {
+    const html = withLocation("?showUnrevealed=1", () =>
+      renderWithIcons(hidden),
+    );
+    expect(html).toContain('src="/icons/emerald-us-1.0/pokemon/150"');
+    expect(html).toContain('src="/icons/emerald-us-1.0/type/psychic"');
+  });
+});
