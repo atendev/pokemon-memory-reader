@@ -28,6 +28,7 @@ export interface PickStore {
 }
 
 type Entries = Record<string, { profileId: string }>;
+type Change = (current: Entries) => void;
 
 /**
  * The picks file, kept in memory and written through. A save re-reads the file, applies its change
@@ -46,7 +47,7 @@ export async function openPickStore(
     );
   };
 
-  /** The file's picks. A missing file is empty, a malformed one is quarantined, a newer or unreadable one throws. */
+  /** The file's picks. A missing file is empty, a malformed or other-version one is quarantined, an unreadable one throws. */
   async function load(): Promise<Entries> {
     let text: string;
     try {
@@ -75,7 +76,13 @@ export async function openPickStore(
     return {};
   });
 
-  async function write(change: (current: Entries) => void): Promise<boolean> {
+  /** Changes a failed write left applying for this run only. A later write of the same key supersedes them. */
+  let unsaved: { keys: readonly PickKey[]; apply: Change }[] = [];
+
+  async function write(
+    keys: readonly PickKey[],
+    change: Change,
+  ): Promise<boolean> {
     const temp = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
     try {
       const current = await load();
@@ -86,7 +93,11 @@ export async function openPickStore(
         `${JSON.stringify({ version: PICKS_VERSION, picks: current }, null, 2)}\n`,
       );
       await rename(temp, path);
+      unsaved = unsaved.filter(
+        (u) => !u.keys.some((key) => keys.includes(key)),
+      );
       entries = current;
+      for (const { apply } of unsaved) apply(entries);
       return true;
     } catch (error) {
       await rm(temp, { force: true }).catch(() => {});
@@ -96,9 +107,11 @@ export async function openPickStore(
   }
 
   /** Whatever the file failed to take still applies for this run, so the pick works until the program exits. */
-  const remember = (change: (current: Entries) => void): void => {
+  const remember = (keys: readonly PickKey[], apply: Change): void => {
+    unsaved = unsaved.filter((u) => !u.keys.some((key) => keys.includes(key)));
+    unsaved.push({ keys, apply });
     entries = { ...entries };
-    change(entries);
+    apply(entries);
   };
 
   return {
@@ -113,16 +126,16 @@ export async function openPickStore(
       const apply = (current: Entries) => {
         for (const key of keys) current[key] = { profileId };
       };
-      const saved = await write(apply);
-      if (!saved) remember(apply);
+      const saved = await write(keys, apply);
+      if (!saved) remember(keys, apply);
       return saved;
     },
     async forget(keys) {
       const apply = (current: Entries) => {
         for (const key of keys) delete current[key];
       };
-      const saved = await write(apply);
-      if (!saved) remember(apply);
+      const saved = await write(keys, apply);
+      if (!saved) remember(keys, apply);
       return saved;
     },
   };

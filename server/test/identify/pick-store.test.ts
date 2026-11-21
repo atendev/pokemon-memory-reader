@@ -108,6 +108,21 @@ test("a save that can't write still applies for this run and reports false", asy
   expect(store.lookup(["sha1:aa"])).toBeNull();
 });
 
+test("a pick a failed write kept for this run survives a later successful write of another key", async () => {
+  const store = await openPickStore(path, silentLog);
+  await rm(folder, { recursive: true, force: true });
+  await writeFile(folder, "a file where the folder was");
+  expect(await store.save(["sha1:aa"], "p")).toBe(false);
+  await rm(folder, { force: true });
+  expect(await store.save(["sha1:bb"], "q")).toBe(true);
+  expect(store.lookup(["sha1:aa"])?.profileId).toBe("p");
+  expect(store.lookup(["sha1:bb"])?.profileId).toBe("q");
+  expect(await store.save(["sha1:aa"], "r")).toBe(true);
+  expect(store.lookup(["sha1:aa"])?.profileId).toBe("r");
+  const again = await openPickStore(path, silentLog);
+  expect(again.lookup(["sha1:aa"])?.profileId).toBe("r");
+});
+
 test("the no-file store finds nothing and saves nothing", async () => {
   expect(noPickStore.lookup(["sha1:aa"])).toBeNull();
   expect(await noPickStore.save(["sha1:aa"], "p")).toBe(false);
