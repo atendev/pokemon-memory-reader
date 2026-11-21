@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [079, 073]
+claimed_by: wfm-v2-build-master-1795260524
+claimed_at: 2026-11-21T12:05:00Z
 ---
 
 # Adapter selector, discovery and `/adapters`
