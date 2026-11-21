@@ -268,8 +268,10 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     startedAt: number,
     kind: ReadOutcome["kind"],
   ): void {
-    if (kind === "data") current.stall.good();
-    else if (kind === "timeout") current.stall.timeout(startedAt, clock.now());
+    const now = clock.now();
+    if (kind === "data") current.stall.good(now);
+    else if (kind === "timeout") current.stall.timeout(startedAt, now);
+    else current.stall.failed(startedAt, now);
   }
 
   /** Caches a decoded value. It is emitted only when it differs from the last one emitted (spec §8.6). */

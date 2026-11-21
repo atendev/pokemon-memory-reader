@@ -19,23 +19,15 @@ Each batch has the 250 ms timeout. After 1 s of consecutive timeouts, `status.ad
 - Tests cover `stalled` turning true after 1 s of timeouts, clearing on a good read, cold-read timeouts counting, and box timeouts and bridge errors not counting.
 - `status.adapter.stalled` reflects it through the real server and fake bridge.
 
-## Handoff
+## Answer
 
-Branch `t3/change-detection-stalled-flag`. Council audit rounds used: 0. Thread tag `wfm-v2-build-070-1795260524`.
+The read loop implements spec §8.6. Each resource skips its decode when its raw bytes match the last tick's, and otherwise decodes, deep-compares to the last emitted value and emits only on a difference. The first successful decode emits, and a failed decode emits nothing and leaves state unchanged. Changes go to an internal subscriber list (`onChange`) for the SSE ticket. `status.adapter.stalled` turns true after 1 s of consecutive main-batch timeouts and clears on the next good read, through the real server and the fake bridge.
 
-**Done (implemented, all green except the unrelated Lua 5.5 test):**
-- `server/src/loop/stall.ts`: `createStallTracker`. The run starts at the first timed-out batch's start, 1 s sets it, a good read clears it, a non-timeout failure is neutral.
-- `server/src/loop/read-loop.ts`: stage one raw-hash skip per part (`session.raw`), stage two `isDeepStrictEqual` against `session.emitted`, `publish()`, `onChange(listener)` returning an unsubscribe, `ChangeEvent`. Boxes emit from `keepBoxes`, which also gained a deep-compare stage. `stalled` lives on the `Session`, so a new game starts clear. A stall flip emits a `status` event. The cold GET deletes the raw hash too. Battle skips only while the tracker isn't failing validation. Hash is stored only on a successful decode and only when the battle frame isn't pending. Identification and main batches report to the stall tracker. Box reads don't.
-- `status.ts`: `StatusInputs.stalled` required.
-- Tests: `server/test/loop/change-detection.test.ts` (new), `status.test.ts`, and a real-server `stalled` test in `server/test/api/tracer.test.ts`.
+- The in-battle flag is part of the `battle` raw key. Battle skips only while the tracker isn't failing validation, and the hash is kept only after a clean decode.
+- Cold-read and identification timeouts count. Box timeouts never report. A bridge error neither counts nor ends a run.
+- A pause of over 1 s with no batch breaks the run, so one timeout after a quiet period doesn't set `stalled`.
+- A `status` change event goes out only when `stalled` flips. `stalled` lives on the session, so a new game starts clear.
 
-**Left, in order:**
-1. Run `council-audit` (Claude seat only, other two `n/a`) on the diff against `wayfinder/v2-build-master`. Fix problems, up to five rounds.
-2. Write `.plan/maps/v2-build/assets/070-change-detection-and-stalled-report.md` (decisions: stall counted per batch not per request, bridge error neutral and doesn't end the run, identification counts, box reads excluded, status event only on a stall flip, battle skip gated on `failingSince`, hash kept off on failed decodes). Run `unslop` on it.
-3. Run the Timing close, delete this section, write `## Answer` and the Decisions line in the ticket, commit, push, open a PR against `wayfinder/v2-build-master` and link it, return DONE.
+Tests: `change-detection.test.ts` (new), `status.test.ts` and a real-server `stalled` test in `tracer.test.ts`. One failure remains, the Lua version check in `core.test.ts`, which fails the same way on the master branch because this host runs Lua 5.5. Audit: Claude seat approved in round 3 (8). Gemini and GPT seats `n/a` (out of quota). Report: [070 report](../assets/070-change-detection-and-stalled-report.md).
 
-**Open council problems:** none yet. Last audit: none.
-
-**Read first:** `server/src/loop/read-loop.ts`, `server/src/loop/stall.ts`, `server/test/loop/change-detection.test.ts`.
-
-**Note:** `core.test.ts` fails on this machine because it runs Lua 5.5. It is unrelated to this ticket.
+Timing: wall 14m, active 13m, user 0s, wait 0s, blocked 0s | implement 7m, audit 5m (3 rounds), gate 40s | tools 75 (8 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 156k | cost $2.73 sonnet-5-5 + $0.03 haiku-5-5

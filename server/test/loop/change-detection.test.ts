@@ -313,6 +313,38 @@ describe("stalled", () => {
     expect(stalled(loop)).toBe(true);
   });
 
+  test("a timeout after a pause with no batches starts a new run", async () => {
+    const { adapter, loop, clock } = setup({
+      pollHz: 5,
+      bind: () => ({ party: sized().party as never }),
+    });
+    await flush();
+    adapter.respond = () => TIMEOUT;
+    expect(await sizeOf(loop)).toBe("no_data");
+    // Nothing is demanded, so no batch runs for a minute.
+    adapter.respond = () => null;
+    clock.advance(60_000);
+    adapter.respond = () => TIMEOUT;
+    expect(await sizeOf(loop)).toBe("no_data");
+    expect(stalled(loop)).toBe(false);
+  });
+
+  test("a bridge error after a pause doesn't carry the old run over", async () => {
+    const { adapter, loop, clock } = setup({
+      pollHz: 5,
+      bind: () => ({ party: sized().party as never }),
+    });
+    await flush();
+    adapter.respond = () => TIMEOUT;
+    expect(await sizeOf(loop)).toBe("no_data");
+    clock.advance(60_000);
+    adapter.respond = () => BRIDGE_ERROR;
+    expect(await sizeOf(loop)).toBe("no_data");
+    adapter.respond = () => TIMEOUT;
+    expect(await sizeOf(loop)).toBe("no_data");
+    expect(stalled(loop)).toBe(false);
+  });
+
   test("a cold read's timeout counts", async () => {
     // Ticks answer with a bridge error, which counts as neither, so only the cold GETs time out.
     const { adapter, clock, loop } = setup({
@@ -325,8 +357,10 @@ describe("stalled", () => {
     expect(stalled(loop)).toBe(false);
 
     adapter.respond = () => BRIDGE_ERROR;
-    clock.advance(1100);
-    await flush();
+    for (let i = 0; i < 6; i++) {
+      clock.advance(200);
+      await flush();
+    }
     expect(stalled(loop)).toBe(false);
 
     // Only this cold read can complete the run the first one began at 0.
