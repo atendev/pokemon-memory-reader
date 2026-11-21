@@ -14,7 +14,7 @@ Branch `t3/battle-tracker-core-schema-1`, built from the handoff at `3d46e02`. T
 
 | # | Question | Options | Choice | Made by |
 | --- | --- | --- | --- | --- |
-| 1 | Does this ticket add the `battle` topic to `TOPIC_NAMES`, `ResourceMap` and `resourceSchemas`? | Add it now, or leave it to the route ticket | Leave it. Ticket 068 adds it with the route. | Implementer |
+| 1 | Does this ticket add the `battle` topic to `TOPIC_NAMES`, `ResourceMap` and `resourceSchemas`? | Add it now, or leave it to the route ticket | Leave it. Ticket 068 (Gen 3 battle decoders) adds it with the route. | Implementer |
 | 2 | What does the tracker emit when the first read fails validation before anything was served? | Emit nothing, or emit the inactive shape once | Emit the inactive shape once, then nothing while validation keeps failing. The resource always has a value after the first read. | Implementer |
 | 3 | Which fields are nullable? | Strict or nullable | `classId` is nullable. `Trainer.items` is `Ref[] \| null`. `Battler.stats` is non-null. | Implementer |
 | 4 | Does `revealed` ever drop a slot mid-battle? | Recompute each frame, or keep it | HP below max is sticky: once a slot is revealed it stays revealed for the battle. Wild battles are always revealed. | Implementer |
