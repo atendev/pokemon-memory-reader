@@ -157,8 +157,10 @@ describe("the screens by route", () => {
     expect(screen("trainer")).toContain("Trainer &amp; bag");
   });
 
-  test("Settings is still a placeholder", () => {
-    expect(screen("settings")).toContain("This screen isn&#x27;t built yet.");
+  test("Settings opens its screen, not a placeholder", () => {
+    const html = screen("settings");
+    expect(html).toContain("Settings");
+    expect(html).not.toContain("This screen isn&#x27;t built yet.");
   });
 
   test("the game screens give way to the connection screen without a game", () => {

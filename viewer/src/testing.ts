@@ -127,3 +127,48 @@ export function activeBattle(
     ...overrides,
   };
 }
+
+type SettingsBody =
+  import("@pokemon-memory-reader/internal/settings-route").SettingsBody;
+
+const entry = <T>(
+  value: T,
+  source: "flag" | "file" | "default" = "default",
+) => ({
+  value,
+  source,
+  restartRequired: false,
+});
+
+/** A `GET /settings` body with the defaults, on this computer, with saves allowed. Tests override what they check. */
+export function settingsBody(
+  overrides: Partial<SettingsBody> = {},
+): SettingsBody {
+  return {
+    settings: {
+      port: { ...entry(7425), restartRequired: true },
+      host: { ...entry("127.0.0.1"), restartRequired: true },
+      openBrowser: { ...entry(true), restartRequired: true },
+      adapter: entry("auto" as const),
+      adapters: entry({
+        mgba: { host: "127.0.0.1", port: 7426 },
+        retroarch: { host: "127.0.0.1", port: 55355 },
+        bizhawk: { host: "127.0.0.1", port: 7427 },
+      }),
+      pollHz: entry(20),
+      updateCheck: entry(true),
+      icons: entry({ mode: "online" as const, baseUrl: null }),
+    },
+    saves: { writable: true, refusal: null },
+    paths: {
+      dataFolder: "/home/me/.pmr",
+      configFile: "/home/me/.pmr/config.json",
+      profiles: "/home/me/.pmr/profiles",
+      bridges: "/home/me/.pmr/bridges",
+      iconPack: "/home/me/.pmr/icons",
+      iconCache: "/home/me/.pmr/icon-cache",
+    },
+    iconCache: { bytes: 0 },
+    ...overrides,
+  };
+}
