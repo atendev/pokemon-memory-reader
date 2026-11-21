@@ -80,6 +80,8 @@ export interface Config {
   sourceOf(key: SettingKey): SettingSource;
   /** Startup keys the file holds a different value for, waiting for a restart. */
   pending(): readonly StartupKey[];
+  /** What the file holds now, as far as this run knows: the values read at startup and every save since. */
+  saved(): Settings;
   /** What a settings save does in memory. The route validates the patch and writes the file. */
   change(patch: SettingsPatch): ChangeResult;
   onLive(listener: LiveListener): () => void;
@@ -116,6 +118,7 @@ export function resolveConfig(
       return file.present.has(key) ? "file" : "default";
     },
     pending,
+    saved: () => fileSettings,
     change(patch) {
       fileSettings = mergeSettings(fileSettings, patch);
       const before = applied;

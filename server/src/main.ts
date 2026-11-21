@@ -1,17 +1,20 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import viewer from "../../viewer/src/index.html";
+import { LGPL_COMPONENTS } from "../../viewer/src/lgpl";
 import { createBridgeAdapter } from "./adapter/bridge/adapter";
 import { generateBridges } from "./bridges";
-import { versionLine } from "./build-info";
+import { buildCommit, buildTarget, versionLine } from "./build-info";
 import { type Command, parseArgs, USAGE } from "./cli";
 import { systemClock } from "./clock";
 import { logConfigIssues, readConfigFile, resolveConfig } from "./config";
 import { ensureDataFolder, installBridges, resolvePaths } from "./data-folder";
 import { consoleLog } from "./log";
+import { loadNotices } from "./notices";
 import { builtinProfiles } from "./profile/builtin";
 import { loadStartupProfiles } from "./profile/startup";
 import { startServer } from "./server";
+import { APP_VERSION } from "./version";
 
 /** Spec §9.7: a graceful shutdown that takes longer than this logs the hung step and exits 1. */
 const SHUTDOWN_MS = 2000;
@@ -124,6 +127,16 @@ async function run(
       pollHz: settings.pollHz,
       bridges,
       viewer,
+      config,
+      about: {
+        version: APP_VERSION,
+        target: buildTarget(),
+        commit: buildCommit(),
+        versionLine: versionLine(),
+        lgpl: LGPL_COMPONENTS,
+        notices: await loadNotices(),
+      },
+      debug: options.debug,
       log,
     });
   } catch (error) {
