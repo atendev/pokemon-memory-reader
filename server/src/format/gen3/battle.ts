@@ -3,6 +3,7 @@ import type {
   Battler,
   StatStages,
   Stats,
+  Trainer,
 } from "@pokemon-memory-reader/api/schemas";
 import type {
   BattleField,
@@ -27,6 +28,7 @@ import {
 } from "../types";
 import { decodePartyMon, ref, speciesTypes, status } from "./mon";
 import { PARTY_MAX, PARTY_MON } from "./structs";
+import { gen3Trainers } from "./trainers";
 
 /** `gMain.inBattle` is bit 1 of the byte at +0x439 (pokeemerald `struct Main`). */
 const IN_BATTLE = { offset: 0x439, mask: 0x02 } as const;
@@ -72,13 +74,27 @@ const STAGE = {
 } as const;
 const NEUTRAL_STAGE = 6;
 
-/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, INGAME_PARTNER 22). Double is bit 0 alone: `battle_setup.c` sets DOUBLE | TWO_OPPONENTS | TRAINER together for a two-opponent battle. */
+/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, TWO_OPPONENTS 15, INGAME_PARTNER 22). Double is bit 0 alone: `battle_setup.c` sets DOUBLE | TWO_OPPONENTS | TRAINER together for a two-opponent battle. */
 const TYPE = {
   double: 1 << 0,
   trainer: 1 << 3,
   multi: 1 << 6,
+  twoOpponents: 1 << 15,
   inGamePartner: 1 << 22,
 } as const;
+
+/**
+ * The battle types whose trainer ID has no `gTrainers` entry, or one that isn't the opponent: link
+ * (1), Battle Tower (8), e-Reader (11), Dome (16), Palace (17), Arena (18), Factory (19), Pike
+ * (20), Pyramid (21), Tower link multi (23), recorded link (25), Trainer Hill (26) and secret
+ * base (27). Their table-derived `Trainer` fields stay null (spec §7.8).
+ */
+const TABLELESS_TYPES = [
+  1, 8, 11, 16, 17, 18, 19, 20, 21, 23, 25, 26, 27,
+].reduce((mask, bit) => mask | (1 << bit), 0);
+
+/** A two-opponent battle keeps trainer B's party in `gEnemyParty` slots 3 to 5. */
+const TWO_OPPONENT_SPLIT = 3;
 
 /** `gSideStatuses` bits (pokeemerald `SIDE_STATUS_*` in `include/constants/battle.h`). */
 const SIDE = {
@@ -128,6 +144,8 @@ interface FrameRegions extends ProbeRegions {
   readonly partyIndexes: Region;
   readonly enemyCount: Region;
   readonly enemyParty: Region;
+  readonly opponentA: Region;
+  readonly opponentB: Region;
   readonly weather: Region;
   readonly sideStatuses: Region;
   readonly sideTimers: Region;
@@ -150,6 +168,8 @@ const frameRegions = (profile: Profile<"gen3">): FrameRegions => {
     partyIndexes: region(a.gBattlerPartyIndexes, BATTLERS * 2),
     enemyCount: region(a.gEnemyPartyCount, 1),
     enemyParty: region(a.gEnemyParty, PARTY_MAX * PARTY_MON.size),
+    opponentA: region(a.gTrainerBattleOpponent_A, 2),
+    opponentB: region(a.gTrainerBattleOpponent_B, 2),
     weather: region(a.gBattleWeather, 2),
     sideStatuses: region(a.gSideStatuses, 4),
     sideTimers: region(a.gSideTimers, 2 * SIDE_TIMER.size),
@@ -273,6 +293,7 @@ function decodeFrame(
   const hasPartner =
     (typeFlags & (TYPE.multi | TYPE.inGamePartner)) !== 0 && isDouble;
 
+  const twoOpponents = isTrainer && (typeFlags & TYPE.twoOpponents) !== 0;
   const count = slices.enemyCount.u8(0);
   if (count < 1 || count > PARTY_MAX)
     return fail(`opponent party count ${count} is outside 1 to ${PARTY_MAX}`);
@@ -318,17 +339,26 @@ function decodeFrame(
 
   const onField = new Set(opponentActive.map((battler) => battler.partySlot));
   const party: OpponentMonFrame[] = [];
-  for (let slot = 0; slot < count; slot++) {
+  // `gEnemyPartyCount` counts both opponents' mons, but trainer A's mons fill only slots 0 to 2, so a two-opponent battle reads every slot and skips the empty ones.
+  const slotCount = twoOpponents ? PARTY_MAX : count;
+  for (let slot = 0; slot < slotCount; slot++) {
     // A wild battle lists only the wild mons on the field (spec §7.8).
     if (!isTrainer && !onField.has(slot)) continue;
-    const decoded = decodePartyMon(
-      slices.enemyParty.sub(slot * PARTY_MON.size, PARTY_MON.size),
-      ctx,
-    );
+    const bytes = slices.enemyParty.sub(slot * PARTY_MON.size, PARTY_MON.size);
+    if (twoOpponents && bytes.raw().every((byte) => byte === 0)) continue;
+    const decoded = decodePartyMon(bytes, ctx);
     if (!decoded.ok)
       return fail(`opponent party slot ${slot}: ${decoded.reason}`);
-    // `trainer` indexes `opponent.trainers`, which the trainer tables fill in a later ticket.
-    party.push({ ...decoded.value, partySlot: slot, trainer: null });
+    party.push({
+      ...decoded.value,
+      partySlot: slot,
+      // An index into `opponent.trainers`.
+      trainer: !isTrainer
+        ? null
+        : twoOpponents && slot >= TWO_OPPONENT_SPLIT
+          ? 1
+          : 0,
+    });
   }
   if (party.length === 0) return fail("opponent party has no mon");
 
@@ -336,13 +366,33 @@ function decodeFrame(
     slices.sideStatuses.u16le(0),
     slices.sideStatuses.u16le(2),
   ] as const;
+  const trainerIds = !isTrainer
+    ? []
+    : twoOpponents
+      ? [slices.opponentA.u16le(0), slices.opponentB.u16le(0)]
+      : [slices.opponentA.u16le(0)];
+  const tableless = (typeFlags & TABLELESS_TYPES) !== 0;
   return ok({
     kind: isTrainer ? "trainer" : "wild",
     format: isDouble ? "double" : "single",
     modes: [],
     turn: null,
     player: { active: playerActive, partner: null },
-    opponent: { active: opponentActive, party, trainers: [] },
+    opponent: {
+      active: opponentActive,
+      party,
+      // The table-derived fields wait for `gen3Trainers.fill`, which the loop runs after its ROM read.
+      trainers: trainerIds.map(
+        (id): Trainer => ({
+          id,
+          classId: null,
+          className: null,
+          name: null,
+          prizeMoney: null,
+          items: null,
+        }),
+      ),
+    },
     field: {
       weather: weather(slices.weather.u16le(0)),
       terrain: null,
@@ -351,6 +401,7 @@ function decodeFrame(
         opponent: side(statuses[1], slices.sideTimers, 1),
       },
     },
+    ...(tableless && { tableDerived: false as const }),
   });
 }
 
@@ -382,4 +433,8 @@ const frame: ResourceDecoder<Profile<"gen3">, FrameRegions, BattleTick> = {
  * while it is set (spec §6.4, §7.8). `gBattleOutcome` is read in the cycle the flag reads clear
  * because the globals stay stale after a battle.
  */
-export const gen3Battle: BattleDecoder<Profile<"gen3">> = { probe, frame };
+export const gen3Battle: BattleDecoder<Profile<"gen3">> = {
+  probe,
+  frame,
+  trainers: gen3Trainers,
+};

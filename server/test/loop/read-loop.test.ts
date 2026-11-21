@@ -334,8 +334,9 @@ describe("the battle resource in the loop", () => {
     const before = adapter.reads.length;
     await tick(clock, 1);
     const requests = adapter.reads.slice(before);
-    expect(requests).toHaveLength(2);
-    expect(requests[1]?.length).toBeGreaterThan(requests[0]?.length ?? 0);
+    // The probe, then the frame's batch, which first reads the `gBattleStruct` pointer word the money multiplier sits behind.
+    expect(requests).toHaveLength(3);
+    expect(requests[2]?.length).toBeGreaterThan(requests[0]?.length ?? 0);
     expect((await battle(loop)).active).toBe(true);
   });
 

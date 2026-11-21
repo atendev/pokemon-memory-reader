@@ -5,7 +5,7 @@ import type {
   Player,
 } from "@pokemon-memory-reader/api/schemas";
 import type { DataFormatId, Profile } from "../profile/schema";
-import type { BattleTick } from "../resource/battle-tracker";
+import type { BattleFrame, BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
 import type { Regions, Slices } from "./regions";
 
@@ -46,6 +46,35 @@ export type BattleProbe =
 export interface BattleDecoder<P> {
   readonly probe: ResourceDecoder<P, Regions, BattleProbe>;
   readonly frame: ResourceDecoder<P, Regions, BattleTick>;
+  /** The trainer tables' part of a battle, for formats that have one. A frame without it keeps the nulls the frame decoder left. */
+  readonly trainers?: TrainerFill<P>;
+}
+
+/** RAM a trainer's prize money needs besides the frame. Its own part, so an unreadable `gBattleStruct` nulls the money and never the frame. */
+export interface BattleExtras {
+  readonly moneyMultiplier: number;
+}
+
+/**
+ * Fills the `Trainer` fields that come from ROM tables (spec §7.8). The frame decoder lists each
+ * trainer with those fields null. The loop reads the ROM regions `rom` names, once per session for
+ * each name, and `fill` returns the frame with the fields set. A region the profile has no table
+ * for, or that failed to read, is absent from `rom` and nulls only the fields that need it.
+ */
+export interface TrainerFill<P> {
+  /** The RAM the money needs. Read in the frame's batch. */
+  readonly extras: ResourceDecoder<P, Regions, BattleExtras>;
+  /** The ROM regions this frame's trainers need, named so the loop can cache them. None for a battle that has no tables. */
+  rom(profile: P, frame: BattleFrame): Regions;
+  /** Every ROM region at its maximum size, for the bridge request caps. */
+  maxRom(profile: P): Regions;
+  /** Pure. `rom` holds the slice of each region that was read. */
+  fill(
+    frame: BattleFrame,
+    ctx: DecodeContext<P>,
+    rom: Readonly<Record<string, Bytes>>,
+    extras: BattleExtras | null,
+  ): BattleFrame;
 }
 
 export interface Decoder<F extends DataFormatId> {

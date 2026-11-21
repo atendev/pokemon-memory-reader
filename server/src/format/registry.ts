@@ -6,12 +6,13 @@ import type {
 } from "@pokemon-memory-reader/api/schemas";
 import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
-import type { BattleTick } from "../resource/battle-tracker";
+import type { BattleFrame, BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
 import { gen3Decoder } from "./gen3";
 import { STORAGE } from "./gen3/structs";
 import type { Regions, Slices } from "./regions";
 import type {
+  BattleExtras,
   BattleProbe,
   DecodeContext,
   ResourceDecoder,
@@ -31,6 +32,21 @@ export interface BoundPart<T> {
 export interface BoundBattle {
   readonly probe: BoundPart<BattleProbe>;
   readonly frame: BoundPart<BattleTick>;
+  /** The trainer tables' part, for a format that has one (spec §7.8). */
+  readonly trainers?: BoundTrainers;
+}
+
+/** The `Trainer` fields that come from ROM tables, with the profile and per-game lookups applied. */
+export interface BoundTrainers {
+  /** RAM read in the frame's batch. A read that fails leaves the money null and the frame intact. */
+  readonly extras: BoundPart<BattleExtras>;
+  /** The ROM regions this frame's trainers need, by cache name. Empty when the battle has no tables. */
+  rom(frame: BattleFrame): Regions;
+  fill(
+    frame: BattleFrame,
+    rom: Readonly<Record<string, Bytes>>,
+    extras: BattleExtras | null,
+  ): BattleFrame;
 }
 
 /** The box reader, with the box count the format fixes so `/boxes/:n` can refuse an out-of-range `n` before any read (amendment 020 §3). */
@@ -73,6 +89,8 @@ export interface DeclaredPart {
 export function declaredRegions(profile: Profile): {
   readonly main: readonly DeclaredPart[];
   readonly boxes: readonly DeclaredPart[];
+  /** The trainer-table ROM read, its own request after the main batch. */
+  readonly rom: readonly DeclaredPart[];
 } {
   switch (profile.dataFormat) {
     case "gen3":
@@ -95,14 +113,30 @@ export function declaredRegions(profile: Profile): {
                 },
               ]
             : []),
+          ...(gen3Decoder.battle?.trainers
+            ? [
+                {
+                  part: "battleExtras",
+                  regions: gen3Decoder.battle.trainers.extras.regions(profile),
+                },
+              ]
+            : []),
         ],
         boxes:
           gen3Decoder.boxes && profile.features.boxes
             ? [{ part: "boxes", regions: gen3Decoder.boxes.regions(profile) }]
             : [],
+        rom: gen3Decoder.battle?.trainers
+          ? [
+              {
+                part: "battleRom",
+                regions: gen3Decoder.battle.trainers.maxRom(profile),
+              },
+            ]
+          : [],
       };
     default:
-      return { main: [], boxes: [] };
+      return { main: [], boxes: [], rom: [] };
   }
 }
 
@@ -125,6 +159,7 @@ export function bindGame(profile: Profile): BoundGame {
         },
       };
       const { party, player, bag, battle, boxes } = gen3Decoder;
+      const trainers = battle?.trainers;
       return {
         ...(party && { party: bind(party, profile, ctx) }),
         ...(player && { player: bind(player, profile, ctx) }),
@@ -138,6 +173,14 @@ export function bindGame(profile: Profile): BoundGame {
           battle: {
             probe: bind(battle.probe, profile, ctx),
             frame: bind(battle.frame, profile, ctx),
+            ...(trainers && {
+              trainers: {
+                extras: bind(trainers.extras, profile, ctx),
+                rom: (frame) => trainers.rom(profile, frame),
+                fill: (frame, rom, extras) =>
+                  trainers.fill(frame, ctx, rom, extras),
+              },
+            }),
           },
         }),
       };
