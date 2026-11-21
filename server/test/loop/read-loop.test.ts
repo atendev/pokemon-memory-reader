@@ -5,6 +5,8 @@ import type {
   Range,
   ReadOutcome,
 } from "../../src/adapter/types";
+import type { BoundGame } from "../../src/format/registry";
+import { ok } from "../../src/format/types";
 import { silentLog } from "../../src/log";
 import { createReadLoop, normalizePollHz } from "../../src/loop/read-loop";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
@@ -79,7 +81,7 @@ afterEach(async () => {
   for (const loop of open.splice(0)) await loop.close();
 });
 
-function setup(pollHz = 20) {
+function setup(pollHz = 20, bind?: (profile: unknown) => BoundGame) {
   const adapter = new MemoryAdapter();
   const clock = new ManualClock();
   const loop = createReadLoop({
@@ -88,6 +90,7 @@ function setup(pollHz = 20) {
     pollHz,
     clock,
     log: silentLog,
+    ...(bind && { bind }),
   });
   open.push(loop);
   return { adapter, clock, loop };
@@ -217,6 +220,118 @@ describe("read loop", () => {
       ok: false,
       code: "no_data",
     });
+  });
+});
+
+/** A party that lives behind the pointer word at IWRAM 0x100: its decoded size is the byte the pointer leads to. */
+const POINTER_WORD = 0x100;
+const gamePointing: BoundGame = {
+  party: {
+    regions: {
+      body: {
+        kind: "pointer",
+        at: {
+          at: { domain: "iwram", offset: POINTER_WORD },
+          width: 4,
+          bank: null,
+          offset: 0,
+        },
+        length: 1,
+      },
+    },
+    decode: (slices) =>
+      ok({ pokemon: new Array(slices.body?.u8(0)).fill({}) } as never),
+  },
+};
+
+describe("pointer-derived regions in the loop", () => {
+  const point = (adapter: MemoryAdapter, target: number, size: number) => {
+    adapter.memory.ewram[target] = size;
+    new DataView(adapter.memory.iwram.buffer).setUint32(
+      POINTER_WORD,
+      0x02000000 + target,
+      true,
+    );
+  };
+  const size = async (loop: ReturnType<typeof setup>["loop"]) => {
+    const got = await loop.get("party");
+    return got.ok ? got.value.pokemon.length : got.code;
+  };
+
+  test("attach sends the pointer words, then the regions, and steady state sends one request", async () => {
+    const { adapter, clock, loop } = setup(20, () => gamePointing);
+    point(adapter, 0x2000, 3);
+    await flush();
+    const afterIdentify = adapter.reads.length;
+
+    expect(await size(loop)).toBe(3);
+    expect(adapter.reads.slice(afterIdentify)).toEqual([
+      [{ domain: "iwram", offset: POINTER_WORD, length: 4 }],
+      [
+        { domain: "iwram", offset: POINTER_WORD, length: 4 },
+        { domain: "ewram", offset: 0x2000, length: 1 },
+      ],
+    ]);
+
+    const steady = adapter.reads.length;
+    for (let i = 0; i < 3; i++) {
+      clock.advance(50);
+      await flush();
+    }
+    expect(adapter.reads.length).toBeGreaterThan(steady);
+    for (const request of adapter.reads.slice(steady)) {
+      expect(request).toHaveLength(2);
+    }
+  });
+
+  test("a moved pointer drops that cycle's result and the next cycle reads the new address", async () => {
+    const { adapter, clock, loop } = setup(20, () => gamePointing);
+    point(adapter, 0x2000, 3);
+    await flush();
+    expect(await size(loop)).toBe(3);
+
+    adapter.memory.ewram[0x3000] = 5;
+    point(adapter, 0x3000, 5);
+    clock.advance(50);
+    await flush();
+    // The tick that saw the move read the old address under the new pointer, so it kept the old value.
+    expect(await size(loop)).toBe(3);
+    clock.advance(50);
+    await flush();
+    expect(await size(loop)).toBe(5);
+  });
+
+  test("a null pointer fails only the decoders that use it, and the next valid pointer recovers", async () => {
+    const { adapter, clock, loop } = setup(20, () => gamePointing);
+    point(adapter, 0x2000, 3);
+    await flush();
+    expect(await size(loop)).toBe(3);
+
+    adapter.memory.iwram.fill(0, POINTER_WORD, POINTER_WORD + 4);
+    clock.advance(5100);
+    await flush();
+    expect(await size(loop)).toBe("no_data");
+    expect(loop.status().state).toBe("game");
+
+    point(adapter, 0x4000, 7);
+    clock.advance(50);
+    await flush();
+    clock.advance(50);
+    await flush();
+    expect(await size(loop)).toBe(7);
+  });
+
+  test("a game change forgets the pointers, so the next cycle sends two requests again", async () => {
+    const { adapter, loop } = setup(20, () => gamePointing);
+    point(adapter, 0x2000, 3);
+    await flush();
+    await size(loop);
+
+    adapter.set({ ...CONNECTED, gameEpoch: 2 });
+    await flush();
+    const before = adapter.reads.length;
+    expect(await size(loop)).toBe(3);
+    expect(adapter.reads.length - before).toBe(2);
   });
 });
 
