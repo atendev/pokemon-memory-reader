@@ -94,7 +94,7 @@ interface Part {
   readonly part: BoundPart<unknown>;
   accept(value: unknown): void;
 }
-const DECODED: readonly MainTopic[] = ["party", "player", "battle"];
+const DECODED: readonly MainTopic[] = ["party", "player", "bag", "battle"];
 
 /** A resource is read while it had a GET in the last 5 s (spec §8.2). */
 const DEMAND_MS = 5000;
@@ -306,7 +306,9 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       if (game === null || game.platform === "other") return;
       const parts: Part[] = topics.flatMap((topic) => {
         const part =
-          topic === "party" || topic === "player" ? bound[topic] : undefined;
+          topic === "party" || topic === "player" || topic === "bag"
+            ? bound[topic]
+            : undefined;
         return part
           ? [
               {

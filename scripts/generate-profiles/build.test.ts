@@ -130,6 +130,19 @@ describe("the Emerald profile", () => {
     );
   });
 
+  test("writes the hand-written bag block, and the output is stable", () => {
+    const built = buildProfile(definition, symbols, hashes, evidence) as {
+      bag: Record<string, unknown>;
+    };
+    expect(built.bag).toEqual({
+      pocketOffsets: [0x560, 0x5d8, 0x650, 0x690, 0x790],
+      pocketCapacities: [30, 30, 16, 64, 46],
+    });
+    expect(renderProfile(built)).toBe(
+      renderProfile(buildProfile(definition, symbols, hashes, evidence)),
+    );
+  });
+
   test("a missing symbol or a size that isn't a whole number of entries fails", () => {
     const without = new Map(symbols);
     without.delete("gPlayerParty");

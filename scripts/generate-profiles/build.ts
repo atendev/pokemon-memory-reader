@@ -50,6 +50,7 @@ export function buildProfile(
     artVersion: definition.artVersion,
     addresses,
     player: definition.player,
+    bag: definition.bag,
     constants: {},
     identify: {
       sha1: hashes.sha1,

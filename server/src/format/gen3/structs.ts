@@ -177,3 +177,6 @@ export const PLAYER = {
   /** `MapHeader.regionMapSectionId`. */
   section: 0x14,
 } as const;
+
+/** `struct ItemSlot`: a u16 item ID, then a u16 quantity that Emerald and FireRed XOR with the encryption key. */
+export const BAG = { slotSize: 4, itemId: 0, quantity: 2 } as const;

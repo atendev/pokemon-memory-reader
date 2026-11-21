@@ -1,4 +1,9 @@
-import type { Boxes, Party, Player } from "@pokemon-memory-reader/api/schemas";
+import type {
+  Bag,
+  Boxes,
+  Party,
+  Player,
+} from "@pokemon-memory-reader/api/schemas";
 import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
 import type { BattleTick } from "../resource/battle-tracker";
@@ -37,6 +42,7 @@ export interface BoundBoxes extends BoundPart<Boxes> {
 export interface BoundGame {
   readonly party?: BoundPart<Party>;
   readonly player?: BoundPart<Player>;
+  readonly bag?: BoundPart<Bag>;
   readonly boxes?: BoundBoxes;
   readonly battle?: BoundBattle;
 }
@@ -78,6 +84,9 @@ export function declaredRegions(profile: Profile): {
           ...(gen3Decoder.player
             ? [{ part: "player", regions: gen3Decoder.player.regions(profile) }]
             : []),
+          ...(gen3Decoder.bag
+            ? [{ part: "bag", regions: gen3Decoder.bag.regions(profile) }]
+            : []),
           ...(gen3Decoder.battle
             ? [
                 {
@@ -115,10 +124,11 @@ export function bindGame(profile: Profile): BoundGame {
           locations: reference.locations(profile.artVersion),
         },
       };
-      const { party, player, battle, boxes } = gen3Decoder;
+      const { party, player, bag, battle, boxes } = gen3Decoder;
       return {
         ...(party && { party: bind(party, profile, ctx) }),
         ...(player && { player: bind(player, profile, ctx) }),
+        ...(bag && { bag: bind(bag, profile, ctx) }),
         // A profile that turns `features.boxes` off has no box reader, so its boxes 503 `unsupported` (spec §7.2).
         ...(boxes &&
           profile.features.boxes && {

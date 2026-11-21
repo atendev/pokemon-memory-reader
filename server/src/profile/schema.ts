@@ -3,7 +3,7 @@ import { z } from "zod";
 import { cfruAddresses } from "../format/cfru/profile";
 import { gen1Addresses } from "../format/gen1/profile";
 import { gen2Addresses } from "../format/gen2/profile";
-import { gen3Addresses, gen3Player } from "../format/gen3/profile";
+import { gen3Addresses, gen3Bag, gen3Player } from "../format/gen3/profile";
 import { addressText, anyAddress } from "./address";
 
 export const DATA_FORMATS = ["gen1", "gen2", "gen3", "cfru"] as const;
@@ -77,6 +77,8 @@ const constants = z.record(z.string(), z.number());
 const playerValues = z.union([z.number(), z.array(z.number())]);
 /** Formats whose player decoder isn't built accept any keys. */
 const untypedPlayer = z.record(z.string(), playerValues).default({});
+/** Formats whose bag decoder isn't built accept any keys. */
+const untypedBag = z.record(z.string(), playerValues).default({});
 const features = z.object({ boxes: z.boolean().optional() }).strict();
 const fixture = z.enum(["full", "smoke", "none"]);
 const kind = z.enum(["official", "hack"]);
@@ -182,6 +184,7 @@ export const profileFile = z
     addresses: z.record(z.string(), addressText.nullable()).optional(),
     constants: z.record(z.string(), z.number().nullable()).optional(),
     player: z.record(z.string(), playerValues.nullable()).optional(),
+    bag: z.record(z.string(), playerValues.nullable()).optional(),
     identify: fileTables.identify.optional(),
     nameTables: z
       .object(removable(fileTables.nameTables.shape))
@@ -208,7 +211,8 @@ function member<
   F extends DataFormatId,
   A extends z.ZodType,
   P extends z.ZodType,
->(format: F, addresses: A, player: P) {
+  B extends z.ZodType,
+>(format: F, addresses: A, player: P, bag: B) {
   const platform = platformOf[format];
   const t = tables(
     anyAddress(platform),
@@ -228,6 +232,7 @@ function member<
       addresses,
       constants: constants.default({}),
       player,
+      bag,
       identify: t.identify.optional(),
       nameTables: t.nameTables.optional(),
       speciesData: t.speciesData.optional(),
@@ -246,10 +251,10 @@ function member<
  */
 export const profileFull = z
   .discriminatedUnion("dataFormat", [
-    member("gen1", gen1Addresses, untypedPlayer),
-    member("gen2", gen2Addresses, untypedPlayer),
-    member("gen3", gen3Addresses, gen3Player),
-    member("cfru", cfruAddresses, untypedPlayer),
+    member("gen1", gen1Addresses, untypedPlayer, untypedBag),
+    member("gen2", gen2Addresses, untypedPlayer, untypedBag),
+    member("gen3", gen3Addresses, gen3Player, gen3Bag),
+    member("cfru", cfruAddresses, untypedPlayer, untypedBag),
   ])
   .superRefine((profile, ctx) => {
     if (profile.kind !== "hack") return;

@@ -2,6 +2,13 @@
 
 exports[`the closed enums of every resource are unchanged 1`] = `
 {
+  "bag.pockets[].id": [
+    "items",
+    "keyItems",
+    "balls",
+    "tmhm",
+    "berries",
+  ],
   "battle.field.terrain": [
     "none",
     "electric",

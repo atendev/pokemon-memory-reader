@@ -58,6 +58,7 @@ Each list is rendered from `api/src/meanings.ts` by `bun api/scripts/open-enums.
 - `status`: The adapter, ROM and game state. Always served.
 - `party`: The player's party, in slot order.
 - `player`: The player's name, IDs, money, badges, map location and play time.
+- `bag`: The player's bag pockets and the items in each, in game order.
 - `battle`: The current battle, or whether none is active and the last one that ended.
 - `boxes`: The PC boxes and the current box, in game order. Read on demand, at most once a second.
 

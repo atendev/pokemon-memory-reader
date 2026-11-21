@@ -63,6 +63,7 @@ const MERGED_BLOCKS = [
   "addresses",
   "constants",
   "player",
+  "bag",
   "nameTables",
   "speciesData",
   "trainerTables",

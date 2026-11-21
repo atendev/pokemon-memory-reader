@@ -249,6 +249,25 @@ describe("the Gen 3 player block", () => {
   });
 });
 
+describe("the Gen 3 bag block", () => {
+  test("the Emerald profile types its bag values", () => {
+    const parsed = profileFull.parse(emerald);
+    expect(parsed.dataFormat === "gen3" && parsed.bag).toEqual({
+      pocketOffsets: [0x560, 0x5d8, 0x650, 0x690, 0x790],
+      pocketCapacities: [30, 30, 16, 64, 46],
+    });
+  });
+
+  test("a Gen 3 profile without five pockets, or without a bag block, fails", () => {
+    const short = clone();
+    short.bag = { ...(short.bag as object), pocketCapacities: [30, 30] };
+    expect(messages(short)).toContain("bag.pocketCapacities");
+    const missing = clone();
+    delete missing.bag;
+    expect(messages(missing)).toContain("bag");
+  });
+});
+
 describe("the file schema", () => {
   test("exports JSON Schema", () => {
     const schema = z.toJSONSchema(profileFile) as {

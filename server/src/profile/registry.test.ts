@@ -111,6 +111,26 @@ describe("extends", () => {
     expect(keyless.player.encryptionKeyOffset).toBeUndefined();
   });
 
+  test("a child inherits the bag block and restates one array to change a capacity", () => {
+    const { registry, problems } = load([
+      user(
+        "a.json",
+        child("bigger", {
+          kind: "hack",
+          ...hackParts,
+          bag: { pocketCapacities: [40, 30, 16, 64, 46] },
+        }),
+      ),
+    ]);
+    expect(problems).toEqual([]);
+    const bigger = registry.get("bigger");
+    if (bigger?.dataFormat !== "gen3") throw new Error("expected Gen 3");
+    expect(bigger.bag.pocketCapacities[0]).toBe(40);
+    expect(bigger.bag.pocketOffsets).toEqual([
+      0x560, 0x5d8, 0x650, 0x690, 0x790,
+    ]);
+  });
+
   test("a missing parent names the parent", () => {
     const { problems } = load([
       user("a.json", child("c", { extends: "nope" })),
@@ -249,7 +269,7 @@ describe("bridge caps", () => {
     expect(registry.get("emerald-us-1.0")).toBeUndefined();
     expect(problems).toHaveLength(1);
     expect(problems[0]?.source).toBe("builtin");
-    expect(problems[0]?.message).toContain("main batch needs 23 ranges");
+    expect(problems[0]?.message).toContain("main batch needs 35 ranges");
     expect(problems[0]?.message).toContain("largest region party.party");
     expect(problems[0]?.message).toContain("512 ranges and 100 bytes");
   });
@@ -264,6 +284,7 @@ describe("bridge caps", () => {
     expect(declared.main.map((p) => p.part)).toEqual([
       "party",
       "player",
+      "bag",
       "battle",
     ]);
     expect(

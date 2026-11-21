@@ -255,6 +255,30 @@ export type Player = {
   [key: string]: unknown;
 };
 
+/** The bag pockets (amendment 017 §5). A closed enum: every supported format has a fixed pocket set. */
+export type PocketId = "items" | "keyItems" | "balls" | "tmhm" | "berries";
+
+/** One item stack. `item.name` is null for an ID the name table doesn't know. */
+export type BagEntry = {
+  item: Ref;
+  quantity: number;
+  [key: string]: unknown;
+};
+
+/** One pocket. `capacity` is the most distinct entries it can hold, and an empty pocket has `items: []`. */
+export type Pocket = {
+  id: PocketId;
+  capacity: number;
+  items: BagEntry[];
+  [key: string]: unknown;
+};
+
+/** The `bag` resource. It lists only the pockets the game has, in game order. */
+export type Bag = {
+  pockets: Pocket[];
+  [key: string]: unknown;
+};
+
 /** What the adapter reports about the loaded ROM. null when the adapter reports no ROM (amendment 020 §5). */
 export type Rom = {
   platform: "gb" | "gba" | "other";
@@ -362,6 +386,7 @@ export type ResourceMap = {
   status: StatusResource;
   party: Party;
   player: Player;
+  bag: Bag;
   battle: Battle;
   boxes: Boxes;
 };

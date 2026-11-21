@@ -61,6 +61,13 @@ export const definitions: readonly ProfileDefinition[] = [
       flagsOffset: 0x1270,
       encryptionKeyOffset: 0xac,
     },
+    // pokeemerald `struct SaveBlock1`: bagPocket_Items 0x560, KeyItems 0x5D8, PokeBalls 0x650, TMHM 0x690 and
+    // Berries 0x790, with BAG_ITEMS_COUNT 30, BAG_KEYITEMS_COUNT 30, BAG_POKEBALLS_COUNT 16, BAG_TMHM_COUNT 64
+    // and BAG_BERRIES_COUNT 46. A slot is `struct ItemSlot` { u16 itemId; u16 quantity }.
+    bag: {
+      pocketOffsets: [0x560, 0x5d8, 0x650, 0x690, 0x790],
+      pocketCapacities: [30, 30, 16, 64, 46],
+    },
     // 412 species is the length of `speciesData` in `gen3-en.json`, which a test pins.
     speciesInfo: { symbol: "gSpeciesInfo", speciesCount: 412 },
     // pokeemerald: sizeof(struct Trainer) 40, trainer class names 13 bytes, struct TrainerMoney 2 bytes.

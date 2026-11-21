@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Battle, Player } from "@pokemon-memory-reader/api/schemas";
+import { Bag, Battle, Player } from "@pokemon-memory-reader/api/schemas";
 import type {
   Adapter,
   AdapterState,
@@ -14,6 +14,7 @@ import { createReadLoop, normalizePollHz } from "../../src/loop/read-loop";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
+import { writeBag } from "../gen3/bag-encode";
 import {
   type BattleMonSpec,
   endBattle,
@@ -710,5 +711,71 @@ describe("the player resource in the loop", () => {
     );
     expect(response.status).toBe(200);
     expect(Player.parse(await response.json()).name).toBe("MAY");
+  });
+});
+
+describe("the bag resource in the loop", () => {
+  const SCENE = {
+    key: 0x1badb002,
+    items: [
+      { id: 13, quantity: 25 },
+      { id: 0x7fff, quantity: 2 },
+    ],
+    keyItems: [{ id: 259, quantity: 1 }],
+    balls: [{ id: 4, quantity: 12 }],
+    tmhm: [{ id: 289, quantity: 1 }],
+    berries: [{ id: 133, quantity: 40 }],
+  };
+
+  test("a synthetic Emerald bag is a valid bag with five pockets and decrypted quantities", async () => {
+    const { adapter, loop } = setup();
+    await flush();
+    writeBag(adapter.memory, SCENE);
+    const got = await loop.get("bag");
+    if (!got.ok) throw new Error(got.code);
+    const bag = Bag.parse(got.value);
+    expect(bag.pockets.map((pocket) => pocket.id)).toEqual([
+      "items",
+      "keyItems",
+      "balls",
+      "tmhm",
+      "berries",
+    ]);
+    expect(bag.pockets.map((pocket) => pocket.items.length)).toEqual([
+      2, 1, 1, 1, 1,
+    ]);
+    expect(bag.pockets[0]?.items[0]).toMatchObject({
+      item: { id: 13 },
+      quantity: 25,
+    });
+    expect(bag.pockets[0]?.items[1]).toEqual({
+      item: { id: 0x7fff, name: null },
+      quantity: 2,
+    });
+    expect(bag.pockets[4]?.items[0]?.quantity).toBe(40);
+  });
+
+  test("a null save block pointer is a 503 no_data through GET /api/v2/bag", async () => {
+    const { clock, loop } = setup();
+    await flush();
+    const response = await createApp({ resources: loop }).request(
+      "/api/v2/bag",
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: { code: "no_data" },
+    });
+    await tick(clock);
+  });
+
+  test("GET /api/v2/bag serves the value from the loop", async () => {
+    const { adapter, loop } = setup();
+    await flush();
+    writeBag(adapter.memory, SCENE);
+    const response = await createApp({ resources: loop }).request(
+      "/api/v2/bag",
+    );
+    expect(response.status).toBe(200);
+    expect(Bag.parse(await response.json()).pockets).toHaveLength(5);
   });
 });
