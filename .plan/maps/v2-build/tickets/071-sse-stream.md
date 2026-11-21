@@ -20,23 +20,14 @@ Subscribers receive change events from the change-detection ticket. The `boxes` 
 - Demand lapses when the last subscriber leaves and the 5 s warm window applies.
 - The `/client` SSE helper is typed without `zod`, and the packed-tarball CI check still passes.
 
-## Handoff
+## Answer
 
-Branch `t3/60ced9c7`. Audit rounds used: 0 (no council yet). Tag `wfm-v2-build-071-1795260524`.
+`GET /api/v2/events?topics=...` is built to spec §7.3 and §8.8. The route returns the standard 400 `invalid_topics` body for a list that names no known topic, and ignores unknown names beside known ones. A subscriber counts as demand through the loop's `retain(topics)`, so a cold topic runs the same extra cycle as a cold GET and its first decoded value is the on-connect event. The 5 s warm window starts when the last subscriber of a topic leaves. Each client holds at most one pending event per topic, latest wins, for on-connect values and `status` too. A socket whose `desiredSize` stays at or below 0 for 30 s is closed as a normal end of stream, and a comment heartbeat goes out every 15 s. `status` events now follow adapter state, which ticket 070 left to this one. `boxes` needs no new throttle, because the loop reads boxes at most once per 1000 ms.
 
-**Done (committed as `wip:`)**
-- `server/src/loop/read-loop.ts`: `StreamSource` interface, loop-level `retain(topics)` demand count (survives sessions, window starts when the last subscriber leaves, a lapsed topic's cached value is dropped so the subscriber's `get` runs cold), and `announceStatus()` which emits a `status` event whenever `status()` deep-differs (adapter state change, identification done, stall flip).
-- `server/src/app/stream.ts`: `parseTopics`, `createStreamHub` (latest-wins queue per client, 15 s heartbeat, 30 s unwritable close, on-connect via `get`), `Sink`.
-- `server/src/app/app.ts`: `GET /api/v2/events` (400 `invalid_topics` with status, `server.timeout(req, 0)`, ReadableStream with highWaterMark 1, `pull` as drain). `server.ts` builds the hub and closes it in `stop()`.
-- Tests: `test/loop/demand.test.ts`, `test/api/stream.test.ts` (21 pass), shared `test/support/scripted-adapter.ts`, `change-detection.test.ts` updated for status events. Server typecheck clean.
+The API package gains a `StreamEvent` type, schema, sync pair and `PAIRED` entry, and `subscribe(topics, handlers, options)` in `client.ts` with an injectable `EventSource`, `onConnection`, `onError`, `onUnknown` and `close()`. It imports neither `zod` nor `/schemas`. The packed-tarball steps pass locally (consumer smoke, publint, attw).
 
-**Left, in order**
-1. Real-server test (`server/test/api/events.test.ts`): `Bun.serve` + `createReadLoop` (ManualClock, ScriptedAdapter) + hub + `createApp`; read the stream with `fetch`; check on-connect values, a change event, then a heartbeat (`clock.advance(15000)`). Also confirm with a real paused TCP socket that `controller.desiredSize <= 0` detects an unwritable socket in Bun, then advance 30 s and see the stream end. If detection fails, rework the sink.
-2. Boxes at 1 Hz: add a test (loop already reads at most once per 1000 ms; check across a game change).
-3. API package: SSE event type in `api/src/types.ts`, Zod schema in `schemas.ts`, sync pair in `sync.test.ts` plus `PAIRED` entry, and `subscribe(topics, handlers, options)` in `client.ts` (injectable `EventSource`, `baseUrl`, `onConnection`, `onError`, `onUnknown`, `close()`, `connection`; no zod import, not even dynamic: a test forbids it). A CLOSED error on connect reports `PmrApiError` kind `http`. Skip `validate`; surface a ticket for it. Add client tests with a fake `EventSource`.
-4. Run the packed-tarball check (`api-package` CI steps locally if possible), `bun run lint`, `bun run typecheck`, whole `bun test` (known failure: Lua version in `server/test/bridge/core.test.ts`).
-5. Council audit (Claude seat only), decision report to `.plan/maps/v2-build/assets/071-sse-stream-report.md` (unslop), Timing close, delete this section, commit, push, DONE.
+Tests: `server/test/api/events.test.ts` (real server: on-connect values, a change, a heartbeat, a 400, and a real paused TCP socket that is detected as unwritable, closed at 30 s and ended on the wire), `stream.test.ts`, `demand.test.ts`, `boxes-rate.test.ts`, `api/src/subscribe.test.ts`. One failure remains, the Lua version check in `core.test.ts` (host has Lua 5.5). Audit: Claude seat approved in round 1 (8). Gemini and GPT seats `n/a` (out of quota). One minor problem fixed, one declined. Report: [071 report](../assets/071-sse-stream-report.md).
 
-**Read first:** `server/src/app/stream.ts`, the `retain`/`announceStatus` parts of `read-loop.ts`, `app.ts` events route, `api/src/client.ts`, `api/src/sync.test.ts`.
+Surfaced: the client `validate` option (lazy-load `/schemas`, drop and report an invalid event) is not built, because a test forbids a `/schemas` import in `client.ts`.
 
-**Decisions so far:** status events now follow adapter state (070 left that to this ticket); `Resources` is unchanged, the stream reads `StreamSource`; `/events` registers only when a `stream` hub is given.
+Timing: wall 12m, active 11m, user 0s, wait 0s, blocked 0s | implement 8m, audit 2m (1 round) | tools 98 (4 subagent) | limits 0, compactions 0, handoffs 2 | ctx peak 154k | cost $0.02 haiku-5-5 + $3.40 sonnet-5-5
