@@ -150,9 +150,10 @@ describe("the screens by route", () => {
   const screen = (route: Parameters<typeof Screen>[0]["route"], s = game) =>
     renderToStaticMarkup(<Screen route={route} status={s} party={idle} />);
 
-  test("Battle, Boxes, and Trainer & bag render a placeholder once a game is up", () => {
+  test("Battle, Boxes, and Trainer & bag render once a game is up", () => {
     expect(screen("battle")).toContain("Battle");
-    expect(screen("boxes")).toContain("This screen isn&#x27;t built yet.");
+    expect(screen("boxes")).toContain("Boxes");
+    expect(screen("trainer")).toContain("This screen isn&#x27;t built yet.");
     expect(screen("trainer")).toContain("Trainer &amp; bag");
   });
 

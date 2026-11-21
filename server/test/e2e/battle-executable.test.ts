@@ -5,11 +5,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { FakeBridge, GBA_GAME } from "../bridge/fake-bridge";
 import { type BattleMonSpec, writeBattle } from "../gen3/battle-encode";
+import { encodeMon, storageBytes } from "../gen3/encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
 /**
- * Runs the compiled executable against the fake bridge with a synthetic wild battle in memory, and
- * checks the `battle` resource and the Battle screen's code in the served viewer. It needs a built
+ * Runs the compiled executable against the fake bridge with a synthetic wild battle and PC box in
+ * memory, and checks the `battle` and `boxes` resources and the Battle and Boxes screens' code in
+ * the served viewer. It needs a built
  * executable, so it runs only when `PMR_EXECUTABLE` names one (the compile-smoke CI job sets it).
  */
 const executable = process.env.PMR_EXECUTABLE;
@@ -18,6 +20,9 @@ const suite = executable ? describe : describe.skip;
 /** Emerald US 1.0's real CRC32, so the game identifies as vanilla rather than modified. */
 const EMERALD_CRC32 = "1f1c08fb";
 const POOCHYENA = 261;
+/** gPokemonStorage is a pointer word at IWRAM 0x5d94. The block sits above the battle structs, which end near 0x25000. */
+const STORAGE_POINTER = 0x5d94;
+const STORAGE_AT = 0x30000;
 const wildMon: BattleMonSpec = {
   species: POOCHYENA,
   level: 3,
@@ -66,6 +71,19 @@ suite("the compiled executable on the fake bridge", () => {
       partyIndexes: [0, 0],
       enemyParty: [{ ...TREECKO, species: POOCHYENA, level: 3, nickname: "" }],
     });
+    memory.ewram.set(
+      storageBytes({
+        currentBox: 1,
+        slots: { 1: { 2: encodeMon({ ...TREECKO, nickname: "BOXED" }) } },
+        names: { 1: "LEAFBOX" },
+      }),
+      STORAGE_AT,
+    );
+    new DataView(memory.iwram.buffer).setUint32(
+      STORAGE_POINTER,
+      0x02000000 + STORAGE_AT,
+      true,
+    );
     bridge.game = { ...GBA_GAME, crc32: EMERALD_CRC32 };
     bridge.onRead = (read, socket) =>
       bridge.reply(socket, read.id, serve(memory, read.ranges));
@@ -119,7 +137,43 @@ suite("the compiled executable on the fake bridge", () => {
     expect(body.opponent?.active[0]?.species.id).toBe(POOCHYENA);
   }, 30_000);
 
-  test("serves a viewer that carries the Battle screen", async () => {
+  test("serves the boxes the fake bridge holds, whole and one at a time", async () => {
+    type BoxBody = {
+      index: number;
+      name: string | null;
+      readable: boolean;
+      slots: ({ nickname: string | null } | null)[];
+    };
+    const deadline = Date.now() + 20_000;
+    const fetchWhole = async () => {
+      try {
+        const response = await fetch(`${base}/api/v2/boxes`);
+        if (response.ok) {
+          return (await response.json()) as {
+            currentBox: number | null;
+            boxes: BoxBody[];
+          };
+        }
+      } catch {}
+      return null;
+    };
+    let whole = await fetchWhole();
+    while (whole === null && Date.now() < deadline) {
+      await Bun.sleep(100);
+      whole = await fetchWhole();
+    }
+    expect(whole?.currentBox).toBe(1);
+    expect(whole?.boxes).toHaveLength(14);
+    expect(whole?.boxes[1]?.name).toBe("LEAFBOX");
+    expect(whole?.boxes[1]?.slots[2]?.nickname).toBe("BOXED");
+    const one = (await (
+      await fetch(`${base}/api/v2/boxes/1`)
+    ).json()) as BoxBody;
+    expect(one.index).toBe(1);
+    expect(one.slots[2]?.nickname).toBe("BOXED");
+  }, 30_000);
+
+  test("serves a viewer that carries the Battle and Boxes screens", async () => {
     const html = await (await fetch(`${base}/`)).text();
     const assets = [...html.matchAll(/(?:src|href)="([^"]+\.js)"/g)].map(
       (m) => m[1] as string,
@@ -133,5 +187,8 @@ suite("the compiled executable on the fake bridge", () => {
     expect(code).toContain("Wild encounter");
     expect(code).toContain("Show unrevealed opponent Pokémon");
     expect(code).not.toContain("This screen isn't built yet.Battle");
+    expect(code).toContain("Reading the boxes");
+    expect(code).toContain("marked corrupt");
+    expect(code).toContain("only as fresh as the last in-game save");
   });
 });
