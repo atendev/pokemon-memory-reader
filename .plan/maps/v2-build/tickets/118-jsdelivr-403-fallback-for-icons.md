@@ -16,3 +16,9 @@ Surfaced by [Icon item ID tables and `check-icon-map`](./105-icon-item-tables-an
 - A jsDelivr 403 falls back to the second source before the miss is remembered.
 - `check-icon-map` passes for the two known paths, or lists them as known blocked with the reason.
 - The fallback never makes a request when `icons.mode` has no provider.
+
+## Answer
+
+The default icon source now has a second base, raw GitHub at the same pinned commit. A jsDelivr 403 is asked of raw GitHub before the miss is remembered, a 404 never asks the second source, and a 429, 5xx or network error on either backs the whole source off for 60 s. A mirror has no second source, and `off` or `local` mode never reaches the fetch. `check-icon-map` uses the same fallback and passes all 5058 paths. Audit: Claude seat APPROVE at round 1 (8), Gemini and GPT not run. Report: [118 report](../assets/118-jsdelivr-403-fallback-for-icons-report.md).
+
+Timing: wall 2m, active 2m, user 0s, wait 0s, blocked 0s | implement 1m, audit 1m (1 round) | tools 24 (2 subagent) | limits 0, compactions 0, handoffs 0 | ctx peak 86k | cost $0.72 sonnet-5-5 + $0.01 haiku-5-5
