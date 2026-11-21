@@ -34,6 +34,7 @@ import type {
   Stats,
   Status,
   StatusResource,
+  StreamEvent,
   Topic,
   Trainer,
   Type,
@@ -87,6 +88,7 @@ type Pairs = [
   Expect<Equal<Infer<typeof schemas.InactiveBattle>, InactiveBattle>>,
   Expect<Equal<Infer<typeof schemas.ActiveBattle>, ActiveBattle>>,
   Expect<Equal<Infer<typeof schemas.Battle>, Battle>>,
+  Expect<Equal<Infer<typeof schemas.StreamEvent>, StreamEvent>>,
 ];
 
 /** The names in `Pairs`. Keep the two lists in step. */
@@ -124,6 +126,7 @@ const PAIRED = [
   "InactiveBattle",
   "ActiveBattle",
   "Battle",
+  "StreamEvent",
 ];
 
 // biome-ignore lint/correctness/noUnusedVariables: checked by the compiler, never read.

@@ -1,4 +1,6 @@
+import { TOPIC_NAMES } from "./meanings.js";
 import type {
+  ConnectionState,
   ErrorBody,
   ErrorCode,
   ResourceMap,
@@ -112,3 +114,125 @@ export async function get<T extends Topic>(
 
 export const getStatus = (options?: ClientOptions) => get("status", options);
 export const getParty = (options?: ClientOptions) => get("party", options);
+
+/** The part of the browser `EventSource` that `subscribe` uses, so a Node polyfill or a test double fits. */
+export interface EventSourceLike {
+  onopen: ((event: unknown) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  /** 0 connecting, 1 open, 2 closed. */
+  readonly readyState: number;
+  addEventListener(
+    type: string,
+    listener: (event: { readonly data: unknown }) => void,
+  ): void;
+  close(): void;
+}
+
+export interface SubscribeOptions extends ClientOptions {
+  /** Defaults to the global `EventSource`. */
+  readonly EventSource?: new (
+    url: string,
+  ) => EventSourceLike;
+  /** Called on every change of `connection`. */
+  readonly onConnection?: (state: ConnectionState) => void;
+  /** Called with a `PmrApiError` for a refused connection or an event body that isn't JSON. */
+  readonly onError?: (error: PmrApiError) => void;
+  /** Called for a requested topic this package doesn't know. `data` is the parsed body, never validated. */
+  readonly onUnknown?: (topic: string, data: unknown) => void;
+}
+
+/** One handler per known topic, each given the resource a `GET` of it returns. */
+export type TopicHandlers = {
+  readonly [T in Topic]?: (data: ResourceMap[T]) => void;
+};
+
+export interface Subscription {
+  readonly connection: ConnectionState;
+  /** Ends the stream. No handler runs after it. */
+  close(): void;
+}
+
+const CLOSED = 2;
+const isKnownTopic = (topic: string): topic is Topic =>
+  Object.hasOwn(TOPIC_NAMES, topic);
+
+/**
+ * Opens `/events` for these topics. The server sends each topic's current value on connect, which
+ * also covers the reconnects `EventSource` makes by itself. A refused connection, such as a `400` for
+ * a `topics` list naming nothing the server knows, closes it and reports a `PmrApiError` of kind
+ * `http` through `onError` with no retry. The data is not validated.
+ */
+export function subscribe(
+  topics: readonly (Topic | (string & {}))[],
+  handlers: TopicHandlers,
+  options: SubscribeOptions = {},
+): Subscription {
+  const Source =
+    options.EventSource ??
+    (globalThis.EventSource as unknown as
+      | (new (
+          url: string,
+        ) => EventSourceLike)
+      | undefined);
+  if (!Source)
+    throw new PmrApiError("network", "no EventSource is available", {});
+  const names = [...new Set(topics)];
+  const url = `${options.baseUrl ?? DEFAULT_BASE_URL}${API_BASE_PATH}/events?topics=${names
+    .map(encodeURIComponent)
+    .join(",")}`;
+  let connection: ConnectionState = "connecting";
+  const setConnection = (next: ConnectionState): void => {
+    if (connection === next) return;
+    connection = next;
+    options.onConnection?.(next);
+  };
+
+  const source = new Source(url);
+  const handle = (topic: string, raw: unknown): void => {
+    if (connection === "closed") return;
+    let data: unknown;
+    try {
+      data = JSON.parse(String(raw));
+    } catch (cause) {
+      options.onError?.(
+        new PmrApiError(
+          "http",
+          `a ${topic} event carried a body that is not JSON`,
+          {
+            cause,
+          },
+        ),
+      );
+      return;
+    }
+    if (isKnownTopic(topic))
+      (handlers[topic] as ((value: unknown) => void) | undefined)?.(data);
+    else options.onUnknown?.(topic, data);
+  };
+  for (const topic of names)
+    source.addEventListener(topic, (event) => handle(topic, event.data));
+  source.onopen = () => {
+    if (connection !== "closed") setConnection("open");
+  };
+  source.onerror = () => {
+    if (connection === "closed") return;
+    if (source.readyState === CLOSED) {
+      // The browser gives up on a non-200 answer, such as the 400 for a bad `topics` list.
+      setConnection("closed");
+      options.onError?.(
+        new PmrApiError("http", `${url} refused the stream`, {}),
+      );
+    } else setConnection("reconnecting");
+  };
+
+  return {
+    get connection() {
+      return connection;
+    },
+    close() {
+      if (connection === "closed") return;
+      source.close();
+      setConnection("closed");
+    },
+  };
+}

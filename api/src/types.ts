@@ -391,6 +391,17 @@ export type ResourceMap = {
   boxes: Boxes;
 };
 
+/**
+ * One event of the `/events` stream (spec §7.3): the SSE event name is the topic and the data is
+ * that resource, the same body a `GET` of it returns.
+ */
+export type StreamEvent = {
+  [T in Topic]: { topic: T; data: ResourceMap[T] };
+}[Topic];
+
+/** The state of a `subscribe` connection (spec §10). */
+export type ConnectionState = "connecting" | "open" | "reconnecting" | "closed";
+
 /** A stat stage, -6 to +6 in every generation. Gen 1's single Special stage fills both `spa` and `spd`. */
 export type StatStages = {
   atk: number;
