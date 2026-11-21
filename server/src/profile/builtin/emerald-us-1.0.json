@@ -31,7 +31,13 @@
     "gBattleResources": {
       "ptr": "0x020244a8",
       "offset": "0x0"
-    }
+    },
+    "gMain": "0x030022c0",
+    "gBattlerPartyIndexes": "0x0202406e",
+    "gBattleOutcome": "0x0202433a",
+    "gBattleWeather": "0x020243cc",
+    "gSideStatuses": "0x0202428e",
+    "gSideTimers": "0x02024294"
   },
   "constants": {},
   "identify": {
