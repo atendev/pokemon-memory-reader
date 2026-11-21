@@ -54,6 +54,8 @@ export interface BattleFrame {
     readonly trainers: readonly Trainer[];
   };
   readonly field: BattleField;
+  /** False when the battle has no trainer tables (Gen 3 link, Battle Tower and Frontier battles), so every table-derived `Trainer` field stays null. */
+  readonly tableDerived?: false;
 }
 
 /**

@@ -160,7 +160,8 @@ function finish(
   const declared = declaredRegions(parsed.data);
   const tooBig =
     checkRequestCaps("main batch", declared.main, caps) ??
-    checkRequestCaps("box request", declared.boxes, caps);
+    checkRequestCaps("box request", declared.boxes, caps) ??
+    checkRequestCaps("trainer ROM request", declared.rom, caps);
   if (tooBig !== null) return { ok: false, error: tooBig };
   return { ok: true, profile: parsed.data };
 }

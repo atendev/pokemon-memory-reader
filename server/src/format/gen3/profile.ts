@@ -24,6 +24,8 @@ export const gen3Addresses = z
     gBattleWeather: gba,
     gSideStatuses: gba,
     gSideTimers: gba,
+    gTrainerBattleOpponent_A: gba,
+    gTrainerBattleOpponent_B: gba,
     gMapHeader: gba,
   })
   .strict();

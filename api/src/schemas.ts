@@ -470,8 +470,18 @@ export const Trainer = z.looseObject({
   classId: z.int().nullable(),
   className: z.string().nullable(),
   name: z.string().nullable(),
-  prizeMoney: z.int().nullable(),
-  items: z.array(Ref).nullable(),
+  prizeMoney: z
+    .int()
+    .nullable()
+    .describe(
+      "The expected payout on a win, without Pay Day money. In Gen 3 it is 4 × the last mon's level × the money multiplier × the class's table value, doubled for a double battle against one trainer. A two-opponent battle pays each trainer its own amount, undoubled, as the game does. null when any input is missing.",
+    ),
+  items: z
+    .array(Ref)
+    .nullable()
+    .describe(
+      "The trainer's starting items in Gen 3 (empty slots left out), and null when the trainers table is missing.",
+    ),
 });
 export type Trainer = TrainerType;
 

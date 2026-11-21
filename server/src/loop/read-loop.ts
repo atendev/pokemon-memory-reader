@@ -26,8 +26,9 @@ import type { Adapter, ReadOutcome } from "../adapter/types";
 import type { Clock } from "../clock";
 import type { Bytes } from "../format/bytes";
 import { unreadableBoxes } from "../format/gen3/box";
+import type { Regions } from "../format/regions";
 import { type BoundGame, type BoundPart, bindGame } from "../format/registry";
-import type { BattleProbe } from "../format/types";
+import type { BattleExtras, BattleProbe } from "../format/types";
 import { type Identification, identification } from "../identify/identify";
 import type { Log } from "../log";
 import type { ProfileRegistry } from "../profile/registry";
@@ -42,6 +43,9 @@ import { buildStatus, isUsable } from "../resource/status";
 import { runJob } from "./job";
 import { PointerCache, readBatch } from "./plan";
 import { createStallTracker, type StallTracker } from "./stall";
+
+/** A trainer-table ROM region that failed to read is not asked for again until this long after. A cached region is never read again in the session. */
+const ROM_RETRY_MS = 5000;
 
 /** The 503 codes this server produces (spec §7.2, amendment 020). `not_found` is a 404 and belongs to `box()`. */
 export type UnavailableCode =
@@ -215,6 +219,10 @@ interface Session {
   battle: BattleTrackerState;
   /** True from the cycle that read the in-battle flag set until one reads it clear, so the frame is read while a battle runs (spec §8.2). */
   battleOn: boolean;
+  /** The trainer-table ROM regions read so far, by name (`classNames`, `money`, `trainer:<id>`). The ROM doesn't change under a loaded game. */
+  readonly rom: Map<string, Bytes>;
+  /** Regions whose read failed, and when each may be tried again. */
+  readonly romRetryAt: Map<string, number>;
   demandedAt: Map<Decoded, number>;
   cold: Map<MainTopic, Promise<void>>;
 }
@@ -245,6 +253,8 @@ const sessionFor = (
   },
   battle: battleTracker.initial(),
   battleOn: false,
+  rom: new Map(),
+  romRetryAt: new Map(),
   demandedAt: new Map(),
   cold: new Map(),
 });
@@ -357,18 +367,89 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     return current.identifying;
   }
 
-  /** Feeds one battle read to the tracker. True when the flag read set but the frame wasn't read, so the frame is read at once. */
-  function feedBattle(current: Session, read: BattleProbe): boolean {
+  /**
+   * The ROM regions the frame's trainers need that the session hasn't read, read in one request
+   * and kept. A failed read is left out and tried again after `ROM_RETRY_MS`, so the frame still
+   * shows with those fields null (spec §7.8).
+   */
+  async function readTrainerRom(
+    current: Session,
+    platform: Platform,
+    wanted: Regions,
+  ): Promise<void> {
+    const now = clock.now();
+    const missing = Object.entries(wanted).filter(
+      ([name]) =>
+        !current.rom.has(name) && now >= (current.romRetryAt.get(name) ?? 0),
+    );
+    if (missing.length === 0) return;
+    const parts = missing.map(
+      ([name, region]): Regions => ({ [name]: region }),
+    );
+    const result = await runJob(
+      readBatch(parts, {
+        mergeGap: adapter.limits.mergeGap,
+        platform,
+        pointers: current.pointers,
+      }),
+      read,
+    );
+    if (current !== session) return;
+    parts.forEach((part, index) => {
+      const name = missing[index]?.[0] ?? "";
+      const sliced =
+        result.kind === "sample" ? result.sample.slices(part) : null;
+      const bytes = sliced?.ok ? sliced.slices[name] : undefined;
+      // A short read is a failed one: a decoder slices these at their declared size.
+      if (bytes && bytes.length === missing[index]?.[1].length)
+        current.rom.set(name, bytes);
+      else current.romRetryAt.set(name, now + ROM_RETRY_MS);
+    });
+  }
+
+  /** The ROM regions' bytes the session holds for this frame, by name. */
+  const romFor = (current: Session, wanted: Regions): Record<string, Bytes> =>
+    Object.fromEntries(
+      Object.keys(wanted).flatMap((name) => {
+        const bytes = current.rom.get(name);
+        return bytes ? [[name, bytes]] : [];
+      }),
+    );
+
+  /**
+   * Feeds one battle read to the tracker. A valid frame first gets its trainer fields from the
+   * ROM tables. True when the flag read set but the frame wasn't read, so the frame is read at once.
+   */
+  async function feedBattle(
+    current: Session,
+    read: BattleProbe,
+    platform: Platform,
+    extras: BattleExtras | null,
+  ): Promise<boolean> {
     if (read.flag === "set" && !("frame" in read)) {
       current.battleOn = true;
       return true;
     }
     current.battleOn = read.flag === "set";
-    const step = battleTracker.step(
-      current.battle,
-      read as BattleTick,
-      clock.now(),
-    );
+    let tick = read as BattleTick;
+    const trainers = current.bound?.battle?.trainers;
+    if (tick.flag === "set" && tick.frame.ok && trainers) {
+      const wanted = trainers.rom(tick.frame.value);
+      await readTrainerRom(current, platform, wanted);
+      if (current !== session) return false;
+      tick = {
+        flag: "set",
+        frame: {
+          ok: true,
+          value: trainers.fill(
+            tick.frame.value,
+            romFor(current, wanted),
+            extras,
+          ),
+        },
+      };
+    }
+    const step = battleTracker.step(current.battle, tick, clock.now());
     current.battle = step.state;
     for (const warning of step.warnings) log.warn(warning);
     if (step.value !== null) publish(current, "battle", step.value);
@@ -456,33 +537,52 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
           : [];
       });
       const battle = bound.battle;
+      const platform = game.platform;
       let frameNeeded = false;
-      if (battle) {
-        parts.push({
-          name: "battle",
-          part: current.battleOn ? battle.frame : battle.probe,
-          accept: (value) => {
-            frameNeeded = feedBattle(current, value as BattleProbe);
-            return !frameNeeded;
-          },
-          // While the frame fails validation, every tick runs the tracker, which times the warning (spec §8.6).
-          canSkip: () => current.battle.failingSince === null,
-        });
-      }
+      let tick: BattleProbe | null = null;
+      let extras: BattleExtras | null = null;
+      /** The battle read and, beside a frame, the RAM its trainers' money needs. The extras are read in the same batch and their failure never fails the frame. */
+      const battleParts = (frame: boolean): Part[] =>
+        battle
+          ? [
+              {
+                name: "battle",
+                part: frame ? battle.frame : battle.probe,
+                accept: (value) => {
+                  tick = value as BattleProbe;
+                  // A flag that reads set without its frame isn't final, so its bytes aren't remembered.
+                  return !(tick.flag === "set" && !("frame" in tick));
+                },
+                // While the frame fails validation, every tick runs the tracker, which times the warning (spec §8.6).
+                canSkip: () => current.battle.failingSince === null,
+              },
+              ...(frame && battle.trainers
+                ? [
+                    {
+                      name: "battle extras",
+                      part: battle.trainers.extras,
+                      accept: (value: unknown) => {
+                        extras = value as BattleExtras;
+                        return true;
+                      },
+                      // Never skipped: a frame that changed needs these bytes again to fill its prize money.
+                      canSkip: () => false,
+                    },
+                  ]
+                : []),
+            ]
+          : [];
+      parts.push(...battleParts(current.battleOn));
       if (parts.length === 0) return;
-      await readParts(current, game.platform, parts);
+      await readParts(current, platform, parts);
+      if (battle && tick !== null) {
+        frameNeeded = await feedBattle(current, tick, platform, extras);
+      }
       if (battle && frameNeeded && current === session) {
-        await readParts(current, game.platform, [
-          {
-            name: "battle",
-            part: battle.frame,
-            accept: (value) => {
-              feedBattle(current, value as BattleProbe);
-              return true;
-            },
-            canSkip: () => current.battle.failingSince === null,
-          },
-        ]);
+        tick = null;
+        extras = null;
+        await readParts(current, platform, battleParts(true));
+        if (tick !== null) await feedBattle(current, tick, platform, extras);
       }
     }).catch((error) => log.error("read cycle failed", { error }));
   }
