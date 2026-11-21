@@ -17,20 +17,8 @@ Spec §11.9, server side. The `/icons` route, its cache, and the icon pack looku
 - No ROM bytes or third-party icon files are committed.
 - The route follows the route-table test.
 
-## Handoff
+## Answer
 
-Branch `t3/icons-route-cache`, based on `wayfinder/v2-build-master` at ca1fde5. Audit round: 0 (no council run yet). Timing phases marked: implement.
+`GET /icons/*` is built in `server/src/icons/` (key grammar, lookup plan, cache, upstream fetch) and wired through the static route table, `app.ts`, `server.ts` and `main.ts`. Lookup runs pack, cache, then upstream in `online` mode, hack folder first for hack profiles. The pack layout is in `docs/icon-packs.md`. Decisions: `mystery` is the ??? route key (`unknown` in the pack); Fairy is unmapped; any `4xx` except `429` is a remembered miss while `429` and `5xx` back the source off for 60 s; Gen 1-2 species answer `404` until their reference data ships; `ITEM_SLUGS` ships empty, so official-profile items answer `404`. Report: [086 report](../assets/086-icons-route-and-cache-report.md). Audit: Claude seat APPROVE at round 1 (8), other seats `n/a`.
 
-Done, in `server/src/icons/` (`source`, `keys`, `maps`, `png`, `plan`, `service`): key grammar, lookup plan (pack, cache, upstream; hack-first), cache with temp+rename, 404 memory, 60 s backoff, 4 parallel fetches, shared in-flight fetch, prune and clear. `GET /icons/*` is in `route-table.ts` (static), `app.ts`, `server.ts` and `main.ts` (prune at startup, settings read live). Tests: `server/test/icons/{keys,plan,service}.test.ts` and icon cases in `server/test/api/internal-routes.test.ts`. Typecheck and those tests pass; Biome was run on `server/`.
-
-Left, in order:
-1. Run `bunx biome check .` (the root run was not seen) and the whole `bun test`. Known unrelated failure: Lua 5.5 check in `server/test/bridge/core.test.ts`.
-2. Add `docs/icon-packs.md` (pack layout from spec §11.9) and link it from the ticket report.
-3. Run `council-audit` (Claude seat only, others `n/a`), up to five rounds.
-4. Write `assets/086-icons-route-and-cache-report.md`, run unslop, run the Timing close, write `## Answer` into the ticket, delete this section, commit, push, open PR against `wayfinder/v2-build-master`, return DONE.
-
-Decisions to put in the report: `mystery` is the route key and `unknown` the pack file name for the ??? type. Fairy is unmapped (no Gen 3 icon). Any 4xx except 429 is a remembered miss, 429 and 5xx back off 60 s (jsDelivr answers 403 for some missing files). Gen 1 and Gen 2 species have no dex map until their reference data ships, so they 404. `ITEM_SLUGS` ships empty, so every item request 404s.
-
-Surface: ticket "Icon item ID tables and `check-icon-map`" (task, blocked by 086): fill `ITEM_SLUGS` per art version from PokeAPI `item_game_indices`, add the `check-icon-map` HEAD script. Also Gen 1-2 species dex tables.
-
-Read first: this ticket, `server/src/icons/service.ts`, `plan.ts`.
+Timing: wall 21m, active 9m, user 0s, wait 3m, blocked 8m | setup 11m, implement 6m, audit 2m (1 round) | tools 64 (4 subagent) | limits 1 (5-hour limit), compactions 0, handoffs 1 | ctx peak 149k | cost $2.35 sonnet-5-5 + $0.02 haiku-5-5

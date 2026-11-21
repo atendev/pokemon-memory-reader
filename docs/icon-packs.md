@@ -43,7 +43,7 @@ icons/
 - **Official profile:** the normal pack path, then the cache, then upstream.
 - **Hack profile:** `hack/{profileId}/...` first. For vanilla Gen 3 species IDs (1-251 and 277-411) and items the program maps, it then goes on to the normal pack path, the cache and upstream. Any other ID stops after the hack folder and never reaches upstream.
 
-Gen 1 and Gen 2 species have no dex table until their reference data ships, so they answer `404` unless the pack has the file. Items answer `404` until the item ID tables ship.
+Gen 1 and Gen 2 species have no dex table until their reference data ships, so they answer `404` and the pack is not consulted for them. Items answer `404` until the item ID tables ship, except through a hack profile's `hack/{profileId}/item/{itemId}.png`.
 
 ## Cache and network
 
