@@ -20,23 +20,16 @@ Spec §8.3, §8.4 and §7.9. Boxes are read only when demanded, at most once per
 - The profile load check passes with Emerald's real box request.
 - SSE pushes for the `boxes` topic wait for the SSE ticket, and the slot for them is marked.
 
-## Handoff
+## Answer
 
-Branch `t3/box-reads-and-routes`. Code and tests are done and committed as `wip:`. Local: lint, typecheck clean, 796 tests pass, 1 known Lua 5.5 failure in `core.test.ts`.
+Boxes are read in the loop only when demanded, at most once per 1000 ms, in their own request after the main batch with their own 1000 ms timeout that never counts toward `stalled`. `GET /api/v2/boxes` and `GET /api/v2/boxes/:n` work on synthetic Emerald memory, and `:n` out of range or non-numeric gives 404 `not_found`.
 
-Done:
-- `api/`: `boxes` joined `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas`; `docs/open-enums.md` regenerated.
-- `server/src/format/registry.ts`: `BoundBoxes` (with `count`), `declaredRegions` now returns the Emerald box request, gated on `features.boxes`.
-- `server/src/loop/read-loop.ts`: box read in the loop (own `PointerCache`, 1000 ms timeout, 1 s interval for ticks and forced GET reads, sha1 hash of raw slices, unreadable boxes on null or failed pointer, 2250 ms GET wait, corruption log wired, SSE slot comment naming ticket 071), `get("boxes")`, `box(n)`.
-- `server/src/app/app.ts`: `/boxes` and `/boxes/:n` (404 `not_found`).
-- Tests: `server/test/loop/boxes.test.ts` (31), registry box-cap tests, `app.test.ts` stubs.
+- The format registry binds the box request (`BoundBoxes`, gated on `features.boxes`), and the loop keeps a separate pointer cache for it.
+- A stale GET triggers one shared read, waits at most 2250 ms and returns the stale cache. The 1 s interval holds for forced reads too, so a read that failed fast isn't retried by every GET.
+- The loop hashes the raw bytes (sha1) and replaces the cache only when the hash changes. A moved or unread pointer drops the read. An unreadable storage block makes every box unreadable.
+- Emerald's real box request passes the 64 KiB profile load check.
+- The SSE push for `boxes` is a marked slot in `keepBoxes` that names the SSE ticket (071).
 
-Audit (Claude seat only; Gemini and GPT skipped, out of quota). Round 1: DISAPPROVE 7. Blocking: forced GET read ignored the 1 s interval after a fast failure. Fixed (`readBoxes` checks `startedAt` for forced reads too) with a test. Minor 2 (fake adapter never enforces the 1000 ms timeout) and minor 3 (GET read uses warm pointer cache; ordering comes from the shared FIFO slot) declined with those reasons.
+Excluded: a test of a hung box read, because the fake adapter doesn't enforce the 1000 ms timeout and the bridge owns it. Audit: Claude seat approved in round 2 (8). Gemini and GPT seats skipped (out of quota). Report: [066 report](../assets/066-box-reads-and-routes-report.md).
 
-Left, in order:
-1. Round 2 audit (Claude seat, haiku) on the fix hunks in `readBoxes` and the new test. Rounds used: 1.
-2. Decision report to `.plan/maps/v2-build/assets/066-box-reads-and-routes-report.md`, run unslop, commit with the work.
-3. Timing close (`wf-time.py close --slug v2-build --ticket 066`), record the resolution in this ticket, delete this section, commit, push without force, open a PR against `wayfinder/v2-build-master` and link it.
-4. Return DONE with the Decisions line and Surfaced list (none found so far).
-
-Read first: `server/src/loop/read-loop.ts` (`readBoxes`, `freshBoxes`, `box`), `server/test/loop/boxes.test.ts`.
+Timing: wall 10m, active 10m, user 0s, wait 0s, blocked 0s | implement 5m, audit 2m (2 rounds), fix 55s, gate 52s | tools 64 (5 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 155k | cost $2.41 sonnet-5-5 + $0.02 haiku-5-5
