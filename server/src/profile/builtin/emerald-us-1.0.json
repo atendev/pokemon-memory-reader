@@ -37,7 +37,23 @@
     "gBattleOutcome": "0x0202433a",
     "gBattleWeather": "0x020243cc",
     "gSideStatuses": "0x0202428e",
-    "gSideTimers": "0x02024294"
+    "gSideTimers": "0x02024294",
+    "gMapHeader": "0x02037318"
+  },
+  "player": {
+    "badgeFlags": [
+      2151,
+      2152,
+      2153,
+      2154,
+      2155,
+      2156,
+      2157,
+      2158
+    ],
+    "moneyOffset": 1168,
+    "flagsOffset": 4720,
+    "encryptionKeyOffset": 172
   },
   "constants": {},
   "identify": {

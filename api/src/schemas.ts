@@ -5,6 +5,7 @@ import type {
   AdapterId,
   AdapterInfo as AdapterInfoType,
   AdapterProblem,
+  Badge as BadgeType,
   BattleMode,
   BattleMove as BattleMoveType,
   Battler as BattlerType,
@@ -18,10 +19,13 @@ import type {
   Game as GameType,
   InactiveBattle as InactiveBattleType,
   LastBattle as LastBattleType,
+  MapLocation as MapLocationType,
   Move as MoveType,
   Nature as NatureType,
   OpponentMon as OpponentMonType,
   Party as PartyType,
+  Player as PlayerType,
+  PlayTime as PlayTimeType,
   Pokemon as PokemonType,
   Ref as RefType,
   ResourceMap as ResourceMapType,
@@ -220,6 +224,73 @@ export const Boxes = z.looseObject({
   boxes: z.array(Box),
 });
 export type Boxes = BoxesType;
+
+/** A badge. `id` is the 0-based index in game order, and `name` is null for a hack profile (amendment 017 §3). */
+export const Badge = z.looseObject({
+  id: z.int(),
+  name: z
+    .string()
+    .nullable()
+    .describe("null for a hack profile, which may have renamed the badge."),
+  obtained: z.boolean(),
+});
+export type Badge = BadgeType;
+
+/** The player's position (amendment 017 §4). */
+export const MapLocation = z.looseObject({
+  mapGroup: z
+    .int()
+    .nullable()
+    .describe("The game's raw map group. null in Gen 1, which has one map ID."),
+  mapNumber: z.int(),
+  x: z
+    .int()
+    .describe(
+      "Steps from the map's left edge, as the game stores it, without the engine's border offset.",
+    ),
+  y: z
+    .int()
+    .describe(
+      "Steps from the map's top edge, as the game stores it, without the engine's border offset.",
+    ),
+  section: Ref.nullable().describe(
+    "The map section in Gen 3 and CFRU, the landmark in Gen 2 (a landmark ID, not a map header ID) and the town-map entry in Gen 1. name is null when the ID has no name, and the whole value is null when the game has no section for this map.",
+  ),
+});
+export type MapLocation = MapLocationType;
+
+/** The play time as the game stores it (amendment 017 §2). */
+export const PlayTime = z.looseObject({
+  hours: z
+    .int()
+    .min(0)
+    .describe(
+      "Unbounded in the schema because a hack can change the cap. Gen 1 stops at 255 hours and Gen 2-3 at 999, so clients must not assume 99.",
+    ),
+  minutes: z.int().min(0).max(59),
+  seconds: z.int().min(0).max(59),
+  frames: z.int().min(0).max(59),
+});
+export type PlayTime = PlayTimeType;
+
+/** The `player` resource (amendment 017 §1). */
+export const Player = z.looseObject({
+  name: z.string(),
+  trainerId: z.int().describe("The 16-bit trainer ID the game shows."),
+  secretId: z
+    .int()
+    .nullable()
+    .describe("The 16-bit secret ID. null in Gen 1-2, which have none."),
+  money: z.int().describe("The decoded amount, after any encryption."),
+  badges: z
+    .array(Badge)
+    .describe(
+      "In game order, with id the 0-based index: 8 badges in Gen 1 and Gen 3, and 16 in Gen 2, Johto first and then Kanto.",
+    ),
+  location: MapLocation,
+  playTime: PlayTime,
+});
+export type Player = PlayerType;
 
 const Hash = z.string().nullable();
 
@@ -441,7 +512,7 @@ export const Battle = z.discriminatedUnion("active", [
 export type Battle = BattleType;
 
 /**
- * The resources the server serves so far, in the order of the topic record. `player`, `bag`
+ * The resources the server serves so far, in the order of the topic record. `bag`
  * and `boxes` join the record and `resourceSchemas` as their decoders land, which is an additive
  * change inside `/api/v2`.
  */
@@ -451,6 +522,7 @@ export type Topic = TopicType;
 export const resourceSchemas = {
   status: StatusResource,
   party: Party,
+  player: Player,
   battle: Battle,
   boxes: Boxes,
 } satisfies Record<Topic, z.ZodType>;

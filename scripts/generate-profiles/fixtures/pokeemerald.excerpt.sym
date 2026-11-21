@@ -18,6 +18,7 @@
 0202406e g 00000008 gBattlerPartyIndexes
 0202428e g 00000004 gSideStatuses
 02024294 g 00000018 gSideTimers
+02037318 g 0000001c gMapHeader
 0202433a g 00000001 gBattleOutcome
 020243cc g 00000002 gBattleWeather
 030022c0 g 0000043c gMain

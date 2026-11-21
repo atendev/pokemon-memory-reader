@@ -208,6 +208,53 @@ export type Boxes = {
   [key: string]: unknown;
 };
 
+/** One badge. `id` is the 0-based index in game order. `name` is null for a hack profile, which may have renamed the badges. */
+export type Badge = {
+  id: number;
+  name: string | null;
+  obtained: boolean;
+  [key: string]: unknown;
+};
+
+/**
+ * Where the player stands. `mapGroup` is null in Gen 1, which has one map ID. `x` and `y` are
+ * step units from the map's top-left corner, without the engine's border offset. `section` is
+ * the map section (Gen 3), landmark (Gen 2) or town-map entry (Gen 1), and null when the game
+ * has none for this map.
+ */
+export type MapLocation = {
+  mapGroup: number | null;
+  mapNumber: number;
+  x: number;
+  y: number;
+  section: Ref | null;
+  [key: string]: unknown;
+};
+
+/** The play time as the game stores it. Gen 1 stops at 255 hours and Gen 2-3 at 999, so don't assume 99. */
+export type PlayTime = {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  frames: number;
+  [key: string]: unknown;
+};
+
+/**
+ * The `player` resource. `secretId` is null in Gen 1-2. `badges` lists 8 in Gen 1 and Gen 3 and
+ * 16 in Gen 2 (Johto, then Kanto), in game order.
+ */
+export type Player = {
+  name: string;
+  trainerId: number;
+  secretId: number | null;
+  money: number;
+  badges: Badge[];
+  location: MapLocation;
+  playTime: PlayTime;
+  [key: string]: unknown;
+};
+
 /** What the adapter reports about the loaded ROM. null when the adapter reports no ROM (amendment 020 §5). */
 export type Rom = {
   platform: "gb" | "gba" | "other";
@@ -305,8 +352,8 @@ export type ErrorBody = {
 };
 
 /**
- * The resources the server serves so far, derived from the topic record. `player` and `bag`
- * join the record and `ResourceMap` as their decoders land, which is an additive change
+ * The resources the server serves so far, derived from the topic record. `bag`
+ * joins the record and `ResourceMap` as its decoder lands, which is an additive change
  * inside `/api/v2`. Topic names are an open enum, but a topic you can fetch is always a known one.
  */
 export type Topic = keyof typeof TOPIC_NAMES;
@@ -314,6 +361,7 @@ export type Topic = keyof typeof TOPIC_NAMES;
 export type ResourceMap = {
   status: StatusResource;
   party: Party;
+  player: Player;
   battle: Battle;
   boxes: Boxes;
 };

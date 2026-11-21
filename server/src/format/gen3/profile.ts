@@ -24,5 +24,25 @@ export const gen3Addresses = z
     gBattleWeather: gba,
     gSideStatuses: gba,
     gSideTimers: gba,
+    gMapHeader: gba,
+  })
+  .strict();
+
+/**
+ * The per-game values the `player` decoder reads (amendment 017 §6). The offsets are into the
+ * save blocks and differ between games, so they are profile values rather than decoder constants.
+ * `encryptionKeyOffset` is absent for Ruby and Sapphire, which keep money in the clear. A file
+ * sets it to null to drop an inherited key.
+ */
+export const gen3Player = z
+  .object({
+    /** The event flag ID of each badge, in game order. Flag `n` is bit `n % 8` of byte `n >> 3` of the flag array. */
+    badgeFlags: z.array(z.int().min(0)).length(8),
+    /** Offset of the 32-bit money value in save block 1. */
+    moneyOffset: z.int().min(0),
+    /** Offset of the event flag array in save block 1. */
+    flagsOffset: z.int().min(0),
+    /** Offset of the 32-bit encryption key in save block 2. */
+    encryptionKeyOffset: z.int().min(0).optional(),
   })
   .strict();

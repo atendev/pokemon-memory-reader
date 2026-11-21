@@ -49,6 +49,7 @@ export function buildProfile(
     language: "en",
     artVersion: definition.artVersion,
     addresses,
+    player: definition.player,
     constants: {},
     identify: {
       sha1: hashes.sha1,

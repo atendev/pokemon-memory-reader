@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Battle } from "@pokemon-memory-reader/api/schemas";
+import { Battle, Player } from "@pokemon-memory-reader/api/schemas";
 import type {
   Adapter,
   AdapterState,
@@ -19,6 +19,7 @@ import {
   endBattle,
   writeBattle,
 } from "../gen3/battle-encode";
+import { writePlayer } from "../gen3/player-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
@@ -630,5 +631,84 @@ describe("normalizePollHz", () => {
     expect(normalizePollHz(2.5, log)).toBe(20);
     expect(normalizePollHz("x", log)).toBe(20);
     expect(warnings).toHaveLength(4);
+  });
+});
+
+const SCENE = {
+  name: "MAY",
+  money: 123456,
+  key: 0x1badb002,
+  badges: [0, 1, 2, 3, 4, 5, 6, 7],
+  hours: 42,
+  minutes: 7,
+  x: 12,
+  y: 34,
+  mapGroup: 1,
+  mapNumber: 5,
+  section: 0x1e,
+} as const;
+
+describe("the player resource in the loop", () => {
+  test("a synthetic Emerald save is a valid player with money decrypted and eight badges", async () => {
+    const { adapter, loop } = setup();
+    await flush();
+    writePlayer(adapter.memory, SCENE);
+    const got = await loop.get("player");
+    if (!got.ok) throw new Error(got.code);
+    const player = Player.parse(got.value);
+    expect(player).toMatchObject({
+      name: "MAY",
+      trainerId: 12345,
+      secretId: 6789,
+      money: 123456,
+      playTime: { hours: 42, minutes: 7 },
+      location: { mapGroup: 1, mapNumber: 5, x: 12, y: 34 },
+    });
+    expect(player.location.section?.id).toBe(0x1e);
+    expect(player.badges).toHaveLength(8);
+    expect(player.badges.every((badge) => badge.obtained)).toBe(true);
+  });
+
+  test("a moved gSaveBlock1Ptr is followed on the next cycle", async () => {
+    const { adapter, clock, loop } = setup();
+    await flush();
+    writePlayer(adapter.memory, SCENE);
+    expect(await loop.get("player")).toMatchObject({
+      ok: true,
+      value: { money: 123456 },
+    });
+    writePlayer(adapter.memory, {
+      ...SCENE,
+      money: 777,
+      blocks: { one: 0x2d000, two: 0x31000 },
+    });
+    await tick(clock, 3);
+    expect(await loop.get("player")).toMatchObject({
+      ok: true,
+      value: { money: 777 },
+    });
+  });
+
+  test("a null save block pointer is a 503 no_data through GET /api/v2/player", async () => {
+    const { clock, loop } = setup();
+    await flush();
+    const app = createApp({ resources: loop });
+    const response = await app.request("/api/v2/player");
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: { code: "no_data" },
+    });
+    await tick(clock);
+  });
+
+  test("GET /api/v2/player serves the value from the loop", async () => {
+    const { adapter, loop } = setup();
+    await flush();
+    writePlayer(adapter.memory, SCENE);
+    const response = await createApp({ resources: loop }).request(
+      "/api/v2/player",
+    );
+    expect(response.status).toBe(200);
+    expect(Player.parse(await response.json()).name).toBe("MAY");
   });
 });

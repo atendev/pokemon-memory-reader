@@ -113,6 +113,23 @@ describe("the Emerald profile", () => {
     });
   });
 
+  test("writes the gMapHeader address and the hand-written player block, and the output is stable", () => {
+    const built = buildProfile(definition, symbols, hashes, evidence) as {
+      addresses: Record<string, unknown>;
+      player: Record<string, unknown>;
+    };
+    expect(built.addresses.gMapHeader).toBe("0x02037318");
+    expect(built.player).toEqual({
+      badgeFlags: [0x867, 0x868, 0x869, 0x86a, 0x86b, 0x86c, 0x86d, 0x86e],
+      moneyOffset: 0x490,
+      flagsOffset: 0x1270,
+      encryptionKeyOffset: 0xac,
+    });
+    expect(renderProfile(built)).toBe(
+      renderProfile(buildProfile(definition, symbols, hashes, evidence)),
+    );
+  });
+
   test("a missing symbol or a size that isn't a whole number of entries fails", () => {
     const without = new Map(symbols);
     without.delete("gPlayerParty");

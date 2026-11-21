@@ -15,6 +15,7 @@ const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
 
 const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = [
   "party",
+  "player",
   "battle",
   "boxes",
 ];
