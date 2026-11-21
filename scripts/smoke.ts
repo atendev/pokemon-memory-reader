@@ -181,7 +181,11 @@ const dataDir = await mkdtemp(join(tmpdir(), "pmr-smoke-"));
 const port = await freePort();
 const child = Bun.spawn(
   [executable, "--no-browser", "--port", String(port), "--data-dir", dataDir],
-  { stdout: "inherit", stderr: "inherit" },
+  {
+    stdout: "inherit",
+    stderr: "inherit",
+    env: { ...process.env, PMR_UPDATE_CHECK: "off" },
+  },
 );
 
 let failure: unknown = null;

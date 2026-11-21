@@ -15,6 +15,7 @@ import type {
   UnavailableCode,
 } from "../loop/read-loop";
 import { settingsBody } from "../settings-body";
+import type { UpdateChecker } from "../update/check";
 import {
   debugGuard,
   internalError,
@@ -56,7 +57,7 @@ export interface AboutInfo extends Omit<AboutBody, "notices"> {
  *
  * The routes outside `/api/v2` register through `internalRoute`, which takes the guard class from
  * the route table. A group registers only when its dependency is given: `/events` with `stream`,
- * `/settings` with `config`, `/about` with `about`, `/icons` with `icons`, and `/debug/read` with `rawRead`, which only `--debug` passes.
+ * `/settings` with `config`, `/about` with `about`, `/update` with `update`, `/icons` with `icons`, and `/debug/read` with `rawRead`, which only `--debug` passes.
  */
 export function createApp(deps: {
   readonly resources: Resources;
@@ -69,6 +70,8 @@ export function createApp(deps: {
   /** Without it there are no `/adapters` routes. */
   readonly selector?: Selector;
   readonly about?: AboutInfo;
+  /** Without it there is no `/update` route. */
+  readonly update?: Pick<UpdateChecker, "state">;
   /** Without it there is no `/icons` route. */
   readonly icons?: IconService;
   readonly rawRead?: (
@@ -240,6 +243,9 @@ export function createApp(deps: {
           }),
     );
   }
+
+  const { update } = deps;
+  if (update) internalRoute("GET", "/update", (c) => c.json(update.state()));
 
   const { rawRead } = deps;
   if (rawRead) {

@@ -17,7 +17,12 @@ import { loadNotices } from "./notices";
 import { builtinProfiles } from "./profile/builtin";
 import { loadStartupProfiles } from "./profile/startup";
 import { startServer } from "./server";
+import { createUpdateChecker, followUpdateSetting } from "./update/check";
 import { APP_VERSION } from "./version";
+
+/** Spec §9.8: the release list of this repo. The API hides drafts. */
+const UPDATE_FEED_URL =
+  "https://api.github.com/repos/atendev/pokemon-memory-reader/releases?per_page=100";
 
 /** Spec §9.7: a graceful shutdown that takes longer than this logs the hung step and exits 1. */
 const SHUTDOWN_MS = 2000;
@@ -136,6 +141,19 @@ async function run(
     log,
   });
 
+  // The tests and the smoke run set this so no request leaves the machine.
+  const updateAllowed = process.env.PMR_UPDATE_CHECK !== "off";
+  const update = createUpdateChecker({
+    current: APP_VERSION,
+    enabled: settings.updateCheck && updateAllowed,
+    feedUrl: UPDATE_FEED_URL,
+    fetch: (url, init) => fetch(url, init),
+    clock: systemClock,
+    log,
+    onNewer: (latest) =>
+      console.log(`Update available: ${latest.version} ${latest.url}`),
+  });
+
   let server: ReturnType<typeof startServer>;
   try {
     server = startServer({
@@ -149,6 +167,7 @@ async function run(
       icons,
       viewer,
       config,
+      update,
       about: {
         version: APP_VERSION,
         target: buildTarget(),
@@ -169,6 +188,7 @@ async function run(
     } else {
       console.error(`Cannot start the server: ${(error as Error).message}`);
     }
+    update.close();
     await selector.close();
     return exitAfterFatal(1);
   }
@@ -184,11 +204,15 @@ async function run(
     `mGBA bridge: ${join(dataFolder, "bridges", "mgba.lua")} or ${url}/bridges/mgba.lua`,
   );
   if (settings.openBrowser) openInBrowser(url);
+  // The server is listening, so the check never delays startup.
+  update.start();
 
   config.onLive((live, changed) => {
     if (changed.includes("pollHz")) server.setPollHz(live.pollHz);
     if (changed.includes("adapter")) selector.setPin(live.adapter);
   });
+
+  followUpdateSetting(config, update, updateAllowed);
 
   let stopping = false;
   const shutdown = async () => {
@@ -201,6 +225,7 @@ async function run(
       process.exit(1);
     }, SHUTDOWN_MS);
     try {
+      update.close();
       await server.stop();
       step = "the adapters";
       await selector.close();

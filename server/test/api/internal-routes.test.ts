@@ -11,6 +11,7 @@ import {
   internalErrorBody,
 } from "@pokemon-memory-reader/internal/errors";
 import { settingsBody } from "@pokemon-memory-reader/internal/settings-route";
+import { updateBody } from "@pokemon-memory-reader/internal/update";
 import { createSelector } from "../../src/adapter/selector";
 import { type AboutInfo, createApp } from "../../src/app/app";
 import { ROUTES } from "../../src/app/route-table";
@@ -21,6 +22,10 @@ import { silentLog } from "../../src/log";
 import type { RawReadResult, Resources } from "../../src/loop/read-loop";
 import { builtinProfiles } from "../../src/profile/builtin/index";
 import { loadProfiles } from "../../src/profile/registry";
+import {
+  createUpdateChecker,
+  followUpdateSetting,
+} from "../../src/update/check";
 import { ManualClock } from "../bridge/manual-clock";
 
 const status = {
@@ -96,6 +101,32 @@ function iconService(mode: "online" | "local" | "off") {
   });
 }
 
+const RELEASE = {
+  tag_name: "v2.1.0",
+  html_url:
+    "https://github.com/atendev/pokemon-memory-reader/releases/tag/v2.1.0",
+  draft: false,
+  prerelease: false,
+};
+
+/** An update checker on a fake feed, so no request leaves the process. */
+function updateChecker(enabled = true) {
+  const requests: string[] = [];
+  const clock = new ManualClock();
+  const checker = createUpdateChecker({
+    current: "2.0.0",
+    enabled,
+    feedUrl: "https://feed.test/releases",
+    fetch: (url) => {
+      requests.push(url);
+      return Promise.resolve(new Response(JSON.stringify([RELEASE])));
+    },
+    clock,
+    log: silentLog,
+  });
+  return { checker, requests, clock };
+}
+
 async function everything(
   read?: (address: string, length: number) => Promise<RawReadResult>,
 ) {
@@ -111,6 +142,7 @@ async function everything(
       log: silentLog,
     }),
     about: ABOUT,
+    update: updateChecker().checker,
     icons: iconService("local"),
     rawRead: read ?? (() => Promise.resolve(okRead)),
     listening: () => ({ host: "127.0.0.1", port: PORT }),
@@ -887,4 +919,87 @@ test("POST /adapters/probe returns the list body and needs the write guard", asy
   expect(adaptersBody.parse(await ok.json()).mode).toBe("auto");
   const lanPeer = await app.request("/adapters/probe", post, lan);
   expect(lanPeer.status).toBe(403);
+});
+
+// Update route
+
+test("GET /update is an open read that answers the last check and never calls the feed", async () => {
+  const { checker, requests } = updateChecker();
+  const app = createApp({ resources: idle, update: checker });
+  const ask = async () => {
+    const response = await app.request(
+      "/update",
+      { headers: { Host: "192.168.1.5:7425" } },
+      lan,
+    );
+    expect(response.status).toBe(200);
+    return updateBody.parse(await response.json());
+  };
+  expect(await ask()).toEqual({
+    enabled: true,
+    current: "2.0.0",
+    latest: null,
+    checkedAt: null,
+  });
+  expect(requests).toHaveLength(0);
+
+  await checker.checkNow();
+  expect(requests).toHaveLength(1);
+  const found = await ask();
+  expect(found.latest).toEqual({
+    version: "2.1.0",
+    url: RELEASE.html_url,
+  });
+  expect(found.checkedAt).not.toBeNull();
+  expect(requests).toHaveLength(1);
+});
+
+test("GET /update with updateCheck off is enabled false and latest null, and the route has no write method", async () => {
+  const { checker } = updateChecker(false);
+  const app = createApp({ resources: idle, update: checker });
+  const response = await app.request("/update", {}, lan);
+  expect(updateBody.parse(await response.json())).toEqual({
+    enabled: false,
+    current: "2.0.0",
+    latest: null,
+    checkedAt: null,
+  });
+  for (const method of ["POST", "PUT", "DELETE"])
+    expect(
+      (await app.request("/update", { method, body: "{}" }, loopback)).status,
+    ).toBe(404);
+});
+
+test("there is no /update route without an update checker", async () => {
+  const response = await createApp({ resources: idle }).request("/update");
+  expect(response.status).toBe(404);
+});
+
+test("a settings save that flips updateCheck reaches the checker", async () => {
+  const { checker, requests, clock } = updateChecker();
+  const config = await loadConfig();
+  followUpdateSetting(config, checker, true);
+  const app = createApp({
+    resources: idle,
+    config,
+    update: checker,
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  const ask = async () =>
+    updateBody.parse(await (await app.request("/update", {}, lan)).json());
+
+  const off = await app.request(
+    "/settings",
+    put({ updateCheck: false }),
+    loopback,
+  );
+  expect(off.status).toBe(200);
+  expect((await ask()).enabled).toBe(false);
+  clock.advance(60_000);
+  expect(requests).toHaveLength(0);
+
+  await app.request("/settings", put({ updateCheck: true }), loopback);
+  expect((await ask()).enabled).toBe(true);
+  clock.advance(5000);
+  expect(requests).toHaveLength(1);
 });
