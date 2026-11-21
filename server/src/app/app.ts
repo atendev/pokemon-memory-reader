@@ -8,6 +8,7 @@ import {
 } from "@pokemon-memory-reader/internal/manual-picks-route";
 import { type Handler, Hono } from "hono";
 import type { Selector } from "../adapter/selector";
+import type { BridgeSources } from "../bridges";
 import type { Config } from "../config";
 import { checkPatch, saveSettings } from "../config-save";
 import { parseIconPath } from "../icons/keys";
@@ -67,8 +68,8 @@ export interface AboutInfo extends Omit<AboutBody, "notices"> {
  */
 export function createApp(deps: {
   readonly resources: Resources;
-  /** Bridge source by name, served at `/bridges/<name>.lua` (spec §4.11). Absent means no bridge routes. */
-  readonly bridges?: Readonly<Record<string, string>>;
+  /** Bridge source by name, served at `/bridges/<name>.lua` (spec §4.11). Absent means no bridge routes. A function is read on every request, so a regenerated script is served at once. */
+  readonly bridges?: BridgeSources;
   readonly log?: Log;
   /** The SSE hub. Without it `/api/v2/events` is a 404. */
   readonly stream?: StreamHub;
@@ -307,11 +308,16 @@ export function createApp(deps: {
   }
 
   // Looked up in the map and never joined to a path, so no request reaches the filesystem (spec §4.11).
-  const bridges = new Map(Object.entries(deps.bridges ?? {}));
   internalRoute("GET", "/bridges/:file", (c) => {
     const file = c.req.param("file") ?? "";
+    const { bridges } = deps;
+    const sources = new Map(
+      Object.entries(
+        (typeof bridges === "function" ? bridges() : bridges) ?? {},
+      ),
+    );
     const source = file.endsWith(".lua")
-      ? bridges.get(file.slice(0, -4))
+      ? sources.get(file.slice(0, -4))
       : undefined;
     if (source === undefined) return c.notFound();
     return c.body(source, 200, { "Content-Type": "text/plain; charset=utf-8" });

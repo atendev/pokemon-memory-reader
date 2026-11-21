@@ -34,6 +34,8 @@ export const adaptersBody = z.object({
       id: adapterId,
       endpoint: z.object({ host: z.string(), port: z.number().int() }),
       live: z.boolean(),
+      /** The adapter's bridge script was installed for an earlier endpoint and no script has connected to the current one since. Always false for an adapter with no script. */
+      scriptStale: z.boolean(),
       probe: z.object({
         result: probeResult,
         bridge: hello.nullable(),

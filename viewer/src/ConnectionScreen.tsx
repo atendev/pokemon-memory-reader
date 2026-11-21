@@ -3,7 +3,7 @@ import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import { CopyButton } from "./CopyButton";
-import { PROBE_TEXT, PROBLEM_TEXT } from "./SettingsScreen";
+import { PROBE_TEXT, PROBLEM_TEXT, STALE_SCRIPT_TEXT } from "./SettingsScreen";
 import { ADAPTER_LABELS } from "./settings-form";
 import type { Polled } from "./useInternal";
 
@@ -194,6 +194,11 @@ function AdapterSummary({
                 <p className="footnote">
                   {adapterNote(entry, programProtocol)}
                 </p>
+                {entry.scriptStale ? (
+                  <p className="footnote" role="status">
+                    {STALE_SCRIPT_TEXT}
+                  </p>
+                ) : null}
               </div>
             </li>
           ))}

@@ -159,6 +159,10 @@ function ToggleInput({
   );
 }
 
+/** Shown while the script the emulator loaded was made for an endpoint that has since changed. */
+export const STALE_SCRIPT_TEXT =
+  "The script loaded in the emulator was made for the old endpoint. Load mgba.lua again.";
+
 export const PROBE_TEXT: Readonly<Record<string, string>> = {
   live: "Connected",
   usable: "Ready",
@@ -215,6 +219,11 @@ export function AdapterList({
                   {PROBE_TEXT[result] ?? result}
                   {problem ? `: ${PROBLEM_TEXT[problem] ?? problem}` : ""}
                 </p>
+                {adapter.scriptStale ? (
+                  <p className="footnote" role="status">
+                    {STALE_SCRIPT_TEXT}
+                  </p>
+                ) : null}
               </div>
               {result === "usable" && !adapter.live ? (
                 <button

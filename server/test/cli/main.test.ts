@@ -206,3 +206,66 @@ test("a malformed config file warns on stderr and the program runs on the defaul
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test("a live mGBA endpoint change regenerates the served and installed script and flags the loaded one", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "pmr-main-"));
+  const port = await freePort();
+  const first = await freePort();
+  const second = await freePort();
+  await writeFile(
+    join(dataDir, "config.json"),
+    JSON.stringify({
+      version: 1,
+      adapters: { mgba: { host: "127.0.0.1", port: first } },
+    }),
+  );
+  const { child } = await startWith([
+    "--port",
+    String(port),
+    "--data-dir",
+    dataDir,
+  ]);
+  const base = `http://127.0.0.1:${port}`;
+  const served = async () => (await fetch(`${base}/bridges/mgba.lua`)).text();
+  const stale = async () =>
+    (
+      (await (await fetch(`${base}/adapters`)).json()) as {
+        adapters: { id: string; scriptStale: boolean }[];
+      }
+    ).adapters.find((a) => a.id === "mgba")?.scriptStale;
+  const put = (body: unknown) =>
+    fetch(`${base}/settings`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  try {
+    expect(await served()).toContain(`local PORT = ${first}`);
+    expect(await stale()).toBe(false);
+
+    // An endpoint that does not change leaves the script and the flag alone.
+    expect((await put({ adapters: { mgba: { port: first } } })).status).toBe(
+      200,
+    );
+    expect(await served()).toContain(`local PORT = ${first}`);
+    expect(await stale()).toBe(false);
+
+    expect((await put({ adapters: { mgba: { port: second } } })).status).toBe(
+      200,
+    );
+    const deadline = Date.now() + 5000;
+    while (!(await served()).includes(`local PORT = ${second}`)) {
+      if (Date.now() > deadline) throw new Error("the script never changed");
+      await Bun.sleep(50);
+    }
+    expect(await served()).not.toContain(`local PORT = ${first}`);
+    expect(
+      await Bun.file(join(dataDir, "bridges", "mgba.lua")).text(),
+    ).toContain(`local PORT = ${second}`);
+    expect(await stale()).toBe(true);
+  } finally {
+    child.kill("SIGKILL");
+    await child.exited;
+    await rm(dataDir, { recursive: true, force: true });
+  }
+}, 30_000);

@@ -37,6 +37,18 @@ test("a bridge is served by name as text", async () => {
   expect(await response.text()).toBe("-- mgba");
 });
 
+test("a bridge given as a function is read on every request", async () => {
+  let source = "-- first";
+  const app = createApp({ resources: idle, bridges: () => ({ mgba: source }) });
+  expect(await (await app.request("/bridges/mgba.lua")).text()).toBe(
+    "-- first",
+  );
+  source = "-- second";
+  expect(await (await app.request("/bridges/mgba.lua")).text()).toBe(
+    "-- second",
+  );
+});
+
 test.each([
   "/bridges/bizhawk.lua",
   "/bridges/mgba",

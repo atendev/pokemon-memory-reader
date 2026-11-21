@@ -6,7 +6,7 @@ import { createBridgeAdapter } from "./adapter/bridge/adapter";
 import { PROTOCOL } from "./adapter/bridge/constants";
 import { createRetroArchAdapter } from "./adapter/retroarch/adapter";
 import { createSelector } from "./adapter/selector";
-import { generateBridges } from "./bridges";
+import { type BridgeEndpoint, generateBridges } from "./bridges";
 import { buildCommit, buildTarget, versionLine } from "./build-info";
 import { type Command, parseArgs, USAGE } from "./cli";
 import { systemClock } from "./clock";
@@ -118,8 +118,7 @@ async function run(
       .join(", ")}`,
   );
 
-  const mgbaEndpoint = settings.adapters.mgba;
-  const bridges = await generateBridges({ mgba: mgbaEndpoint });
+  let bridges = await generateBridges({ mgba: settings.adapters.mgba });
   await installBridges(dataFolder, bridges, log);
 
   const icons = createIconService({
@@ -146,6 +145,7 @@ async function run(
             )
           : null,
     endpoint: (id) => config.applied().adapters[id],
+    scripted: ["mgba"],
     pin: settings.adapter,
     clock: systemClock,
     log,
@@ -183,7 +183,7 @@ async function run(
       host: settings.host,
       port: settings.port,
       pollHz: settings.pollHz,
-      bridges,
+      bridges: () => bridges,
       icons,
       picks,
       supported: support.flags,
@@ -230,10 +230,33 @@ async function run(
   // The server is listening, so the check never delays startup.
   update.start();
 
+  // One regeneration at a time, so two quick endpoint edits land in order.
+  let regenerating: Promise<void> = Promise.resolve();
+  const regenerateBridges = (endpoint: BridgeEndpoint): Promise<void> => {
+    regenerating = regenerating.then(async () => {
+      try {
+        const next = await generateBridges({ mgba: endpoint });
+        if (next.mgba === bridges.mgba) return;
+        bridges = next;
+        await installBridges(dataFolder, bridges, log);
+        log.info("regenerated the mGBA bridge for its new endpoint", {
+          ...endpoint,
+        });
+      } catch (error) {
+        // An endpoint a script cannot carry, such as a host name. The old script stays served.
+        log.warn("could not regenerate the mGBA bridge", { error });
+      }
+    });
+    return regenerating;
+  };
+
   config.onLive((live, changed) => {
     if (changed.includes("pollHz")) server.setPollHz(live.pollHz);
     if (changed.includes("adapter")) selector.setPin(live.adapter);
-    if (changed.includes("adapters")) selector.refreshEndpoints();
+    if (changed.includes("adapters")) {
+      selector.refreshEndpoints();
+      void regenerateBridges(live.adapters.mgba);
+    }
   });
 
   followUpdateSetting(config, update, updateAllowed);

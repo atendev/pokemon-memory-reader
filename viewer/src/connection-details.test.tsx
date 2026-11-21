@@ -32,6 +32,7 @@ const entry = (
   id,
   endpoint: { host: "127.0.0.1", port },
   live: false,
+  scriptStale: false,
   probe: {
     result: "no_reply",
     bridge: null,
@@ -134,6 +135,17 @@ describe("the adapter list", () => {
     expect(html).toContain("Connected");
     expect(html).toContain("Refused the connection");
     expect(html).toContain("Not checked");
+  });
+
+  test("says a script made for an old endpoint is stale, and only for that adapter", () => {
+    const html = render({
+      status: status("disconnected"),
+      adapters: adapters([
+        { ...entry("mgba", { result: "no_reply" }), scriptStale: true },
+        entry("retroarch", { result: "refused" }, 55355),
+      ]),
+    });
+    expect(html.match(/made for the old endpoint/g)).toHaveLength(1);
   });
 
   test("says while it is loading and when the list can't be read", () => {

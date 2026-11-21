@@ -36,18 +36,21 @@ const adaptersBody = (
         id: "mgba",
         endpoint: { host: "127.0.0.1", port: 7426 },
         live: true,
+        scriptStale: false,
         probe: probe("live"),
       },
       {
         id: "retroarch",
         endpoint: { host: "127.0.0.1", port: 55355 },
         live: false,
+        scriptStale: false,
         probe: probe("usable"),
       },
       {
         id: "bizhawk",
         endpoint: { host: "127.0.0.1", port: 7427 },
         live: false,
+        scriptStale: false,
         probe: probe("refused"),
       },
     ],
@@ -224,6 +227,24 @@ describe("the adapter list", () => {
         onSwitch={noop}
       />,
     );
+
+  test("says the loaded script is stale for the adapter that has one", () => {
+    const body = adaptersBody("auto");
+    const stale: Polled<AdaptersBody> =
+      body.kind === "ready"
+        ? {
+            kind: "ready",
+            value: {
+              ...body.value,
+              adapters: body.value.adapters.map((a) =>
+                a.id === "mgba" ? { ...a, scriptStale: true } : a,
+              ),
+            },
+          }
+        : body;
+    expect(list(stale)).toContain("made for the old endpoint");
+    expect(list(body)).not.toContain("made for the old endpoint");
+  });
 
   test("in auto mode lists each adapter, offers a switch to a ready one and a recheck", () => {
     const html = list(adaptersBody("auto"));
