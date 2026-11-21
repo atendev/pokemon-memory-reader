@@ -159,10 +159,17 @@ test("every exported schema has a type pair", () => {
   expect(exported).toEqual([...PAIRED].sort());
 });
 
-test("types.ts and client.ts import nothing from zod or schemas", async () => {
+test("types.ts and client.ts import nothing from zod or schemas, except the one dynamic import behind `validate`", async () => {
+  const dynamicImport = /import\s*\(\s*["'](?:zod|\.\/schemas)[^"']*["']\s*\)/g;
   for (const file of ["types.ts", "client.ts"]) {
     const source = await Bun.file(new URL(file, import.meta.url)).text();
     expect(source, file).not.toMatch(/from\s+["'](?:zod|\.\/schemas)/);
-    expect(source, file).not.toMatch(/import\s*\(\s*["'](?:zod|\.\/schemas)/);
+    const found = source.match(dynamicImport) ?? [];
+    expect(found, file).toEqual(
+      file === "client.ts" ? ['import("./schemas.js")'] : [],
+    );
+    expect(source.replace(dynamicImport, ""), file).not.toMatch(
+      /import\s*\(\s*["'](?:zod|\.\/schemas)/,
+    );
   }
 });
