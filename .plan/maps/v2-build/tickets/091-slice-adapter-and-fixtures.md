@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: []
+claimed_by: wfm-v2-build-master-1795265782
+claimed_at: 2026-11-21T13:30:00Z
 ---
 
 # `SliceAdapter`, fixture files and golden files
