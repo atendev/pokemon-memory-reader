@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import type {
-  Adapter,
-  AdapterState,
-  Range,
-  ReadOutcome,
-} from "../../src/adapter/types";
+import type { StatusResource } from "@pokemon-memory-reader/api/schemas";
+import type { ReadOutcome } from "../../src/adapter/types";
 import { type BoundGame, bindGame } from "../../src/format/registry";
 import { fail, ok } from "../../src/format/types";
 import { silentLog } from "../../src/log";
@@ -14,59 +10,10 @@ import { loadProfiles } from "../../src/profile/registry";
 import type { Profile } from "../../src/profile/schema";
 import { ManualClock } from "../bridge/manual-clock";
 import { endBattle, writeBattle } from "../gen3/battle-encode";
-import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { emeraldMemory, TREECKO } from "../support/emerald-memory";
+import { CONNECTED, ScriptedAdapter } from "../support/scripted-adapter";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
-
-const CONNECTED: AdapterState = {
-  connection: "connected",
-  bridge: null,
-  problem: null,
-  game: {
-    platform: "gba",
-    crc32: "1f1c08fb",
-    sha1: null,
-    romName: "Emerald",
-    domains: { rom: 0x400, ewram: 0x40000, iwram: 0x8000 },
-  },
-  gameEpoch: 1,
-};
-
-/** Serves synthetic Emerald memory unless a test scripts the next answers. */
-class ScriptedAdapter implements Adapter {
-  readonly id = "mgba";
-  readonly limits = { minIntervalMs: 0, mergeGap: 32 };
-  state: AdapterState = CONNECTED;
-  #listeners = new Set<(state: AdapterState) => void>();
-  memory = emeraldMemory([TREECKO]);
-  /** Answers a request instead of the memory. Returns null to serve it. */
-  respond: (ranges: readonly Range[]) => ReadOutcome | null = () => null;
-  reads = 0;
-  scripted = 0;
-
-  subscribe(listener: (state: AdapterState) => void): () => void {
-    this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
-  }
-
-  set(state: AdapterState): void {
-    this.state = state;
-    for (const listener of this.#listeners) listener(state);
-  }
-
-  async read(ranges: readonly Range[]): Promise<ReadOutcome> {
-    this.reads++;
-    const answer = this.respond(ranges);
-    if (answer) {
-      this.scripted++;
-      return answer;
-    }
-    return {
-      kind: "data",
-      slices: ranges.map((range) => serve(this.memory, [range])),
-    };
-  }
-}
 
 const TIMEOUT: ReadOutcome = { kind: "timeout" };
 const BRIDGE_ERROR: ReadOutcome = { kind: "failed", reason: "bridge_error" };
@@ -94,9 +41,14 @@ function setup(
     ...(options.bind && { bind: options.bind }),
   });
   open.push(loop);
+  /** Resource events. `status` events go to `statuses`, because they follow the adapter's state too (spec §7.3). */
   const events: ChangeEvent[] = [];
-  loop.onChange((event) => events.push(event));
-  return { adapter, clock, loop, events };
+  const statuses: StatusResource[] = [];
+  loop.onChange((event) => {
+    if (event.topic === "status") statuses.push(event.value);
+    else events.push(event);
+  });
+  return { adapter, clock, loop, events, statuses };
 }
 
 const tick = async (clock: ManualClock, times = 2) => {
@@ -276,13 +228,12 @@ describe("change detection", () => {
 describe("stalled", () => {
   const stalled = (loop: ReturnType<typeof setup>["loop"]) =>
     loop.status().adapter?.stalled;
-  const statusEvents = (events: ChangeEvent[]) =>
-    events.flatMap((e) =>
-      e.topic === "status" ? [e.value.adapter?.stalled] : [],
-    );
+  /** The `stalled` value of each status event. The first is the identification's. */
+  const statusEvents = (statuses: StatusResource[]) =>
+    statuses.map((status) => status.adapter?.stalled);
 
   test("1 s of consecutive timeouts sets it, and the next good read clears it", async () => {
-    const { adapter, clock, loop, events } = setup();
+    const { adapter, clock, loop, statuses } = setup();
     await flush();
     expect(stalled(loop)).toBe(false);
 
@@ -291,12 +242,12 @@ describe("stalled", () => {
     expect(stalled(loop)).toBe(false);
     await tick(clock, 4);
     expect(stalled(loop)).toBe(true);
-    expect(statusEvents(events)).toEqual([true]);
+    expect(statusEvents(statuses)).toEqual([false, true]);
 
     adapter.respond = () => null;
     await tick(clock, 2);
     expect(stalled(loop)).toBe(false);
-    expect(statusEvents(events)).toEqual([true, false]);
+    expect(statusEvents(statuses)).toEqual([false, true, false]);
   });
 
   test("a good read in the middle starts the count again", async () => {

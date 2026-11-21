@@ -3,6 +3,7 @@ import { DEFAULT_POLL_HZ } from "@pokemon-memory-reader/internal/config";
 import type { HTMLBundle } from "bun";
 import type { Adapter } from "./adapter/types";
 import { type AboutInfo, createApp } from "./app/app";
+import { createStreamHub } from "./app/stream";
 import { type Clock, systemClock } from "./clock";
 import type { Config } from "./config";
 import { type Log, silentLog } from "./log";
@@ -50,8 +51,14 @@ export function startServer(options: ServerOptions): RunningServer {
     clock: options.clock ?? systemClock,
     log,
   });
+  const stream = createStreamHub({
+    source: loop,
+    clock: options.clock ?? systemClock,
+    log,
+  });
   const app = createApp({
     resources: loop,
+    stream,
     bridges: options.bridges,
     log,
     config: options.config,
@@ -74,6 +81,7 @@ export function startServer(options: ServerOptions): RunningServer {
     port: server.port ?? DEFAULT_PORT,
     setPollHz: loop.setPollHz,
     async stop() {
+      stream.close();
       await server.stop(true);
       await loop.close();
     },

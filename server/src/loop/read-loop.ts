@@ -81,7 +81,7 @@ export type ChangeEvent = {
   [T in Topic]: { readonly topic: T; readonly value: ResourceMap[T] };
 }[Topic];
 
-/** What the HTTP app sees. SSE `subscribe` and the settings actions join this when their tickets land. */
+/** What the HTTP app sees. The settings actions join this when their ticket lands. */
 export interface Resources {
   status(): StatusResource;
   /**
@@ -92,6 +92,19 @@ export interface Resources {
   get<T extends Topic>(topic: T): Promise<Snapshot<T>>;
   /** One box by its 0-based index, as the raw `:n` of the route. */
   box(n: string): Promise<BoxSnapshot>;
+}
+
+/** What the SSE stream reads from the loop (spec §7.3, §8.2). */
+export interface StreamSource extends Pick<Resources, "status" | "get"> {
+  /** Change events (spec §8.6). Returns the unsubscribe. */
+  onChange(listener: (event: ChangeEvent) => void): () => void;
+  /**
+   * Counts a subscriber as demand for these topics until the returned release runs. `status` needs
+   * none. Call it before `get`: a topic that wasn't demanded is cold, so that `get` runs the cold
+   * cycle and returns the first decoded value (spec §8.2). The 5 s warm window starts when the last
+   * subscriber of a topic leaves.
+   */
+  retain(topics: readonly Topic[]): () => void;
 }
 
 /** The answer to a raw read (`GET /debug/read`, amendment 021 item 11). */
@@ -168,18 +181,17 @@ export function normalizePollHz(value: unknown, log: Log): number {
   return clamped;
 }
 
-export type ReadLoop = Resources & {
-  /** Internal change events (spec §8.6). The SSE stream is the subscriber. Returns the unsubscribe. */
-  onChange(listener: (event: ChangeEvent) => void): () => void;
-  /** A live `pollHz` change, clamped like the one at startup. */
-  setPollHz(hz: number): void;
-  /**
-   * One raw read of live memory for `--debug`. It takes the loop's one request slot, so it runs
-   * after the tick's batch and before the next tick, and only one can be queued or running.
-   */
-  rawRead(address: string, length: number): Promise<RawReadResult>;
-  close(): Promise<void>;
-};
+export type ReadLoop = Resources &
+  StreamSource & {
+    /** A live `pollHz` change, clamped like the one at startup. */
+    setPollHz(hz: number): void;
+    /**
+     * One raw read of live memory for `--debug`. It takes the loop's one request slot, so it runs
+     * after the tick's batch and before the next tick, and only one can be queued or running.
+     */
+    rawRead(address: string, length: number): Promise<RawReadResult>;
+    close(): Promise<void>;
+  };
 
 /** The box resource of one session. Its pointer cache belongs to the box request alone (spec §8.5). */
 interface BoxState {
@@ -284,10 +296,22 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   };
   const newSession = (): Session => {
     const made: Session = sessionFor(adapter, log, () => {
-      if (made === session) emit({ topic: "status", value: status() });
+      if (made === session) announceStatus();
     });
     return made;
   };
+
+  /** The status last announced. A status event goes out only when `status()` differs from it (spec §7.3). */
+  let announced: StatusResource | null = null;
+  function announceStatus(): void {
+    const now = status();
+    if (announced !== null && isDeepStrictEqual(announced, now)) return;
+    announced = now;
+    emit({ topic: "status", value: now });
+  }
+
+  /** Subscribers per topic. It belongs to the loop, not the session, so a game change keeps the demand (spec §8.2). */
+  const retained = new Map<Decoded, number>();
 
   let session = newSession();
   let slot: Promise<unknown> = Promise.resolve();
@@ -353,6 +377,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       if (current !== session || found === null) return;
       current.identification = found;
       current.bound = found.kind === "identified" ? bind(found.profile) : null;
+      announceStatus();
       if (found.kind === "unidentified")
         log.info(`ROM not identified (${found.reason})`);
       else if (found.match === "exact" && found.signature === "mismatch")
@@ -588,6 +613,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   }
 
   const isDemanded = (current: Session, topic: Decoded): boolean =>
+    retained.has(topic) ||
     clock.now() - (current.demandedAt.get(topic) ?? -Infinity) <= DEMAND_MS;
 
   const demanded = (current: Session): MainTopic[] =>
@@ -729,10 +755,14 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   }
 
   const stopListening = adapter.subscribe((state) => {
-    if (state.gameEpoch === session.epoch && isUsable(state) === session.usable)
-      return;
-    session = newSession();
-    void identify(session);
+    if (
+      state.gameEpoch !== session.epoch ||
+      isUsable(state) !== session.usable
+    ) {
+      session = newSession();
+      void identify(session);
+    }
+    announceStatus();
   });
   void identify(session);
   tick();
@@ -744,6 +774,38 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       identification: session.identification,
       stalled: session.stall.stalled,
     });
+  announced = status();
+
+  function retain(topics: readonly Topic[]): () => void {
+    const wanted = [
+      ...new Set(
+        topics.filter((topic): topic is Decoded => topic !== "status"),
+      ),
+    ];
+    for (const topic of wanted) {
+      // A cached value from before the demand lapsed is stale, so the subscriber's `get` reads it cold (spec §8.2).
+      if (topic !== "boxes" && !isDemanded(session, topic)) {
+        delete session.values[topic];
+        session.raw.delete(topic);
+      }
+      retained.set(topic, (retained.get(topic) ?? 0) + 1);
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      for (const topic of wanted) {
+        const left = (retained.get(topic) ?? 1) - 1;
+        if (left > 0) {
+          retained.set(topic, left);
+          continue;
+        }
+        retained.delete(topic);
+        // The warm window runs from the last subscriber's leaving (spec §8.2).
+        session.demandedAt.set(topic, clock.now());
+      }
+    };
+  }
 
   /** The first 503 that applies, checked in the order of amendment 020 §3, without `no_data`. */
   function unavailable(
@@ -898,6 +960,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    retain,
     rawRead,
     /** Takes effect from the next tick (spec §9.4). */
     setPollHz(hz) {

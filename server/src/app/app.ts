@@ -20,6 +20,7 @@ import {
   writeGuard,
 } from "./guards";
 import { guardOf } from "./route-table";
+import { parseTopics, type Sink, type StreamHub } from "./stream";
 
 /** Fixed English text per code. It carries no stability promise, so clients branch on `code` (amendment 020 §1). */
 const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
@@ -45,20 +46,21 @@ export interface AboutInfo extends Omit<AboutBody, "notices"> {
 }
 
 /**
- * The HTTP app (spec §7). Only the status, party, battle and boxes snapshots, the bridge
- * downloads and the internal routes below `/api/v2` are served. The SSE route, the remaining
- * resources and `/openapi.json` join it as their tickets land. The viewer is served by `Bun.serve`
+ * The HTTP app (spec §7). The snapshots, the `/events` stream, the bridge downloads and the
+ * internal routes below `/api/v2` are served. `/openapi.json` joins them when its ticket lands. The viewer is served by `Bun.serve`
  * itself (see `startServer`).
  *
  * The routes outside `/api/v2` register through `internalRoute`, which takes the guard class from
- * the route table. A group registers only when its dependency is given: `/settings` with
- * `config`, `/about` with `about`, and `/debug/read` with `rawRead`, which only `--debug` passes.
+ * the route table. A group registers only when its dependency is given: `/events` with `stream`,
+ * `/settings` with `config`, `/about` with `about`, and `/debug/read` with `rawRead`, which only `--debug` passes.
  */
 export function createApp(deps: {
   readonly resources: Resources;
   /** Bridge source by name, served at `/bridges/<name>.lua` (spec §4.11). Absent means no bridge routes. */
   readonly bridges?: Readonly<Record<string, string>>;
   readonly log?: Log;
+  /** The SSE hub. Without it `/api/v2/events` is a 404. */
+  readonly stream?: StreamHub;
   readonly config?: Config;
   readonly about?: AboutInfo;
   readonly rawRead?: (
@@ -119,6 +121,44 @@ export function createApp(deps: {
     };
     return c.json(body, 503);
   });
+
+  const { stream } = deps;
+  if (stream) {
+    app.get(`${API_BASE_PATH}/events`, (c) => {
+      const parsed = parseTopics(c.req.queries("topics") ?? []);
+      if (!parsed.ok)
+        return c.json(failure("invalid_topics", parsed.message), 400);
+      // The stream idles between heartbeats, so Bun's idle timeout (10 s by default) mustn't end it.
+      (
+        c.env as { timeout?: (request: Request, seconds: number) => void }
+      )?.timeout?.(c.req.raw, 0);
+      const encoder = new TextEncoder();
+      let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
+      let client: ReturnType<StreamHub["open"]> | undefined;
+      const body = new ReadableStream<Uint8Array>(
+        {
+          start: (made) => {
+            controller = made;
+          },
+          // The consumer took what was queued, so a client that was unwritable can be sent more.
+          pull: () => client?.drain(),
+          cancel: () => client?.close(),
+        },
+        { highWaterMark: 1 },
+      );
+      const sink: Sink = {
+        write: (text) => controller?.enqueue(encoder.encode(text)),
+        writable: () => (controller?.desiredSize ?? 0) > 0,
+        close: () => controller?.close(),
+      };
+      client = stream.open(parsed.topics, sink);
+      return c.body(body, 200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+      });
+    });
+  }
 
   /** Registers a route outside `/api/v2` under the guard class the route table gives it. */
   const internalRoute = (
