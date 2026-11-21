@@ -1,6 +1,6 @@
 import type { Bag, Player, Pocket } from "@pokemon-memory-reader/api/schemas";
 import type { ReactNode } from "react";
-import { refName } from "./display";
+import { ItemArt } from "./Art";
 import {
   areaName,
   badgeName,
@@ -123,7 +123,7 @@ function PocketCard({ pocket }: { pocket: Pocket }) {
             // biome-ignore lint/suspicious/noArrayIndexKey: slots are positional and an item can sit in two stacks
             <li key={slot} className="pocket-item">
               <span className="body pocket-item-name">
-                {refName(entry.item)}
+                <ItemArt id={entry.item.id} name={entry.item.name} />
               </span>
               <span className="body muted tabular">×{entry.quantity}</span>
             </li>
@@ -176,7 +176,7 @@ function BagSection({ bag }: { bag: Loaded<Bag> }) {
 /**
  * The Trainer & bag screen (spec §11.6): the player's details and badges, then each bag pocket
  * with its fill and stacks. The two resources load on their own, so one failing leaves the other
- * showing. Item icons wait on the icon system.
+ * showing. Each item shows its icon beside its name when the icon system has one.
  */
 export function TrainerScreen({
   player,
