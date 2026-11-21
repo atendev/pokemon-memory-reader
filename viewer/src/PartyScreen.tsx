@@ -1,6 +1,7 @@
 import type { Party, Pokemon } from "@pokemon-memory-reader/api/schemas";
 import {
   cardTitle,
+  type HpFields,
   hpPercent,
   hpTone,
   orDash,
@@ -10,7 +11,7 @@ import {
 } from "./display";
 import type { Loaded } from "./useResource";
 
-function HpBar({ mon }: { mon: Pokemon }) {
+export function HpBar({ mon }: { mon: HpFields }) {
   const percent = hpPercent(mon);
   return (
     <div className="hp">

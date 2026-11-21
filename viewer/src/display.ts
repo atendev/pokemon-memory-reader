@@ -25,16 +25,19 @@ export function partySlots(pokemon: readonly Pokemon[]): (Pokemon | null)[] {
   return Array.from({ length: PARTY_SLOTS }, (_, i) => pokemon[i] ?? null);
 }
 
+/** The two fields the HP helpers read, so a battler and an opponent mon share them. */
+export type HpFields = Pick<Pokemon, "hp" | "maxHp">;
+
 export type HpTone = "high" | "mid" | "low" | "none";
 
 /** The share of HP left as 0-100, or null when HP isn't known. */
-export function hpPercent(mon: Pokemon): number | null {
+export function hpPercent(mon: HpFields): number | null {
   if (mon.hp === null || mon.maxHp === null || mon.maxHp <= 0) return null;
   return Math.max(0, Math.min(100, (mon.hp / mon.maxHp) * 100));
 }
 
 /** Green above half, amber above a fifth, red below that, grey when fainted or unknown (spec §11.8). */
-export function hpTone(mon: Pokemon): HpTone {
+export function hpTone(mon: HpFields): HpTone {
   const percent = hpPercent(mon);
   if (percent === null || (mon.hp ?? 0) <= 0) return "none";
   if (percent > 50) return "high";

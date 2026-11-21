@@ -392,3 +392,196 @@ body {
     padding: 0;
   }
 }
+
+/* Battle screen (spec §11.4). */
+.versus {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 16px 0;
+  align-items: start;
+}
+.vs {
+  justify-self: center;
+  color: var(--label-2);
+}
+.side h3 {
+  margin: 0 0 8px;
+}
+.battlers,
+.trainers,
+.tiles,
+.moves {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.battlers,
+.trainers {
+  display: grid;
+  gap: 16px;
+}
+.trainers {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-bottom: 16px;
+}
+.moves {
+  display: grid;
+  gap: 4px;
+}
+.moves li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+.stats dd {
+  margin: 0;
+}
+.stats dt {
+  font-size: 11px;
+}
+.types {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: capitalize;
+}
+.type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray);
+}
+.type-fire {
+  background: #ff6b35;
+}
+.type-water {
+  background: #4a90ff;
+}
+.type-grass {
+  background: #30d158;
+}
+.type-electric {
+  background: #ffd60a;
+}
+.type-ice {
+  background: #64d2ff;
+}
+.type-fighting {
+  background: #c0392b;
+}
+.type-poison {
+  background: #bf5af2;
+}
+.type-ground {
+  background: #c8a064;
+}
+.type-flying {
+  background: #8fa8ff;
+}
+.type-psychic {
+  background: #ff5fa2;
+}
+.type-bug {
+  background: #a4c639;
+}
+.type-rock {
+  background: #a08a5a;
+}
+.type-ghost {
+  background: #6e5aa8;
+}
+.type-dragon {
+  background: #5e5ce6;
+}
+.type-dark {
+  background: #5a4a42;
+}
+.type-steel {
+  background: #aab4c0;
+}
+.type-fairy {
+  background: #ff9ec4;
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+.badge {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.opponent-party,
+.field {
+  margin-bottom: 16px;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 2px solid transparent;
+}
+.tile-active {
+  border-color: var(--blue);
+}
+.tile-hidden {
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  color: var(--label-2);
+}
+.field-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+@media (min-width: 1100px) {
+  .versus {
+    grid-template-columns: 1fr auto 1fr;
+  }
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.battler-hidden {
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  color: var(--label-2);
+}

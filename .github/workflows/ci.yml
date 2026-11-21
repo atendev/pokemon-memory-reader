@@ -92,6 +92,9 @@ jobs:
           --define "PMR_COMMIT=\"${GITHUB_SHA::7}\""
           --outfile out/pokemon-memory-reader server/src/main.ts
       - run: bun scripts/smoke.ts out/pokemon-memory-reader "$(jq -r .version server/package.json)"
+      - run: bun test server/test/e2e
+        env:
+          PMR_EXECUTABLE: out/pokemon-memory-reader
 
   rehost-smoke:
     name: Re-host smoke (linux-x64)
