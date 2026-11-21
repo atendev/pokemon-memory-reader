@@ -1,0 +1,150 @@
+name: Release API
+
+# A pushed api-v<semver> tag checks the package, publishes @pokemon-memory-reader/api to npm and creates the GitHub release (spec §13.8).
+# Publishing uses npm trusted publishing (GitHub OIDC) with provenance. No npm token exists in the repository or in this file, so there is no secret to leak.
+# The trusted publisher on npm is configured for this exact file name, so renaming it breaks publishing.
+#
+# `workflow_dispatch` and `pull_request` are dry runs. They build and check the same tarball and run `npm publish --dry-run`
+# on it, so the file list and exports map show in the log, and they never publish. GitHub only offers `workflow_dispatch` for
+# a workflow file on the default branch, so the filtered `pull_request` trigger covers a feature branch (amendment 024 item 8).
+on:
+  push:
+    tags: ["api-v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release-api.yml
+      - scripts/check-release-ref.ts
+      - scripts/api-consumer-smoke.ts
+      - api/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-api-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  # Runs the shared ref check (amendment 024). A stable tag passes only from main, and a prerelease from main or PRERELEASE_BRANCH.
+  ref:
+    name: Ref check
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.check.outputs.version }}
+      prerelease: ${{ steps.check.outputs.prerelease }}
+      dry_run: ${{ steps.meta.outputs.dry_run }}
+    steps:
+      # Full history, so the ancestry test against origin/main and the prerelease branch can run.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - id: meta
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=api-v$(jq -r .version api/package.json)" >> "$GITHUB_OUTPUT"
+            echo "dry_run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - id: check
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          DRY_RUN: ${{ steps.meta.outputs.dry_run }}
+        run: |
+          flags=()
+          if [ "$DRY_RUN" = true ]; then flags+=(--dry-run); fi
+          bun scripts/check-release-ref.ts check --tag "$TAG" --kind api "${flags[@]}" --output "$GITHUB_OUTPUT"
+
+  # Builds and checks the one tarball that the publish job uploads. The checks are the ones `ci.yml` runs in `api-package`.
+  package:
+    name: Package check
+    needs: ref
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - working-directory: api
+        run: |
+          bun run build
+          bun pm pack --destination ../pack
+      - run: |
+          bunx publint pack/*.tgz
+          bunx attw pack/*.tgz --profile esm-only
+      - run: bun scripts/api-consumer-smoke.ts pack/*.tgz
+      # The changelog section is checked before anything is published, so a missing section fails here and not after the publish.
+      - name: Release body
+        env:
+          TAG: ${{ needs.ref.outputs.tag }}
+          DRY_RUN: ${{ needs.ref.outputs.dry_run }}
+        run: |
+          flags=()
+          if [ "$DRY_RUN" = true ]; then flags+=(--dry-run); fi
+          bun scripts/check-release-ref.ts body --tag "$TAG" --kind api --repo "$GITHUB_REPOSITORY" --notes api/release-notes.md --out pack/body.md "${flags[@]}"
+      # Trusted publishing needs npm 11.5.1 or later. `bun publish` and older npm can't publish through OIDC.
+      - name: Install npm 11.5.1
+        run: |
+          npm install --global npm@11.5.1
+          npm --version
+      # Never publishes. It prints the tarball contents, and the exports map is read out of the same tarball below.
+      - name: Dry run publish
+        env:
+          DIST_TAG: ${{ needs.ref.outputs.prerelease == 'true' && 'next' || 'latest' }}
+        run: |
+          npm publish ./pack/*.tgz --dry-run --access public --tag "$DIST_TAG"
+          echo "Exports map:"
+          tar -xOzf pack/*.tgz package/package.json | jq .exports
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: api-package
+          path: |
+            pack/*.tgz
+            pack/body.md
+          if-no-files-found: error
+          retention-days: 7
+
+  # Runs on a tag push only. It publishes the tarball the package job checked, then creates the release.
+  publish:
+    name: Publish to npm
+    needs: [ref, package]
+    if: needs.ref.outputs.dry_run == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # The OIDC token that npm trusts. It is minted per run and never stored.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: api-package
+          path: pack
+      - name: Install npm 11.5.1
+        run: |
+          npm install --global npm@11.5.1
+          npm --version
+      # A prerelease goes to `next` and a stable version to `latest`, so publishing 2.0.0 is the promotion (spec §13.8).
+      - name: Publish
+        env:
+          DIST_TAG: ${{ needs.ref.outputs.prerelease == 'true' && 'next' || 'latest' }}
+        run: npm publish ./pack/*.tgz --access public --provenance --tag "$DIST_TAG"
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.ref.outputs.tag }}
+          PRERELEASE: ${{ needs.ref.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file pack/body.md "${flags[@]}"
