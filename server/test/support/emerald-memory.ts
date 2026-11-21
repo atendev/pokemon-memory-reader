@@ -33,6 +33,10 @@ export function emeraldMemory(
   rom.set(new TextEncoder().encode("POKEMON EMER"), 0xa0);
   rom.set(new TextEncoder().encode("BPEE"), 0xac);
   rom[0xbc] = 0;
+  // The vanilla signature: the GF header words that point at the species, item and move tables.
+  rom.set([0xcc, 0x03, 0x32, 0x08], 0x1bc);
+  rom.set([0xa0, 0x39, 0x58, 0x08], 0x1c8);
+  rom.set([0x98, 0xc8, 0x31, 0x08], 0x1cc);
   const ewram = new Uint8Array(0x40000);
   ewram[EWRAM_PARTY_COUNT] = mons.length;
   ewram.set(partyBytes(mons.map(encodeMon)), EWRAM_PARTY);

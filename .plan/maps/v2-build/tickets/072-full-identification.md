@@ -19,3 +19,9 @@ Identification stays a single request-slot job, and a failed signature on a hash
 - `/status` reports `match`, `signature` and the `rom` fields from [the 020 amendment](../assets/020-status-and-error-details.md) through the real server and fake bridge.
 - The mGBA bridge identifies by CRC32 only, as 014 says.
 - No ROM bytes are committed.
+
+Timing: wall 6m, active 6m, user 0s, wait 0s, blocked 0s | implement 3m, audit 2m (2 rounds) | tools 42 (5 subagent) | limits 0, compactions 0, handoffs 0 | ctx peak 138k | cost $1.56 sonnet-5-5 + $0.02 haiku-5-5
+
+## Resolution
+
+Identification now follows spec §5.4: exact hash (SHA-1 when supplied, else CRC32), then header plus signature, then header alone, in one request-slot job. `status.game.match` is `exact` or `header`, and `signature` is `match`, `mismatch`, `unchecked` or `null` (amendment 025 §3). A hash match checks the signature in the same read as the header and still loads on a mismatch, with a logged profile error. A hash that matches nothing while the header matches a base game, or a header match whose signature fails or can't be read, stays `unidentified` (internal reason `modified_rom`). An adapter that can't read ROM matches by hash and reports `unchecked` for a profile with a signature, following 025 over the ticket's "null". `status.rom.contentName` is filled from the adapter. The mGBA bridge already sends CRC32 only. `romKeys` is left to the manual-picks ticket. Report: [072 report](../assets/072-full-identification-report.md). Audit: Claude seat only, approved in round 2 (8).

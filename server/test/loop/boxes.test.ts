@@ -20,7 +20,7 @@ const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
 const GAME = {
   platform: "gba",
-  crc32: "1a2b3c4d",
+  crc32: "1f1c08fb",
   sha1: null,
   romName: "Emerald",
   domains: { rom: 0x400, ewram: 0x40000, iwram: 0x8000 },
