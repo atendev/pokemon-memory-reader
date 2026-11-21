@@ -4,7 +4,7 @@ import {
   Boxes,
   Party,
   Player,
-  Status,
+  StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
 import type {
   Adapter,
@@ -21,7 +21,12 @@ import leafgreen10 from "../../src/profile/builtin/leafgreen-us-1.0.json";
 import leafgreen11 from "../../src/profile/builtin/leafgreen-us-1.1.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
-import { encodeMon, encodeText, partyBytes, storageBytes } from "../gen3/encode";
+import {
+  encodeMon,
+  encodeText,
+  partyBytes,
+  storageBytes,
+} from "../gen3/encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
 const builds = [firered10, firered11, leafgreen10, leafgreen11];
@@ -40,7 +45,7 @@ const FR = {
   mapHeader: 0x36dfc,
   one: 0x25000,
   two: 0x29000,
-  storage: 0x30000,
+  storage: 0x10000,
 } as const;
 /** `struct SaveBlock1` and `SaveBlock2` offsets from pokefirered `include/global.h`. */
 const SB1 = {
@@ -104,9 +109,18 @@ function frlgMemory(build: Build) {
     ewram[at] = (ewram[at] ?? 0) | (1 << (flag & 7));
   }
   ewram[FR.mapHeader + 0x14] = 0x58;
-  const slot = (pocket: number, index: number, id: number, quantity: number) => {
+  const slot = (
+    pocket: number,
+    index: number,
+    id: number,
+    quantity: number,
+  ) => {
     view.setUint16(FR.one + pocket + index * 4, id, true);
-    view.setUint16(FR.one + pocket + index * 4 + 2, (quantity ^ KEY) & 0xffff, true);
+    view.setUint16(
+      FR.one + pocket + index * 4 + 2,
+      (quantity ^ KEY) & 0xffff,
+      true,
+    );
   };
   slot(SB1.items, 41, 13, 7);
   slot(SB1.keyItems, 29, 259, 1);
@@ -190,7 +204,12 @@ async function start(build: Build) {
 
 test("all four builds load with no profile problems", () => {
   expect(problems).toEqual([]);
-  expect([...registry.keys()].sort()).toEqual([
+  expect(
+    registry
+      .all()
+      .map((profile) => profile.id)
+      .sort(),
+  ).toEqual([
     "firered-us-1.0",
     "firered-us-1.1",
     "leafgreen-us-1.0",
@@ -201,10 +220,10 @@ test("all four builds load with no profile problems", () => {
 describe.each(builds)("$id on synthetic FireRed memory", (build) => {
   test("identifies by hash with a matching signature", async () => {
     const get = await start(build);
-    const status = Status.parse(await (await get("/status")).json());
+    const status = StatusResource.parse(await (await get("/status")).json());
     expect(status.game).toMatchObject({
-      profile: build.id,
-      match: "hash",
+      profileId: build.id,
+      match: "exact",
       signature: "match",
     });
   });
@@ -212,7 +231,7 @@ describe.each(builds)("$id on synthetic FireRed memory", (build) => {
   test("decodes the party", async () => {
     const get = await start(build);
     const party = Party.parse(await (await get("/party")).json());
-    expect(party.mons[0]?.nickname).toBe("BULBA");
+    expect(party.pokemon[0]?.nickname).toBe("BULBA");
   });
 
   test("decodes the player with money and the badges XORed and flagged for FireRed", async () => {
@@ -223,8 +242,14 @@ describe.each(builds)("$id on synthetic FireRed memory", (build) => {
       trainerId: 4242,
       secretId: 777,
       money: 3000,
-      playTime: { hours: 12, minutes: 34, seconds: 56 },
-      location: { mapGroup: 3, mapNumber: 4, x: 5, y: 6, section: 0x58 },
+      playTime: { hours: 12, minutes: 34, seconds: 56, frames: 0 },
+      location: {
+        mapGroup: 3,
+        mapNumber: 4,
+        x: 5,
+        y: 6,
+        section: { id: 0x58, name: "PALLET TOWN" },
+      },
     });
     expect(player.badges.map((badge) => badge.obtained)).toEqual([
       true,
