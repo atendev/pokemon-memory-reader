@@ -1,10 +1,16 @@
 import type { Party } from "@pokemon-memory-reader/api/schemas";
 import type { Profile } from "../profile/schema";
 import { referenceData } from "../reference";
+import type { BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
 import { gen3Decoder } from "./gen3";
 import type { Regions, Slices } from "./regions";
-import type { DecodeContext, ResourceDecoder, Result } from "./types";
+import type {
+  BattleProbe,
+  DecodeContext,
+  ResourceDecoder,
+  Result,
+} from "./types";
 
 export const GENERATION = { gen1: 1, gen2: 2, gen3: 3, cfru: 3 } as const;
 
@@ -15,9 +21,16 @@ export interface BoundPart<T> {
   decode(slices: Readonly<Record<string, Bytes>>): Result<T>;
 }
 
+/** The battle reader's two reads (spec §8.2): the flag with the outcome every tick, and the whole frame while the flag is set. */
+export interface BoundBattle {
+  readonly probe: BoundPart<BattleProbe>;
+  readonly frame: BoundPart<BattleTick>;
+}
+
 /** What the read loop reads and decodes for the loaded game. A part left out makes its resource 503 `unsupported` (spec §7.2). */
 export interface BoundGame {
   readonly party?: BoundPart<Party>;
+  readonly battle?: BoundBattle;
 }
 
 function bind<P, R extends Regions, T>(
@@ -50,9 +63,19 @@ export function declaredRegions(profile: Profile): {
   switch (profile.dataFormat) {
     case "gen3":
       return {
-        main: gen3Decoder.party
-          ? [{ part: "party", regions: gen3Decoder.party.regions(profile) }]
-          : [],
+        main: [
+          ...(gen3Decoder.party
+            ? [{ part: "party", regions: gen3Decoder.party.regions(profile) }]
+            : []),
+          ...(gen3Decoder.battle
+            ? [
+                {
+                  part: "battle",
+                  regions: gen3Decoder.battle.frame.regions(profile),
+                },
+              ]
+            : []),
+        ],
         boxes: [],
       };
     default:
@@ -78,9 +101,16 @@ export function bindGame(profile: Profile): BoundGame {
           locations: reference.locations(profile.artVersion),
         },
       };
-      return gen3Decoder.party
-        ? { party: bind(gen3Decoder.party, profile, ctx) }
-        : {};
+      const { party, battle } = gen3Decoder;
+      return {
+        ...(party && { party: bind(party, profile, ctx) }),
+        ...(battle && {
+          battle: {
+            probe: bind(battle.probe, profile, ctx),
+            frame: bind(battle.frame, profile, ctx),
+          },
+        }),
+      };
     }
     default:
       return {};

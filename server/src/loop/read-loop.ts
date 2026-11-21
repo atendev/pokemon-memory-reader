@@ -3,13 +3,20 @@ import type {
   StatusResource,
   Topic,
 } from "@pokemon-memory-reader/api/schemas";
+import type { Platform } from "@pokemon-memory-reader/internal/memory";
 import type { Adapter, ReadOutcome } from "../adapter/types";
 import type { Clock } from "../clock";
-import { type BoundGame, bindGame } from "../format/registry";
+import { type BoundGame, type BoundPart, bindGame } from "../format/registry";
+import type { BattleProbe } from "../format/types";
 import { type Identification, identification } from "../identify/identify";
 import type { Log } from "../log";
 import type { ProfileRegistry } from "../profile/registry";
 import type { Profile } from "../profile/schema";
+import {
+  type BattleTick,
+  type BattleTrackerState,
+  battleTracker,
+} from "../resource/battle-tracker";
 import { buildStatus, isUsable } from "../resource/status";
 import { runJob } from "./job";
 import { PointerCache, readBatch } from "./plan";
@@ -52,7 +59,14 @@ export interface ReadLoopDeps {
 }
 
 type Decoded = Exclude<Topic, "status">;
-const DECODED: readonly Decoded[] = ["party"];
+
+/** One decoder part a cycle reads, and where its decoded value goes. */
+interface Part {
+  readonly name: string;
+  readonly part: BoundPart<unknown>;
+  accept(value: unknown): void;
+}
+const DECODED: readonly Decoded[] = ["party", "battle"];
 
 const DEFAULT_POLL_HZ = 20;
 const MIN_POLL_HZ = 5;
@@ -85,6 +99,10 @@ interface Session {
   /** The pointer values the main batch last read (spec §8.5). Empty until the first cycle, so that cycle sends two requests. */
   readonly pointers: PointerCache;
   values: { [T in Decoded]?: ResourceMap[T] };
+  /** The battle tracker's state. A new session starts it over, so a game change resets `battleId` and `lastBattle` (spec §7.8). */
+  battle: BattleTrackerState;
+  /** True from the cycle that read the in-battle flag set until one reads it clear, so the frame is read while a battle runs (spec §8.2). */
+  battleOn: boolean;
   demandedAt: Map<Decoded, number>;
   cold: Map<Decoded, Promise<void>>;
 }
@@ -97,6 +115,8 @@ const sessionFor = (adapter: Adapter): Session => ({
   bound: null,
   pointers: new PointerCache(),
   values: {},
+  battle: battleTracker.initial(),
+  battleOn: false,
   demandedAt: new Map(),
   cold: new Map(),
 });
@@ -149,44 +169,108 @@ export function createReadLoop(
     return current.identifying;
   }
 
-  /** One batched read for these topics, decoded into the session's values. */
+  /** Feeds one battle read to the tracker. True when the flag read set but the frame wasn't read, so the frame is read at once. */
+  function feedBattle(current: Session, read: BattleProbe): boolean {
+    if (read.flag === "set" && !("frame" in read)) {
+      current.battleOn = true;
+      return true;
+    }
+    current.battleOn = read.flag === "set";
+    const step = battleTracker.step(
+      current.battle,
+      read as BattleTick,
+      clock.now(),
+    );
+    current.battle = step.state;
+    for (const warning of step.warnings) log.warn(warning);
+    if (step.value !== null) current.values.battle = step.value;
+    return false;
+  }
+
+  /** One batched read for these parts, each decoded value handed to its `accept`. */
+  async function readParts(
+    current: Session,
+    platform: Platform,
+    parts: readonly Part[],
+  ): Promise<void> {
+    const result = await runJob(
+      readBatch(
+        parts.map(({ part }) => part.regions),
+        {
+          mergeGap: adapter.limits.mergeGap,
+          platform,
+          pointers: current.pointers,
+        },
+      ),
+      read,
+    );
+    // A timeout or a failed read keeps the last value. `stalled` counts the timeouts here.
+    if (current !== session || result.kind !== "sample") return;
+    for (const { name, part, accept } of parts) {
+      const sliced = result.sample.slices(part.regions);
+      if (!sliced.ok) {
+        log.debug(`${name} skipped this cycle: ${sliced.reason}`);
+        continue;
+      }
+      try {
+        const decoded = part.decode(sliced.slices);
+        if (decoded.ok) accept(decoded.value);
+        else log.debug(`${name} did not decode: ${decoded.reason}`);
+      } catch (error) {
+        log.error(`${name} decoder threw, which is a layout bug`, { error });
+      }
+    }
+  }
+
+  /**
+   * One batched read for these topics and the in-battle flag, decoded into the session's values.
+   * The flag is read every cycle with the outcome beside it. While it is set the cycle reads the
+   * whole frame, and a flag that reads set after a clear read gets its frame in a second request
+   * straight away, so a battle shows within the tick (spec §8.2, §8.6).
+   */
   function cycle(current: Session, topics: readonly Decoded[]): Promise<void> {
     return exclusive(async () => {
       const bound = current.bound;
       if (current !== session || bound === null) return;
-      const parts = topics.flatMap((topic) => {
-        const part = bound[topic];
-        return part ? [{ topic, part }] : [];
-      });
-      if (parts.length === 0) return;
       const game = adapter.state.game;
       if (game === null || game.platform === "other") return;
-      const result = await runJob(
-        readBatch(
-          parts.map(({ part }) => part.regions),
-          {
-            mergeGap: adapter.limits.mergeGap,
-            platform: game.platform,
-            pointers: current.pointers,
+      const parts: Part[] = topics.flatMap((topic) => {
+        const part = topic === "party" ? bound.party : undefined;
+        return part
+          ? [
+              {
+                name: topic,
+                part,
+                accept: (value: unknown) => {
+                  current.values[topic] = value as never;
+                },
+              },
+            ]
+          : [];
+      });
+      const battle = bound.battle;
+      let frameNeeded = false;
+      if (battle) {
+        parts.push({
+          name: "battle",
+          part: current.battleOn ? battle.frame : battle.probe,
+          accept: (value) => {
+            frameNeeded = feedBattle(current, value as BattleProbe);
           },
-        ),
-        read,
-      );
-      // A timeout or a failed read keeps the last value. `stalled` counts the timeouts here.
-      if (current !== session || result.kind !== "sample") return;
-      for (const { topic, part } of parts) {
-        const sliced = result.sample.slices(part.regions);
-        if (!sliced.ok) {
-          log.debug(`${topic} skipped this cycle: ${sliced.reason}`);
-          continue;
-        }
-        try {
-          const decoded = part.decode(sliced.slices);
-          if (decoded.ok) current.values[topic] = decoded.value as never;
-          else log.debug(`${topic} did not decode: ${decoded.reason}`);
-        } catch (error) {
-          log.error(`${topic} decoder threw, which is a layout bug`, { error });
-        }
+        });
+      }
+      if (parts.length === 0) return;
+      await readParts(current, game.platform, parts);
+      if (battle && frameNeeded && current === session) {
+        await readParts(current, game.platform, [
+          {
+            name: "battle",
+            part: battle.frame,
+            accept: (value) => {
+              feedBattle(current, value as BattleProbe);
+            },
+          },
+        ]);
       }
     }).catch((error) => log.error("read cycle failed", { error }));
   }
@@ -202,7 +286,9 @@ export function createReadLoop(
     if (!current.usable) return;
     if (current.identification === null) return identify(current);
     const topics = demanded(current);
-    if (topics.length > 0) await cycle(current, topics);
+    // The in-battle flag is read every tick, whether or not anything is demanded (spec §8.2).
+    if (topics.length > 0 || current.bound?.battle)
+      await cycle(current, topics);
   }
 
   function tick(): void {
@@ -262,7 +348,11 @@ export function createReadLoop(
     const warm =
       clock.now() - (current.demandedAt.get(wanted) ?? -Infinity) <= DEMAND_MS;
     current.demandedAt.set(wanted, clock.now());
-    if (!warm || current.values[wanted] === undefined) {
+    // The flag read keeps `battle` current, so only a missing value needs a cold cycle.
+    if (
+      (!warm && wanted !== "battle") ||
+      current.values[wanted] === undefined
+    ) {
       // A cold GET runs one extra cycle at once, shared by GETs that arrive together (spec §8.2).
       let run = current.cold.get(wanted);
       if (run === undefined) {

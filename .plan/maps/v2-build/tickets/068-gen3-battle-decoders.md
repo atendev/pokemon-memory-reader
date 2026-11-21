@@ -22,21 +22,19 @@ Feed the tracker from Emerald, following spec §7.8, §6.4 and [the 015 amendmen
 
 ## Handoff
 
-Branch `t3/gen3-battle-decoders`, SHA is the commit after `ae4d348` (wip: handoff). Audit round 0, no council yet.
+Branch `t3/gen3-battle-decoders-1` (cut from `fded0b9`), SHA is the commit that adds this section (wip: slice 2). Attempt 2, audit round 0, no council yet.
 
-**Done.** Slice 1 at `ae4d348`: the generator emits `gMain`, `gBattlerPartyIndexes`, `gBattleOutcome`, `gBattleWeather`, `gSideStatuses`, `gSideTimers` into Emerald `addresses` (the "battle block" is these keys, not a new top-level profile key; record that decision in the report). `gen3Addresses` accepts them, the sym excerpt fixture has them, and a second `generate:profiles` run is stable. Typecheck and 94 profile and generator tests pass. Run `bun install` in the worktree first.
-
-**Facts (pret master headers, checked).**
-- `gMain.inBattle` is byte `+0x439`, mask `0x02`. `gMain` is 0x43c bytes.
-- `BattlePokemon` is 0x58 bytes: species 0, atk 2, def 4, spe 6, spa 8, spd 0xA, moves[4] 0xC, statStages[8] 0x18 (HP, ATK, DEF, SPE, SPA, SPD, ACC, EVA, neutral 6), ability 0x20, types[2] 0x21, pp[4] 0x24, hp 0x28, level 0x2A, maxHP 0x2C, item 0x2E. `gBattleMons` is 4 entries.
-- `gBattlerPartyIndexes` is u16[4]. `gBattleOutcome` is u8 (mask 0x7F). `gBattleWeather` is u16: rain 0x7, sandstorm 0x18, sun 0x60, hail 0x80. `gSideStatuses` is u16[2]: reflect 1, lightscreen 2, spikes 0x10, safeguard 0x20, mist 0x100. `gSideTimers` is 2 x 12 bytes, spikesAmount at +10.
-- Type flags: double bit 0, trainer bit 3, two-opponents bit 15. Battler order: 0 player, 1 opponent, 2 partner, 3 opponent 2.
+**Done.**
+- Slice 1 (`ae4d348`): Emerald `addresses` gain `gMain`, `gBattlerPartyIndexes`, `gBattleOutcome`, `gBattleWeather`, `gSideStatuses`, `gSideTimers`. The "battle block" is these keys, not a new profile key (put that in the report).
+- Slice 2 (this commit): `server/src/format/gen3/battle.ts` (`gen3Battle` with `probe` = flag + outcome and `frame`, `gen3Outcome`), `BattleDecoder`/`BattleProbe` in `format/types.ts`, `BoundBattle` and `declaredRegions` in `format/registry.ts`, `battle` in `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas`, `SNAPSHOT_TOPICS`, `docs/open-enums.md` regenerated, and the read loop (`readParts`, `feedBattle`, `Session.battle`/`battleOn`, flag read every tick, frame read while set, immediate second request when the probe reads set). Typecheck passes. `bun test`: 635 pass, 6 fail.
+- Verified against pret: BattlePokemon layout incl. `ppBonuses` 0x3B and `status1` 0x4C, flag bits (multi 6, inGamePartner 22), `inBattle` 0x439 bit 1, status and side bits. Open doubt: pret master's `SideTimer` lists 11 bytes while the 0x18 symbol size means 12 each; code uses 12 (opponent spikes only). Note in report, ask for a ROM fixture check.
 
 **Left, in order.**
-1. `server/src/format/gen3/battle.ts` decoder returning `BattleTick`, plus `Decoder.battle` and `BoundGame.battle`.
-2. Read loop: read the `inBattle` flag every tick, read the full battle regions while the flag was last set or `battle` is demanded, keep tracker state in the session, call `initial()` on a game change.
-3. Add `battle` to `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas`, `SNAPSHOT_TOPICS` and `DECODED`.
-4. Tests: inactive shape, synthetic single wild and double trainer battles, every §7.8 outcome plus unknown, no-subscriber `lastBattle`.
-5. Council (Claude seat only), decision report with unslop, `wf-time.py close`, record, push.
+1. Fix the 5 expected test failures: `server/test/loop/read-loop.test.ts` (flag is now read every tick, so the "no read without demand" and `partyReads` helper need updating: party reads are ranges at ewram 0x244ec), `server/src/profile/registry.test.ts` (main batch parts are now `party` and `battle`; the tiny-caps test names the largest region, check it).
+2. Tests: new `server/test/gen3/battle.test.ts` (outcome mapping every §7.8 value plus unknown, battler fields, stat stages, weather, sides, wild vs trainer, double, validation fails), loop tests (inactive shape with `lastBattle: null`, synthetic single wild and double trainer via `GET battle`, no subscriber `lastBattle` complete, game change resets), app route test for `/api/v2/battle`. Update `server/test/support/emerald-memory.ts` for battle memory.
+3. Generator stable second run still holds; run `bun run lint`, `bun run typecheck`.
+4. Council (Claude seat only), decision report `assets/068-gen3-battle-decoders-report.md` with unslop, `wf-time.py close`, record, push, open PR vs `wayfinder/v2-build-master` if the repo uses PRs.
 
-Read first: `server/src/resource/battle-tracker.ts`, `server/src/loop/read-loop.ts`, `server/src/format/registry.ts`, `server/test/support/battle-frames.ts`.
+Known failing and ignored: `core.test.ts` Lua check (host Lua 5.5).
+
+Read first: `server/src/format/gen3/battle.ts`, `server/src/loop/read-loop.ts` (`cycle`), `server/test/loop/read-loop.test.ts`.

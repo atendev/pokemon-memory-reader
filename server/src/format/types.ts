@@ -1,5 +1,6 @@
 import type { Party } from "@pokemon-memory-reader/api/schemas";
 import type { DataFormatId, Profile } from "../profile/schema";
+import type { BattleTick } from "../resource/battle-tracker";
 import type { Bytes } from "./bytes";
 import type { Regions, Slices } from "./regions";
 
@@ -23,8 +24,28 @@ export interface ResourceDecoder<P, R extends Regions, T> {
   decode(slices: Slices<R>, ctx: DecodeContext<P>): Result<T>;
 }
 
+/**
+ * What one read cycle learned about the in-battle flag without reading the battle: the flag
+ * reads clear (with the outcome read in the same cycle), is the Gen 1 end marker, or is set
+ * and the full frame still has to be read.
+ */
+export type BattleProbe =
+  | { readonly flag: "set" }
+  | Exclude<BattleTick, { readonly flag: "set" }>;
+
+/**
+ * A format's battle reader in two reads (spec §8.2). `probe` is the in-battle flag and the
+ * outcome, which the loop reads every tick. `frame` is those plus everything a battle needs, and
+ * is read while the flag is set. Both return a tick the tracker folds (interfaces 004).
+ */
+export interface BattleDecoder<P> {
+  readonly probe: ResourceDecoder<P, Regions, BattleProbe>;
+  readonly frame: ResourceDecoder<P, Regions, BattleTick>;
+}
+
 export interface Decoder<F extends DataFormatId> {
   readonly party?: ResourceDecoder<Profile<F>, Regions, Party>;
+  readonly battle?: BattleDecoder<Profile<F>>;
 }
 
 /** Everything a decoder gets besides its slices. Built once per loaded game. */

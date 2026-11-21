@@ -13,7 +13,10 @@ const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
   no_data: "The game is loaded but this resource has no value yet.",
 };
 
-const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = ["party"];
+const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = [
+  "party",
+  "battle",
+];
 
 /**
  * The HTTP app (spec §7). Only the status and party snapshots and the bridge downloads are

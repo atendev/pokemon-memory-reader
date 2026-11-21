@@ -55,11 +55,7 @@ function closedEnums(
 // `--update-snapshots` to make this test pass: a changed closed enum is a breaking API change.
 test("the closed enums of every resource are unchanged", () => {
   const found: Record<string, string[]> = {};
-  // `battle` joins `resourceSchemas` with its route, so its closed enums are pinned here already.
-  for (const [topic, schema] of Object.entries({
-    ...resourceSchemas,
-    battle: Battle,
-  })) {
+  for (const [topic, schema] of Object.entries(resourceSchemas)) {
     closedEnums(schema, topic, found);
   }
   expect(found).toMatchSnapshot();
