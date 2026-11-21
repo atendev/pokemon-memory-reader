@@ -6,18 +6,13 @@ import { generateBridges } from "./bridges";
 import { versionLine } from "./build-info";
 import { type Command, parseArgs, USAGE } from "./cli";
 import { systemClock } from "./clock";
-import {
-  defaultDataFolder,
-  ensureDataFolder,
-  installBridges,
-} from "./data-folder";
+import { logConfigIssues, readConfigFile, resolveConfig } from "./config";
+import { ensureDataFolder, installBridges, resolvePaths } from "./data-folder";
 import { consoleLog } from "./log";
 import { builtinProfiles } from "./profile/builtin";
 import { loadStartupProfiles } from "./profile/startup";
 import { startServer } from "./server";
 
-/** The mGBA bridge's default endpoint. The config ticket makes it a setting (spec §9.2). */
-const MGBA_ENDPOINT = { host: "127.0.0.1", port: 7426 } as const;
 /** Spec §9.7: a graceful shutdown that takes longer than this logs the hung step and exits 1. */
 const SHUTDOWN_MS = 2000;
 
@@ -65,10 +60,12 @@ async function run(
   options: Extract<Command, { kind: "run" }>["options"],
 ): Promise<void> {
   const log = consoleLog(options.debug);
-  const dataFolder =
-    options.dataDir ??
-    process.env.PMR_DATA_DIR ??
-    defaultDataFolder({ platform: process.platform, env: process.env });
+  const paths = resolvePaths({
+    platform: process.platform,
+    env: process.env,
+    dataDirFlag: options.dataDir,
+  });
+  const dataFolder = paths.dataFolder;
 
   console.log(`Pokemon Memory Reader ${versionLine()}`);
   try {
@@ -80,6 +77,16 @@ async function run(
     return exitAfterFatal(1);
   }
   console.log(`Data folder: ${dataFolder}`);
+
+  const file = await readConfigFile(paths.configFile);
+  logConfigIssues(paths.configFile, file.issues, log);
+  console.log(
+    file.exists
+      ? `Config file: ${paths.configFile}`
+      : `Config file: ${paths.configFile} (not created yet, using defaults)`,
+  );
+  const config = resolveConfig(file, options, paths);
+  const settings = config.applied();
 
   const profiles = loadStartupProfiles(
     { builtin: builtinProfiles, user: [] },
@@ -97,10 +104,11 @@ async function run(
       .join(", ")}`,
   );
 
-  const bridges = await generateBridges({ mgba: MGBA_ENDPOINT });
+  const mgbaEndpoint = settings.adapters.mgba;
+  const bridges = await generateBridges({ mgba: mgbaEndpoint });
   await installBridges(dataFolder, bridges, log);
 
-  const adapter = createBridgeAdapter("mgba", MGBA_ENDPOINT, {
+  const adapter = createBridgeAdapter("mgba", mgbaEndpoint, {
     clock: systemClock,
     log,
   });
@@ -111,8 +119,9 @@ async function run(
     server = startServer({
       adapter,
       registry,
-      host: options.host,
-      port: options.port,
+      host: settings.host,
+      port: settings.port,
+      pollHz: settings.pollHz,
       bridges,
       viewer,
       log,
@@ -121,7 +130,7 @@ async function run(
     const code = (error as { code?: string }).code;
     if (code === "EADDRINUSE") {
       console.error(
-        `Port ${options.port} on ${options.host} is already in use. Pass --port <n> to pick another. A second emulator needs its own port.`,
+        `Port ${settings.port} on ${settings.host} is already in use. Pass --port <n> to pick another. A second emulator needs its own port.`,
       );
     } else {
       console.error(`Cannot start the server: ${(error as Error).message}`);
@@ -131,7 +140,7 @@ async function run(
   }
 
   const url = `http://${server.host.includes(":") ? `[${server.host}]` : server.host}:${server.port}`;
-  if (!isLoopback(options.host)) {
+  if (!isLoopback(settings.host)) {
     console.warn(
       "Warning: the API and viewer are reachable by anyone on this network. Settings stay writable only from this machine.",
     );
@@ -140,7 +149,11 @@ async function run(
   console.log(
     `mGBA bridge: ${join(dataFolder, "bridges", "mgba.lua")} or ${url}/bridges/mgba.lua`,
   );
-  if (options.openBrowser) openInBrowser(url);
+  if (settings.openBrowser) openInBrowser(url);
+
+  config.onLive((live, changed) => {
+    if (changed.includes("pollHz")) server.setPollHz(live.pollHz);
+  });
 
   let stopping = false;
   const shutdown = async () => {

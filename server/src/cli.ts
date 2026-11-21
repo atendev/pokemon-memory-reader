@@ -1,9 +1,11 @@
 import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
 
+/** A flag the user didn't pass is null, so the config file's value (then the default) applies (spec §9.3). */
 export interface Options {
-  readonly port: number;
-  readonly host: string;
-  readonly openBrowser: boolean;
+  readonly port: number | null;
+  readonly host: string | null;
+  /** `--no-browser` gives false. */
+  readonly openBrowser: false | null;
   /** null: the default for this OS, or `PMR_DATA_DIR`. */
   readonly dataDir: string | null;
   readonly debug: boolean;
@@ -32,11 +34,11 @@ function parsePort(text: string): number | null {
   return port >= 1 && port <= 65535 ? port : null;
 }
 
-/** Flags only. Config file values arrive with the config ticket, and a flag will win over them. */
+/** Reads the flags only. `resolveConfig` lays them over the file and the defaults. */
 export function parseArgs(argv: readonly string[]): Command {
-  let port = DEFAULT_PORT;
-  let host: string = DEFAULT_HOST;
-  let openBrowser = true;
+  let port: number | null = null;
+  let host: string | null = null;
+  let openBrowser: false | null = null;
   let dataDir: string | null = null;
   let debug = false;
   for (let i = 0; i < argv.length; i++) {
