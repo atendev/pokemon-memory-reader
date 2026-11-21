@@ -262,3 +262,97 @@ test("a live adapter that drops with no problem reads disconnected with no probl
   });
   expect(selector.list().live).toBeNull();
 });
+
+/** Builds a fresh adapter on every create, so a rebuild shows as a second instance. */
+function buildLive(pin: AdapterId | "auto" = "auto") {
+  const clock = new ManualClock();
+  const endpoints = {
+    mgba: { host: "127.0.0.1", port: 5000 },
+    retroarch: { host: "127.0.0.1", port: 55355 },
+    bizhawk: { host: "127.0.0.1", port: 5001 },
+  };
+  const made: Scripted[] = [];
+  const created: { id: AdapterId; port: number }[] = [];
+  const selector = createSelector({
+    create: (id) => {
+      if (id === "bizhawk") return null;
+      const adapter = new Scripted(id, id === "retroarch");
+      made.push(adapter);
+      created.push({ id, port: endpoints[id].port });
+      return adapter;
+    },
+    endpoint: (id) => endpoints[id],
+    pin,
+    clock,
+    log: silentLog,
+  });
+  const latest = (id: AdapterId) =>
+    made.filter((a) => a.id === id).at(-1) as Scripted;
+  return { endpoints, made, created, selector, latest };
+}
+
+test("a changed mGBA endpoint closes the old adapter, builds a new one on the new endpoint and drops live", () => {
+  const { endpoints, made, created, selector, latest } = buildLive();
+  latest("retroarch").lastMiss = { kind: "refused", at: 1 };
+  const old = latest("mgba");
+  old.answer();
+  expect(selector.list().live).toBe("mgba");
+  endpoints.mgba = { host: "127.0.0.1", port: 6000 };
+  selector.refreshEndpoints();
+  expect(old.closedCount).toBe(1);
+  expect(created.filter((c) => c.id === "mgba")).toEqual([
+    { id: "mgba", port: 5000 },
+    { id: "mgba", port: 6000 },
+  ]);
+  expect(made).toHaveLength(3);
+  expect(selector.list().live).toBeNull();
+  expect(selector.list().adapters[0]?.endpoint.port).toBe(6000);
+  // The new adapter's own answer takes over, and nothing from the old session lingers.
+  latest("mgba").answer();
+  expect(selector.list().live).toBe("mgba");
+  expect(latest("mgba")).not.toBe(old);
+});
+
+test("a changed RetroArch endpoint rebuilds only RetroArch", () => {
+  const { endpoints, created, selector, latest } = buildLive();
+  const mgba = latest("mgba");
+  mgba.answer();
+  const old = latest("retroarch");
+  endpoints.retroarch = { host: "192.168.1.5", port: 55355 };
+  selector.refreshEndpoints();
+  expect(old.closedCount).toBe(1);
+  expect(mgba.closedCount).toBe(0);
+  expect(created.filter((c) => c.id === "retroarch")).toHaveLength(2);
+  expect(selector.list().live).toBe("mgba");
+  expect(latest("retroarch")).not.toBe(old);
+});
+
+test("a changed endpoint of the live RetroArch adapter drops it and a pinned selector rebuilds the pin", () => {
+  const { endpoints, created, selector, latest } = buildLive("retroarch");
+  const old = latest("retroarch");
+  expect(selector.list().live).toBe("retroarch");
+  endpoints.retroarch = { host: "127.0.0.1", port: 55400 };
+  selector.refreshEndpoints();
+  expect(old.closedCount).toBe(1);
+  expect(created).toEqual([
+    { id: "retroarch", port: 55355 },
+    { id: "retroarch", port: 55400 },
+  ]);
+  expect(selector.list().live).toBe("retroarch");
+  expect(latest("retroarch").mode).toBe("live");
+});
+
+test("an unchanged endpoint touches nothing", () => {
+  const { endpoints, made, selector, created } = buildLive();
+  latest(made).answer();
+  endpoints.mgba = { ...endpoints.mgba };
+  selector.refreshEndpoints();
+  selector.refreshEndpoints();
+  expect(created).toHaveLength(2);
+  expect(made.every((a) => a.closedCount === 0)).toBe(true);
+  expect(selector.list().live).toBe("mgba");
+});
+
+function latest(made: Scripted[]) {
+  return made.find((a) => a.id === "mgba") as Scripted;
+}

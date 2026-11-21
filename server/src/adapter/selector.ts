@@ -73,6 +73,8 @@ export interface Selector {
   switchTo(id: AdapterId): Promise<SwitchResult>;
   /** A live `adapter` setting change. */
   setPin(pin: AdapterId | "auto"): void;
+  /** A live `adapters` setting change. Rebuilds each adapter whose endpoint differs from the one it was built with. */
+  refreshEndpoints(): void;
   close(): Promise<void>;
 }
 
@@ -94,6 +96,8 @@ export function createSelector(deps: SelectorDeps): Selector {
   const adapters = new Map<AdapterId, ManagedAdapter>();
   const records = new Map<AdapterId, Seen>();
   const unsubscribe = new Map<AdapterId, () => void>();
+  /** The endpoint each attached adapter was built with. */
+  const built = new Map<AdapterId, Endpoint>();
   const listeners = new Set<(state: AdapterState) => void>();
   let pin: AdapterId | "auto" = deps.pin;
   let live: ManagedAdapter | null = null;
@@ -283,9 +287,11 @@ export function createSelector(deps: SelectorDeps): Selector {
   function attach(id: AdapterId): ManagedAdapter | null {
     const existing = adapters.get(id);
     if (existing) return existing;
+    const endpoint = { ...deps.endpoint(id) };
     const made = deps.create(id);
     if (made === null) return null;
     adapters.set(id, made);
+    built.set(id, endpoint);
     unsubscribe.set(
       id,
       made.subscribe((state) => onState(id, made, state)),
@@ -302,8 +308,30 @@ export function createSelector(deps: SelectorDeps): Selector {
     unsubscribe.get(id)?.();
     unsubscribe.delete(id);
     adapters.delete(id);
+    built.delete(id);
     records.delete(id);
+    if (live === a) {
+      live = null;
+      epoch += 1;
+      underlying = 0;
+    }
     await a.close();
+  }
+
+  function refreshEndpoints(): void {
+    if (closed) return;
+    let rebuilt = false;
+    for (const [id, was] of [...built]) {
+      const now = deps.endpoint(id);
+      if (now.host === was.host && now.port === was.port) continue;
+      log.info("adapter endpoint changed", { adapter: id, ...now });
+      void detach(id);
+      rebuilt = true;
+    }
+    if (!rebuilt) return;
+    // Rebuilds what is missing: every adapter in auto, the pinned one when pinned.
+    applyPin();
+    refreshFacade();
   }
 
   function applyPin(): void {
@@ -487,6 +515,7 @@ export function createSelector(deps: SelectorDeps): Selector {
       pin = next;
       applyPin();
     },
+    refreshEndpoints,
     async close() {
       closed = true;
       timer();

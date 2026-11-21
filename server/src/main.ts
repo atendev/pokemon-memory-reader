@@ -132,9 +132,16 @@ async function run(
   const selector = createSelector({
     create: (id) =>
       id === "mgba"
-        ? createBridgeAdapter("mgba", settings.adapters.mgba, adapterDeps)
+        ? createBridgeAdapter(
+            "mgba",
+            config.applied().adapters.mgba,
+            adapterDeps,
+          )
         : id === "retroarch"
-          ? createRetroArchAdapter(settings.adapters.retroarch, adapterDeps)
+          ? createRetroArchAdapter(
+              config.applied().adapters.retroarch,
+              adapterDeps,
+            )
           : null,
     endpoint: (id) => config.applied().adapters[id],
     pin: settings.adapter,
@@ -213,6 +220,7 @@ async function run(
   config.onLive((live, changed) => {
     if (changed.includes("pollHz")) server.setPollHz(live.pollHz);
     if (changed.includes("adapter")) selector.setPin(live.adapter);
+    if (changed.includes("adapters")) selector.refreshEndpoints();
   });
 
   followUpdateSetting(config, update, updateAllowed);
