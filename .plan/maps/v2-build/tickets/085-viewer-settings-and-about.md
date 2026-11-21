@@ -17,21 +17,8 @@ Spec §11.7. Settings shows endpoints, `pollHz` and `updateCheck` from `/setting
 - Writes go through the guarded routes and show a refusal clearly.
 - It runs against the fake bridge in the compiled executable.
 
-## Handoff
+## Answer
 
-Branch `t3/viewer-settings-about-screens`, wip commit on top of b253ec0 (see `git log -1`). Thread 1 hit the 150k context limit before the first audit. Audit round count so far: 0.
+Settings is one form with a per-field patch (`viewer/src/SettingsScreen.tsx`, `settings-form.ts`, `settings-actions.ts`). A 5 s poll never overwrites a draft, fields a flag set are disabled, restart-only fields say so, and a non-loopback bind address warns. A live "Adapters now" section lists each probe result with a run-only switch and Check again, and the manual pick control lists candidates and forgets a pick. `paths` shows only when not null. About shows the version line, the update summary and the LGPL lines with the notices link, and the update banner reads `/update` globally with a per-version dismissal. Every write shows the program's refusal with a title by code. `GET /manual-picks` is ticket 108's, so the pick control reads a local mirror of the amendment's body and says "can't list candidate profiles yet" on a 404. The Settings icon section stays with its own ticket. The compiled-executable test passes 8 of 8 on the fake bridge. Audit: Claude seat only, approved at round 2 with a score of 8. [Report](../assets/085-viewer-settings-and-about-report.md).
 
-**Done** (typecheck clean, `bun test viewer` 196 pass, Biome clean):
-- `viewer/src/internal-api.ts`: `call` plus typed wrappers for `/settings`, `/adapters`, `/adapters/probe`, `/adapters/switch`, `/manual-picks`, `/manual-picks/forget`, `/about`, `/update`; `refusalCopy`. Local `ManualPicksBody` mirrors amendment 021 item 8 because `GET /manual-picks` is ticket 108's and doesn't exist yet (404 shows "can't list candidate profiles yet").
-- `settings-form.ts` (draft, patch, validate, lock by flag, LAN host, saves banner), `useInternal.ts` (polled reads), `SettingsScreen.tsx` (view plus controller), `ManualPick.tsx`, `UpdateBanner.tsx` (global banner, per-version dismiss), `About.tsx` (version, update, LGPL cards), `App.tsx` wiring, CSS at the end of `styles.css`.
-- Tests: `settings-form.test.ts`, `internal-api.test.ts`, `update-banner.test.tsx`, `shell.test.tsx` Settings case, `testing.ts` `settingsBody` fixture.
-
-**Left, in order**
-1. Component tests with `renderToStaticMarkup` for `SettingsView` (each section, flag-locked field, restart note, LAN warning, null `paths` vs set, refused-saves banner, `AdapterList` auto vs pinned, `NoticeView` error) and `ManualPickSection` (no ROM, expansion, auto match, manual match with forget, candidates, 404) in a new `settings.test.tsx`. Extend `about.test.tsx` for the version and update cards.
-2. Compiled-executable test `server/test/e2e/settings-executable.test.ts` (pattern: `battle-executable.test.ts`, runs only when `PMR_EXECUTABLE` is set): GET `/settings`, `/about`, `/update`, `/adapters`, a bad-Host PUT refused 403, and the served viewer code carries the Settings and About strings. Try `bun build --compile` locally (`bun run build:exe`) and run it with `PMR_EXECUTABLE=out/pokemon-memory-reader`.
-3. Council audit, Claude seat only ("Gemini and GPT: not run"), up to five rounds.
-4. Decision report `.plan/maps/v2-build/assets/085-viewer-settings-and-about-report.md` (unslop), Answer section, Timing close, push without force, PR against `wayfinder/v2-build-master`.
-
-**Decisions to put in the report:** one Save form with per-field patch, drafts never overwritten by polls; flag-locked fields disabled; icon section left to its own ticket (087); manual pick control built against the amendment's GET body with a 404 fallback; update banner global in `App`.
-
-**Open audit problems:** none yet. Read first: `SettingsScreen.tsx`, `settings-form.ts`, `internal-api.ts`.
+Timing: wall 13m, active 13m, user 0s, wait 0s, blocked 0s | implement 7m, audit 2m (2 rounds), fix 58s, gate 51s | tools 95 (9 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 158k | cost $3.78 sonnet-5-5 + $0.03 haiku-5-5
