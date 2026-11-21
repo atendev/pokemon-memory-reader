@@ -18,7 +18,7 @@
     },
     "api": {
       "name": "@pokemon-memory-reader/api",
-      "version": "0.0.0",
+      "version": "2.0.0-alpha.0",
       "devDependencies": {
         "zod": "4.6.7",
       },
