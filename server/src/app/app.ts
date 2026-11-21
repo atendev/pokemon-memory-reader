@@ -2,6 +2,7 @@ import { API_BASE_PATH } from "@pokemon-memory-reader/api/client";
 import type { ErrorBody, Topic } from "@pokemon-memory-reader/api/schemas";
 import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import { switchRequest } from "@pokemon-memory-reader/internal/adapters-route";
+import { pickRequest } from "@pokemon-memory-reader/internal/manual-picks-route";
 import { type Handler, Hono } from "hono";
 import type { Selector } from "../adapter/selector";
 import type { Config } from "../config";
@@ -10,6 +11,8 @@ import { parseIconPath } from "../icons/keys";
 import type { IconService } from "../icons/service";
 import { type Log, silentLog } from "../log";
 import type {
+  ForgetResult,
+  PickResult,
   RawReadResult,
   Resources,
   UnavailableCode,
@@ -57,7 +60,7 @@ export interface AboutInfo extends Omit<AboutBody, "notices"> {
  *
  * The routes outside `/api/v2` register through `internalRoute`, which takes the guard class from
  * the route table. A group registers only when its dependency is given: `/events` with `stream`,
- * `/settings` with `config`, `/about` with `about`, `/update` with `update`, `/icons` with `icons`, and `/debug/read` with `rawRead`, which only `--debug` passes.
+ * `/settings` with `config`, `/about` with `about`, `/update` with `update`, `/manual-picks` with `picks`, `/icons` with `icons`, and `/debug/read` with `rawRead`, which only `--debug` passes.
  */
 export function createApp(deps: {
   readonly resources: Resources;
@@ -78,6 +81,11 @@ export function createApp(deps: {
     address: string,
     length: number,
   ) => Promise<RawReadResult>;
+  /** Without it there are no `/manual-picks` routes. */
+  readonly picks?: {
+    pick(request: ReturnType<typeof pickRequest.parse>): Promise<PickResult>;
+    forget(): Promise<ForgetResult>;
+  };
   /** Where the server listens, for the Host checks. Defaults to the loopback host on port 7425. */
   readonly listening?: () => Listening;
 }): Hono {
@@ -224,6 +232,30 @@ export function createApp(deps: {
       const result = await selector.switchTo(request.data.id);
       return result.ok
         ? c.json({ live: result.live })
+        : internalError(c, result.code, result.message);
+    });
+  }
+
+  const { picks } = deps;
+  if (picks) {
+    internalRoute("POST", "/manual-picks", async (c) => {
+      const raw: unknown = await c.req.json().catch(() => undefined);
+      const request = pickRequest.safeParse(raw);
+      if (!request.success)
+        return internalError(
+          c,
+          "invalid_request",
+          'The body must be { profileId, scope: "rom" | "base" }.',
+        );
+      const result = await picks.pick(request.data);
+      return result.ok
+        ? c.json(result.value)
+        : internalError(c, result.code, result.message);
+    });
+    internalRoute("POST", "/manual-picks/forget", async (c) => {
+      const result = await picks.forget();
+      return result.ok
+        ? c.json({})
         : internalError(c, result.code, result.message);
     });
   }

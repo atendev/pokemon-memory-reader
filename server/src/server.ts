@@ -8,6 +8,7 @@ import { createStreamHub } from "./app/stream";
 import { type Clock, systemClock } from "./clock";
 import type { Config } from "./config";
 import type { IconService } from "./icons/service";
+import type { PickStore } from "./identify/pick-store";
 import { type Log, silentLog } from "./log";
 import { createReadLoop } from "./loop/read-loop";
 import type { ProfileRegistry } from "./profile/registry";
@@ -37,6 +38,8 @@ export interface ServerOptions {
   readonly update?: Pick<UpdateChecker, "state">;
   /** The `/icons` lookup. Without it there is no `/icons` route. */
   readonly icons?: IconService;
+  /** The saved manual picks. Without it picks last for the session only. */
+  readonly picks?: PickStore;
   /** `--debug`: adds `/debug/read`. */
   readonly debug?: boolean;
   readonly clock?: Clock;
@@ -60,6 +63,7 @@ export function startServer(options: ServerOptions): RunningServer {
     pollHz: options.pollHz ?? DEFAULT_POLL_HZ,
     clock: options.clock ?? systemClock,
     log,
+    picks: options.picks,
   });
   const stream = createStreamHub({
     source: loop,
@@ -76,6 +80,7 @@ export function startServer(options: ServerOptions): RunningServer {
     about: options.about,
     update: options.update,
     icons: options.icons,
+    picks: loop,
     ...(options.debug ? { rawRead: loop.rawRead } : {}),
     // The Host checks read the address the server really listens on, which port 0 only picks once it is up.
     listening: () => ({

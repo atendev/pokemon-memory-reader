@@ -27,7 +27,8 @@ export const ART_VERSIONS = [
 ] as const;
 export type ArtVersion = (typeof ART_VERSIONS)[number];
 
-const platformOf: Record<DataFormatId, Platform> = {
+/** The platform each data format runs on. */
+export const platformOf: Record<DataFormatId, Platform> = {
   gen1: "gb",
   gen2: "gb",
   gen3: "gba",
