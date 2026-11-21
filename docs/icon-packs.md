@@ -23,14 +23,14 @@ icons/
   hack/{profileId}/item/{itemId}.png
 ```
 
-| Path | Use |
-|---|---|
-| `pokemon/{artVersion}/{dex}.png` | Front sprite for party cards and battlers. `dex` is the National Dex number. |
-| `pokemon/{artVersion}/shiny/{dex}.png` | Shiny front sprite. Gen 1 never asks for one. |
-| `icon/{dex}.png` | Gen 3 menu icon for the Boxes grid and opponent party tiles, for all three generations. |
-| `item/{itemSlug}.png` | Item or ball art, named by its PokeAPI slug. |
-| `type/{typeArtVersion}/{typeName}.png` | Type icon. |
-| `hack/{profileId}/...` | Art for a hack profile, named by the hack's own IDs. |
+| Path                                   | Use                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pokemon/{artVersion}/{dex}.png`       | Front sprite for party cards and battlers. `dex` is the National Dex number.            |
+| `pokemon/{artVersion}/shiny/{dex}.png` | Shiny front sprite. Gen 1 never asks for one.                                           |
+| `icon/{dex}.png`                       | Gen 3 menu icon for the Boxes grid and opponent party tiles, for all three generations. |
+| `item/{itemSlug}.png`                  | Item or ball art, named by its PokeAPI slug.                                            |
+| `type/{typeArtVersion}/{typeName}.png` | Type icon.                                                                              |
+| `hack/{profileId}/...`                 | Art for a hack profile, named by the hack's own IDs.                                    |
 
 `artVersion` is one of `red-blue`, `red-green-japan`, `yellow`, `gold`, `silver`, `crystal`, `ruby-sapphire`, `emerald` and `firered-leafgreen`.
 
