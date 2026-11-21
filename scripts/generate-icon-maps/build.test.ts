@@ -90,3 +90,10 @@ test("a rerun gives the same text", () => {
     renderIconMaps(buildIconMaps(input())),
   );
 });
+
+test("a game name with no game_index falls back to the one item that carries it", () => {
+  const gen3ItemNames = Array(20).fill(null);
+  gen3ItemNames[15] = "TM01";
+  const { items } = buildIconMaps(input({ gen3ItemNames }));
+  expect(items.emerald).toEqual({ 15: "tm01" });
+});

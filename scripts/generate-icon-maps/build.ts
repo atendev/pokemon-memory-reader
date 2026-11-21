@@ -115,15 +115,16 @@ const RENAMED: Readonly<Record<string, string>> = {
 /** PokeAPI items by normalised English name and by slug, for the names that no `game_index` settles. */
 function byName(data: PokeApiData): Map<string, string[]> {
   const out = new Map<string, string[]>();
-  for (const slug of data.items.values())
-    out.set(normalize(slug), [...(out.get(normalize(slug)) ?? []), slug]);
+  const add = (key: string, slug: string) => {
+    const known = out.get(key) ?? [];
+    if (!known.includes(slug)) out.set(key, [...known, slug]);
+  };
+  for (const slug of data.items.values()) add(normalize(slug), slug);
   for (const [name, slug] of Object.entries(RENAMED))
     out.set(normalize(name), [slug]);
   for (const [id, name] of data.itemNames) {
     const slug = data.items.get(id);
-    if (slug === undefined) continue;
-    const key = normalize(name);
-    out.set(key, [...(out.get(key) ?? []), slug]);
+    if (slug !== undefined) add(normalize(name), slug);
   }
   return out;
 }
