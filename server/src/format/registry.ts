@@ -41,7 +41,8 @@ export interface DeclaredPart {
 /**
  * What the loaded game's decoders read, split into the main batch and the box request (amendment
  * 026 §6). It needs no reference data, so a profile is measured the same whether or not its
- * language has any. No format has a box decoder yet, so `boxes` is empty.
+ * language has any. Gen 3 has a box decoder, but the box request stays empty until the loop reads
+ * boxes (ticket 066).
  */
 export function declaredRegions(profile: Profile): {
   readonly main: readonly DeclaredPart[];

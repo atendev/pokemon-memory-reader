@@ -185,6 +185,29 @@ export type Party = {
   [key: string]: unknown;
 };
 
+/**
+ * One PC box. A readable box's `slots` has a fixed length (30 in Gen 3) in game slot order, with
+ * `null` for empty slots so indices hold. An unreadable box has `readable: false` and empty
+ * `slots` and `corruptSlots`, and keeps `name` and `wallpaper` where known. `corruptSlots` lists
+ * the `null` slots that hold a Pokémon the program couldn't decode (checksum failure or bad egg).
+ */
+export type Box = {
+  index: number;
+  name: string | null;
+  wallpaper: number | null;
+  readable: boolean;
+  corruptSlots: number[];
+  slots: (Pokemon | null)[];
+  [key: string]: unknown;
+};
+
+/** The player's PC boxes. `currentBox` is 0-based and null when the game's storage couldn't be read. */
+export type Boxes = {
+  currentBox: number | null;
+  boxes: Box[];
+  [key: string]: unknown;
+};
+
 /** What the adapter reports about the loaded ROM. null when the adapter reports no ROM (amendment 020 §5). */
 export type Rom = {
   platform: "gb" | "gba" | "other";

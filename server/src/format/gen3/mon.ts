@@ -7,6 +7,7 @@ import {
 } from "@pokemon-memory-reader/api/schemas";
 import { Bytes } from "../bytes";
 import { type DecodeContext, fail, ok, type Result } from "../types";
+import { levelFromExperience } from "./growth";
 import {
   ATTACKS,
   EVS,
@@ -101,20 +102,22 @@ function gender(genderRatio: number, personality: number): Pokemon["gender"] {
 }
 
 /**
- * Decodes one 100-byte party Pokémon. Fails on a checksum mismatch, a bad egg or a missing
- * species. Boxed Pokémon share everything but the trailing party block.
+ * Decodes the 80 bytes every Pokémon stores, which is a whole boxed Pokémon. Fails on a bad egg or
+ * a checksum mismatch. Species 0 is an empty slot, which gives null. The fields only a party
+ * Pokémon stores (`hp`, `maxHp`, `stats`, `status`) are null, and `level` is computed from
+ * experience and the growth rate.
  */
-export function decodePartyMon(
+export function decodeBoxMon(
   mon: Bytes,
   ctx: DecodeContext<{ readonly language: string }>,
-): Result<Pokemon> {
+): Result<Pokemon | null> {
   const flags = mon.u8(PARTY_MON.flags);
   if (Bytes.bits(flags, FLAG.badEgg, 1)) return fail("bad egg");
   const secure = readSecure(mon);
   if (!secure.checksumOk) return fail("checksum mismatch");
 
   const speciesId = secure.growth.u16le(GROWTH.species);
-  if (speciesId === 0) return fail("species 0");
+  if (speciesId === 0) return ok(null);
   const personality = mon.u32le(PARTY_MON.personality);
   const otId = mon.u32le(PARTY_MON.otId);
   const trainerId = otId & 0xffff;
@@ -171,7 +174,7 @@ export function decodePartyMon(
   const heldItemId = secure.growth.u16le(GROWTH.heldItem);
   const ballId = Bytes.bits(origins, 11, 4);
   const metLocation = secure.misc.u8(MISC.metLocation);
-  const maxHp = mon.u16le(PARTY_MON.maxHp);
+  const experience = secure.growth.u32le(GROWTH.experience);
   const evs = {
     hp: secure.evs.u8(EVS.hp),
     atk: secure.evs.u8(EVS.atk),
@@ -206,23 +209,16 @@ export function decodePartyMon(
     },
     isEgg,
     eggCycles: isEgg ? friendshipByte : null,
-    level: mon.u8(PARTY_MON.level),
-    experience: secure.growth.u32le(GROWTH.experience),
+    level: info ? levelFromExperience(info.growthRate, experience) : null,
+    experience,
     friendship: isEgg ? null : friendshipByte,
     types: info ? speciesTypes(info.types) : null,
-    hp: mon.u16le(PARTY_MON.hp),
-    maxHp,
-    stats: {
-      hp: maxHp,
-      atk: mon.u16le(PARTY_MON.atk),
-      def: mon.u16le(PARTY_MON.def),
-      spa: mon.u16le(PARTY_MON.spa),
-      spd: mon.u16le(PARTY_MON.spd),
-      spe: mon.u16le(PARTY_MON.spe),
-    },
+    hp: null,
+    maxHp: null,
+    stats: null,
     ivs,
     evs,
-    status: status(mon.u32le(PARTY_MON.status)),
+    status: null,
     ability:
       abilityId === 0 ? null : ref(abilityId, ctx.names.abilities(abilityId)),
     heldItem:
@@ -251,5 +247,34 @@ export function decodePartyMon(
       SHINY_THRESHOLD,
     gender: info ? gender(info.genderRatio, personality) : null,
     hiddenPower: hiddenPower(ivs),
+  });
+}
+
+/**
+ * Decodes one 100-byte party Pokémon. Fails on a checksum mismatch, a bad egg or a missing
+ * species. Boxed Pokémon share everything but the trailing party block.
+ */
+export function decodePartyMon(
+  mon: Bytes,
+  ctx: DecodeContext<{ readonly language: string }>,
+): Result<Pokemon> {
+  const stored = decodeBoxMon(mon, ctx);
+  if (!stored.ok) return stored;
+  if (stored.value === null) return fail("species 0");
+  const maxHp = mon.u16le(PARTY_MON.maxHp);
+  return ok({
+    ...stored.value,
+    level: mon.u8(PARTY_MON.level),
+    hp: mon.u16le(PARTY_MON.hp),
+    maxHp,
+    stats: {
+      hp: maxHp,
+      atk: mon.u16le(PARTY_MON.atk),
+      def: mon.u16le(PARTY_MON.def),
+      spa: mon.u16le(PARTY_MON.spa),
+      spd: mon.u16le(PARTY_MON.spd),
+      spe: mon.u16le(PARTY_MON.spe),
+    },
+    status: status(mon.u32le(PARTY_MON.status)),
   });
 }

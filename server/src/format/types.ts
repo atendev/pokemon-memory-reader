@@ -1,4 +1,4 @@
-import type { Party } from "@pokemon-memory-reader/api/schemas";
+import type { Boxes, Party } from "@pokemon-memory-reader/api/schemas";
 import type { DataFormatId, Profile } from "../profile/schema";
 import type { Bytes } from "./bytes";
 import type { Regions, Slices } from "./regions";
@@ -25,6 +25,7 @@ export interface ResourceDecoder<P, R extends Regions, T> {
 
 export interface Decoder<F extends DataFormatId> {
   readonly party?: ResourceDecoder<Profile<F>, Regions, Party>;
+  readonly boxes?: ResourceDecoder<Profile<F>, Regions, Boxes>;
 }
 
 /** Everything a decoder gets besides its slices. Built once per loaded game. */

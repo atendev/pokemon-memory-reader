@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { z } from "zod";
-import { Battle, resourceSchemas } from "./schemas.js";
+import { Battle, Box, Boxes, resourceSchemas } from "./schemas.js";
 
 /** Every `z.enum` a published schema holds, by path. A `z.enum` is closed by construction. */
 function closedEnums(
@@ -55,10 +55,11 @@ function closedEnums(
 // `--update-snapshots` to make this test pass: a changed closed enum is a breaking API change.
 test("the closed enums of every resource are unchanged", () => {
   const found: Record<string, string[]> = {};
-  // `battle` joins `resourceSchemas` with its route, so its closed enums are pinned here already.
+  // `battle` and `boxes` join `resourceSchemas` with their routes, so their closed enums are pinned here already.
   for (const [topic, schema] of Object.entries({
     ...resourceSchemas,
     battle: Battle,
+    boxes: Boxes,
   })) {
     closedEnums(schema, topic, found);
   }
@@ -95,4 +96,35 @@ test("battle is a union on `active`, and an unknown mode name still parses", () 
   expect(Battle.safeParse(active).success).toBe(true);
   expect(Battle.safeParse({ ...active, kind: "link" }).success).toBe(false);
   expect(Battle.safeParse({ ...active, modes: [1] }).success).toBe(false);
+});
+
+test("boxes keeps empty slots as null and an unreadable box empty", () => {
+  const unreadable = {
+    index: 0,
+    name: null,
+    wallpaper: null,
+    readable: false,
+    corruptSlots: [],
+    slots: [],
+  };
+  expect(
+    Boxes.safeParse({ currentBox: null, boxes: [unreadable] }).success,
+  ).toBe(true);
+  const readable = { ...unreadable, readable: true, slots: [null, null] };
+  expect(Boxes.safeParse({ currentBox: 0, boxes: [readable] }).success).toBe(
+    true,
+  );
+  expect(Boxes.safeParse({ currentBox: 0 }).success).toBe(false);
+  const { corruptSlots: _omitted, ...withoutCorrupt } = readable;
+  expect(Box.safeParse(withoutCorrupt).success).toBe(false);
+  expect(Box.safeParse({ ...readable, future: 1 }).success).toBe(true);
+});
+
+test("the slots description lists the fields a box doesn't store", () => {
+  const description = Box.shape.slots.description ?? "";
+  expect(description).toContain(
+    "hp, maxHp, stats and status in Gen 2 and Gen 3",
+  );
+  expect(description).toContain("stats and maxHp in Gen 1");
+  expect(description).toContain("level is computed");
 });
