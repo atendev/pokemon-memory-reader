@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { z } from "zod";
-import { Battle, Box, Boxes, resourceSchemas } from "./schemas.js";
+import { Battle, Box, Boxes, resourceSchemas, StreamEvent } from "./schemas.js";
 
 /** Every `z.enum` a published schema holds, by path. A `z.enum` is closed by construction. */
 function closedEnums(
@@ -126,4 +126,17 @@ test("the slots description lists the fields a box doesn't store", () => {
   );
   expect(description).toContain("stats and maxHp in Gen 1");
   expect(description).toContain("level is computed");
+});
+
+test("a stream event pairs its topic with that topic's resource", () => {
+  const status = { state: "no_game", adapter: null, rom: null, game: null };
+  expect(StreamEvent.safeParse({ topic: "status", data: status }).success).toBe(
+    true,
+  );
+  expect(StreamEvent.safeParse({ topic: "party", data: status }).success).toBe(
+    false,
+  );
+  expect(StreamEvent.safeParse({ topic: "unheard", data: {} }).success).toBe(
+    false,
+  );
 });

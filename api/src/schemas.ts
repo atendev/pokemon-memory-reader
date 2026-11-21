@@ -39,6 +39,7 @@ import type {
   Stats as StatsType,
   StatusResource as StatusResourceType,
   Status as StatusType,
+  StreamEvent as StreamEventType,
   Topic as TopicType,
   Trainer as TrainerType,
   Type as TypeType,
@@ -588,3 +589,14 @@ export const resourceSchemas = {
 } satisfies Record<Topic, z.ZodType>;
 
 export type ResourceMap = ResourceMapType;
+
+/** One `/events` event, as the client hands it over: the topic from the SSE event name and the parsed data (spec §7.3). */
+export const StreamEvent = z.discriminatedUnion("topic", [
+  z.object({ topic: z.literal("status"), data: StatusResource }),
+  z.object({ topic: z.literal("party"), data: Party }),
+  z.object({ topic: z.literal("player"), data: Player }),
+  z.object({ topic: z.literal("bag"), data: Bag }),
+  z.object({ topic: z.literal("battle"), data: Battle }),
+  z.object({ topic: z.literal("boxes"), data: Boxes }),
+]);
+export type StreamEvent = StreamEventType;
