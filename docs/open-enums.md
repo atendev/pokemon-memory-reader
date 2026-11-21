@@ -10,8 +10,7 @@ An open enum is a field whose value a client reads as a string and must tolerate
 - `bridgeId`: `status.adapter.bridge.bridge`.
 - `adapterProblem`: `status.adapter.problem`.
 - `topic`: the topic names, which are the resource routes.
-
-`battle.modes` joins this list when the `battle` resource lands.
+- `battleMode`: each element of `battle.modes` and `lastBattle.modes`. A name ships with its verification fixture and a generation-neutral, yes/no meaning (amendment 015). Tags are independent and can co-occur, and the array is unique and sorted in code-point order.
 
 ## Records
 
@@ -58,6 +57,10 @@ Each list is rendered from `api/src/meanings.ts` by `bun api/scripts/open-enums.
 
 - `status`: The adapter, ROM and game state. Always served.
 - `party`: The player's party, in slot order.
+
+### `battleMode`
+
+No name is emitted yet.
 
 <!-- open-enums:end -->
 

@@ -84,7 +84,11 @@ export function renderRecords(baseline: Baseline = currentBaseline()): string {
       ([value, entry]) =>
         `- \`${value}\`: ${entry.meaning}${entry.retiredIn === undefined ? "" : ` Retired in ${entry.retiredIn}.`}`,
     );
-    return [`### \`${name}\``, "", ...rows].join("\n");
+    return [
+      `### \`${name}\``,
+      "",
+      ...(rows.length === 0 ? ["No name is emitted yet."] : rows),
+    ].join("\n");
   });
   return `${START}\n\n${sections.join("\n\n")}\n\n${END}`;
 }

@@ -2,20 +2,30 @@ import { expect, test } from "bun:test";
 import { z } from "zod";
 import * as schemas from "./schemas.js";
 import type {
+  ActiveBattle,
   AdapterInfo,
+  Battle,
+  BattleMove,
+  Battler,
   ErrorBody,
   Game,
+  InactiveBattle,
+  LastBattle,
   Move,
   Nature,
+  OpponentMon,
   Party,
   Pokemon,
   Ref,
   ResourceMap,
   Rom,
+  SideConditions,
+  StatStages,
   Stats,
   Status,
   StatusResource,
   Topic,
+  Trainer,
   Type,
 } from "./types.js";
 
@@ -47,6 +57,16 @@ type Pairs = [
   Expect<Equal<Infer<typeof schemas.AdapterInfo>, AdapterInfo>>,
   Expect<Equal<Infer<typeof schemas.StatusResource>, StatusResource>>,
   Expect<Equal<Infer<typeof schemas.ErrorBody>, ErrorBody>>,
+  Expect<Equal<Infer<typeof schemas.StatStages>, StatStages>>,
+  Expect<Equal<Infer<typeof schemas.BattleMove>, BattleMove>>,
+  Expect<Equal<Infer<typeof schemas.Battler>, Battler>>,
+  Expect<Equal<Infer<typeof schemas.Trainer>, Trainer>>,
+  Expect<Equal<Infer<typeof schemas.OpponentMon>, OpponentMon>>,
+  Expect<Equal<Infer<typeof schemas.SideConditions>, SideConditions>>,
+  Expect<Equal<Infer<typeof schemas.LastBattle>, LastBattle>>,
+  Expect<Equal<Infer<typeof schemas.InactiveBattle>, InactiveBattle>>,
+  Expect<Equal<Infer<typeof schemas.ActiveBattle>, ActiveBattle>>,
+  Expect<Equal<Infer<typeof schemas.Battle>, Battle>>,
 ];
 
 /** The names in `Pairs`. Keep the two lists in step. */
@@ -64,6 +84,16 @@ const PAIRED = [
   "AdapterInfo",
   "StatusResource",
   "ErrorBody",
+  "StatStages",
+  "BattleMove",
+  "Battler",
+  "Trainer",
+  "OpponentMon",
+  "SideConditions",
+  "LastBattle",
+  "InactiveBattle",
+  "ActiveBattle",
+  "Battle",
 ];
 
 // biome-ignore lint/correctness/noUnusedVariables: checked by the compiler, never read.
@@ -79,6 +109,13 @@ type Mapped = [
   Expect<Equal<(typeof schemas.TYPES)[number], Type>>,
   Expect<Equal<(typeof schemas.NATURES)[number], Nature>>,
   Expect<Equal<(typeof schemas.STATUSES)[number], Status>>,
+  Expect<
+    Equal<(typeof schemas.BATTLE_OUTCOMES)[number], LastBattle["outcome"]>
+  >,
+  Expect<Equal<(typeof schemas.BATTLE_KINDS)[number], ActiveBattle["kind"]>>,
+  Expect<
+    Equal<(typeof schemas.BATTLE_FORMATS)[number], ActiveBattle["format"]>
+  >,
 ];
 
 test("every exported schema has a type pair", () => {
