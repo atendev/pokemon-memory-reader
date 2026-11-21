@@ -72,12 +72,11 @@ const STAGE = {
 } as const;
 const NEUTRAL_STAGE = 6;
 
-/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, TWO_OPPONENTS 15, INGAME_PARTNER 22). A two-opponent battle is a double even without bit 0. */
+/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, INGAME_PARTNER 22). Double is bit 0 alone: the game sets DOUBLE beside TWO_OPPONENTS. */
 const TYPE = {
   double: 1 << 0,
   trainer: 1 << 3,
   multi: 1 << 6,
-  twoOpponents: 1 << 15,
   inGamePartner: 1 << 22,
 } as const;
 
@@ -270,8 +269,7 @@ function decodeFrame(
 ): Result<BattleFrame> {
   const typeFlags = slices.typeFlags.u32le(0);
   const isTrainer = (typeFlags & TYPE.trainer) !== 0;
-  const isDouble =
-    (typeFlags & TYPE.double) !== 0 || (typeFlags & TYPE.twoOpponents) !== 0;
+  const isDouble = (typeFlags & TYPE.double) !== 0;
   const hasPartner =
     (typeFlags & (TYPE.multi | TYPE.inGamePartner)) !== 0 && isDouble;
 

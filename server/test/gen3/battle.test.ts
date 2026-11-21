@@ -325,9 +325,8 @@ describe("a double trainer battle", () => {
     }
   });
 
-  test("the two-opponents flag also makes a double", () => {
-    const frame = build({ typeFlags: TRAINER | (1 << 15) });
-    expect(frame.format).toBe("double");
+  test("a trainer flag without bit 0 is a single", () => {
+    expect(build({ typeFlags: TRAINER }).format).toBe("single");
   });
 });
 
