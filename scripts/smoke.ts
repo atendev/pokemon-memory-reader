@@ -123,17 +123,17 @@ async function checkServing(base: string, dataDir: string): Promise<void> {
     info.version === expectedVersion,
     `/about version was ${JSON.stringify(info.version)}, expected ${expectedVersion}`,
   );
-  check(
-    Array.isArray(info.lgpl) &&
-      info.lgpl.length > 0 &&
-      info.lgpl.every(
-        (item) =>
-          typeof item.displayName === "string" &&
-          typeof item.copyright === "string" &&
-          item.copyright.length > 0,
-      ),
-    "/about names no LGPL component with a copyright line",
-  );
+  const lgpl = Array.isArray(info.lgpl) ? info.lgpl : [];
+  for (const name of ["JavaScriptCore", "tinycc"]) {
+    const found = lgpl.find(
+      (item) =>
+        typeof item.displayName === "string" &&
+        item.displayName.includes(name) &&
+        typeof item.copyright === "string" &&
+        item.copyright.length > 0,
+    );
+    check(found !== undefined, `/about has no ${name} copyright line`);
+  }
   check(
     info.notices === true,
     "/about says notices are missing: run `bun run notices` before the compile",
