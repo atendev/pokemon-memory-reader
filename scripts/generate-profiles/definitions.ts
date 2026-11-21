@@ -50,6 +50,8 @@ export const definitions: readonly ProfileDefinition[] = [
       { key: "gBattleWeather", symbol: "gBattleWeather" },
       { key: "gSideStatuses", symbol: "gSideStatuses" },
       { key: "gSideTimers", symbol: "gSideTimers" },
+      { key: "gTrainerBattleOpponent_A", symbol: "gTrainerBattleOpponent_A" },
+      { key: "gTrainerBattleOpponent_B", symbol: "gTrainerBattleOpponent_B" },
       { key: "gMapHeader", symbol: "gMapHeader" },
     ],
     // pokeemerald: badge flags are FLAG_BADGE01_GET to FLAG_BADGE08_GET (SYSTEM_FLAGS 0x860 + 7 to 0xE). Money is

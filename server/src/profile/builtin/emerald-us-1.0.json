@@ -38,6 +38,8 @@
     "gBattleWeather": "0x020243cc",
     "gSideStatuses": "0x0202428e",
     "gSideTimers": "0x02024294",
+    "gTrainerBattleOpponent_A": "0x02038bca",
+    "gTrainerBattleOpponent_B": "0x02038bcc",
     "gMapHeader": "0x02037318"
   },
   "player": {
