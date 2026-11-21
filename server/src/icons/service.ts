@@ -40,7 +40,10 @@ export interface IconService {
   get(key: IconKey): Promise<IconImage | null>;
   /** Deletes every cache folder except the source in use. Run once at startup. */
   pruneCache(): Promise<void>;
-  /** Deletes every source folder under `icon-cache/` and forgets the remembered misses. */
+  /**
+   * Deletes every source folder under `icon-cache/` and forgets the remembered misses. A download in
+   * flight still answers its request but leaves no file and no remembered miss.
+   */
   clearCache(): Promise<void>;
 }
 
@@ -110,6 +113,10 @@ export function createIconService(options: IconServiceOptions): IconService {
   /** When each source may be tried again after a network error. */
   const backoffUntil = new Map<string, number>();
   const inFlight = new Map<string, Promise<Png | null>>();
+  /** Bumped by every clear, so a download that began before it drops its write and its remembered miss. */
+  let generation = 0;
+  /** Cache writes under way, which a clear waits for before it deletes. */
+  const writing = new Set<Promise<void>>();
   const warnedPackFiles = new Set<string>();
   let running = 0;
   const waiting: Array<() => void> = [];
@@ -195,6 +202,7 @@ export function createIconService(options: IconServiceOptions): IconService {
     path: string,
     memory: string,
   ): Promise<Png | null> {
+    const started = generation;
     await acquire();
     try {
       let response: Response;
@@ -224,7 +232,7 @@ export function createIconService(options: IconServiceOptions): IconService {
       }
       if (!response.ok) {
         await response.body?.cancel();
-        missing.add(memory);
+        if (started === generation) missing.add(memory);
         return null;
       }
       let bytes: Png | null;
@@ -236,13 +244,19 @@ export function createIconService(options: IconServiceOptions): IconService {
         return null;
       }
       if (bytes === null || !isServablePng(bytes)) {
-        missing.add(memory);
+        if (started === generation) missing.add(memory);
         log.warn(
           `icon source ${source.id} sent ${path}, which is not a PNG of 512 KB or less`,
         );
         return null;
       }
-      await writeCache(source, path, bytes);
+      if (started === generation) {
+        const write = writeCache(source, path, bytes).finally(() =>
+          writing.delete(write),
+        );
+        writing.add(write);
+        await write;
+      }
       return bytes;
     } finally {
       release();
@@ -259,8 +273,10 @@ export function createIconService(options: IconServiceOptions): IconService {
       return Promise.resolve(null);
     const shared = inFlight.get(memory);
     if (shared) return shared;
-    const started = download(source, path, memory).finally(() =>
-      inFlight.delete(memory),
+    const started: Promise<Png | null> = download(source, path, memory).finally(
+      () => {
+        if (inFlight.get(memory) === started) inFlight.delete(memory);
+      },
     );
     inFlight.set(memory, started);
     return started;
@@ -305,7 +321,11 @@ export function createIconService(options: IconServiceOptions): IconService {
     },
 
     async clearCache() {
+      generation++;
       missing.clear();
+      // A request after the clear starts a fresh download rather than joining one that will not write.
+      inFlight.clear();
+      await Promise.all(writing);
       const entries = await readdir(paths.iconCacheFolder, {
         withFileTypes: true,
       }).catch((error) => {

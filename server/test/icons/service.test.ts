@@ -607,3 +607,81 @@ test("a failed cache write warns and still serves the fetched icon", async () =>
   expect((await service.get(pikachu))?.bytes).toEqual(A);
   expect(warnings.some((w) => w.includes("could not be written"))).toBe(true);
 });
+
+const reached = async (upstream: ReturnType<typeof fakeUpstream>) => {
+  while (upstream.calls.length === 0) await Bun.sleep(1);
+};
+
+function gatedUpstream(answer: Response) {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const upstream = fakeUpstream({
+    [UPSTREAM_25]: async () => {
+      await gate;
+      return answer.clone() as Response;
+    },
+  });
+  return { upstream, release };
+}
+
+const cacheFiles = async () =>
+  (await readdir(cacheFolder, { recursive: true }).catch(() => []))
+    .map(String)
+    .filter((name) => name.endsWith(".png"));
+
+test("a download that finishes after a clear still serves its request but leaves no cache file", async () => {
+  const { upstream, release } = gatedUpstream(ok(A));
+  const { service } = setup({ upstream });
+  const pending = service.get(pikachu);
+  await reached(upstream);
+  await service.clearCache();
+  release();
+  expect((await pending)?.bytes).toEqual(A);
+  expect(await cacheFiles()).toEqual([]);
+});
+
+test("a request after a clear fetches fresh instead of joining a download from before it", async () => {
+  const { upstream, release } = gatedUpstream(ok(A));
+  const { service } = setup({ upstream });
+  const before = service.get(pikachu);
+  await reached(upstream);
+  await service.clearCache();
+  const after = service.get(pikachu);
+  release();
+  await Promise.all([before, after]);
+  expect(upstream.calls.length).toBe(2);
+  expect(await cacheFiles()).toHaveLength(1);
+});
+
+test("a 404 that arrives after a clear is not remembered", async () => {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const upstream = fakeUpstream({
+    [UPSTREAM_25]: async () => {
+      await gate;
+      return new Response(null, { status: 404 });
+    },
+  });
+  const { service } = setup({ upstream });
+  const pending = service.get(pikachu);
+  await reached(upstream);
+  await service.clearCache();
+  release();
+  expect(await pending).toBeNull();
+  expect(await service.get(pikachu)).toBeNull();
+  expect(upstream.calls.length).toBe(2);
+});
+
+test("a clear waits for a cache write already under way", async () => {
+  const upstream = fakeUpstream({ [UPSTREAM_25]: ok(A) });
+  const { service } = setup({ upstream });
+  const pending = service.get(pikachu);
+  await reached(upstream);
+  await service.clearCache();
+  await pending;
+  expect(await cacheFiles()).toEqual([]);
+});
