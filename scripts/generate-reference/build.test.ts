@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildReference, renderReference, type Source } from "./build";
 import { evaluate, readConstants, readEntries, stringLiteral } from "./c";
-import type { LocationKey } from "./definition";
+import type { ArtKey } from "./definition";
 import { extract, type Files } from "./extract";
 
 /** Hand-written map-section lists in the three repos' shapes. None of it is copied from a pret file. */
@@ -95,16 +95,16 @@ const withFiles = (changes: Partial<Files>): Files => ({
 const source = (
   repo: string,
   files: Files,
-  locationKey: LocationKey = "emerald",
+  artKey: ArtKey = "emerald",
 ): Source => ({
   repo,
-  locationKey,
+  artKey,
   commit: "0".repeat(40),
   files: ["a"],
   extracted: extract("emerald", files),
 });
 
-/** One source per location key, as the real run has. `second` replaces the Ruby and Sapphire source's files. */
+/** One source per art key, as the real run has. `second` replaces the Ruby and Sapphire source's files. */
 const buildAll = (first: Files, second: Files = first) =>
   buildReference([
     source("pret/a", first, "emerald"),
@@ -321,7 +321,50 @@ describe("buildReference", () => {
     expect(JSON.parse(renderReference(withFirered))).toEqual(withFirered);
   });
 
-  test("a missing or doubled location source fails", () => {
+  test("item tables stay per art version, so a name or ID in one game doesn't reach another", () => {
+    const withExtra = (name: string, constants: string) =>
+      withFiles({
+        itemConstants: constants,
+        items: `${emeraldFiles.items}
+    [ITEM_EXTRA] =
+    {
+        .name = _("${name}"),
+        .itemId = ITEM_EXTRA,
+    },
+  `,
+      });
+    const emerald = withExtra(
+      "OLD SEA MAP",
+      "enum {\n ITEM_NONE,\n ITEM_BALL,\n ITEM_034,\n ITEM_TM01,\n ITEM_EXTRA,\n};\n",
+    );
+    const firered = withExtra(
+      "OAK'S PARCEL",
+      "enum {\n ITEM_NONE,\n ITEM_BALL,\n ITEM_034,\n ITEM_TM01,\n ITEM_EXTRA,\n};\n",
+    );
+    const file = buildReference([
+      source("pret/a", emerald, "emerald"),
+      source("pret/b", emeraldFiles, "ruby-sapphire"),
+      source("pret/c", firered, "firered-leafgreen"),
+    ]);
+    expect(file.names.items.emerald[4]).toBe("OLD SEA MAP");
+    expect(file.names.items["firered-leafgreen"][4]).toBe("OAK'S PARCEL");
+    expect(file.names.items["ruby-sapphire"][4] ?? null).toBeNull();
+    expect(file.names.items["ruby-sapphire"]).toEqual([
+      null,
+      "BALL",
+      "????????",
+      "TM01",
+    ]);
+    expect(JSON.parse(renderReference(file))).toEqual(file);
+    const again = buildReference([
+      source("pret/a", emerald, "emerald"),
+      source("pret/b", emeraldFiles, "ruby-sapphire"),
+      source("pret/c", firered, "firered-leafgreen"),
+    ]);
+    expect(renderReference(again)).toBe(renderReference(file));
+  });
+
+  test("a missing or doubled art version source fails", () => {
     expect(() =>
       buildReference([
         source("pret/a", emeraldFiles, "emerald"),

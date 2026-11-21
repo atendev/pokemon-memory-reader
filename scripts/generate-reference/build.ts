@@ -1,4 +1,4 @@
-import type { LocationKey } from "./definition";
+import type { ArtKey } from "./definition";
 import type { Extracted, MoveRow, SpeciesRow } from "./extract";
 
 export interface ReferenceFile {
@@ -18,12 +18,11 @@ export interface ReferenceFile {
   readonly names: {
     readonly species: ReadonlyArray<string | null>;
     readonly moves: ReadonlyArray<string | null>;
-    readonly items: ReadonlyArray<string | null>;
+    /** Item names by item ID, one table per art version. The games number and name items differently past the shared range. */
+    readonly items: Readonly<Record<ArtKey, ReadonlyArray<string | null>>>;
     readonly abilities: ReadonlyArray<string | null>;
     /** Map-section names by section ID, one table per art version (amendment 019 §4). */
-    readonly locations: Readonly<
-      Record<LocationKey, ReadonlyArray<string | null>>
-    >;
+    readonly locations: Readonly<Record<ArtKey, ReadonlyArray<string | null>>>;
   };
   /** Index is the species ID. `dex` is the National Dex number. */
   readonly speciesData: ReadonlyArray<
@@ -34,7 +33,7 @@ export interface ReferenceFile {
 
 export interface Source {
   readonly repo: string;
-  readonly locationKey: LocationKey;
+  readonly artKey: ArtKey;
   readonly commit: string;
   readonly files: readonly string[];
   readonly extracted: Extracted;
@@ -116,25 +115,27 @@ function table<T>(merged: Map<number, T>): Array<T | null> {
   return Array.from({ length: size }, (_, id) => merged.get(id) ?? null);
 }
 
-const LOCATION_KEYS: readonly LocationKey[] = [
+const ART_KEYS: readonly ArtKey[] = [
   "ruby-sapphire",
   "emerald",
   "firered-leafgreen",
 ];
 
-/** Location tables differ by game, so each repo keeps its own and none are merged. */
-function locationTables(
+/** These tables differ by game, so each repo keeps its own and none are merged. */
+function perArtVersion<T>(
+  what: string,
   sources: readonly Source[],
-): Record<LocationKey, Array<string | null>> {
-  const out = {} as Record<LocationKey, Array<string | null>>;
-  for (const key of LOCATION_KEYS) {
-    const owners = sources.filter((source) => source.locationKey === key);
+  pick: (extracted: Extracted) => Map<number, T>,
+): Record<ArtKey, Array<T | null>> {
+  const out = {} as Record<ArtKey, Array<T | null>>;
+  for (const key of ART_KEYS) {
+    const owners = sources.filter((source) => source.artKey === key);
     const [owner] = owners;
     if (owners.length !== 1 || !owner)
       throw new Error(
-        `location names: expected one source for ${key}, found ${owners.length}`,
+        `${what}: expected one source for ${key}, found ${owners.length}`,
       );
-    out[key] = table(owner.extracted.locations);
+    out[key] = table(pick(owner.extracted));
   }
   return out;
 }
@@ -168,9 +169,9 @@ export function buildReference(sources: readonly Source[]): ReferenceFile {
     names: {
       species: table(species),
       moves: table(agree("move name", sources, (x) => x.moves)),
-      items: table(agree("item name", sources, (x) => x.items)),
+      items: perArtVersion("item names", sources, (x) => x.items),
       abilities: table(agree("ability name", sources, (x) => x.abilities)),
-      locations: locationTables(sources),
+      locations: perArtVersion("location names", sources, (x) => x.locations),
     },
     speciesData: table(rows),
     moveData: table(
@@ -182,6 +183,16 @@ export function buildReference(sources: readonly Source[]): ReferenceFile {
       ),
     ),
   };
+}
+
+/** One table per art version, one line each. */
+function perKey(
+  tables: Readonly<Record<ArtKey, ReadonlyArray<string | null>>>,
+): string {
+  const lines = ART_KEYS.map(
+    (key) => `      ${JSON.stringify(key)}: ${JSON.stringify(tables[key])}`,
+  );
+  return `{\n${lines.join(",\n")}\n    }`;
 }
 
 /** One table row per line, so a regenerated file diffs by entry. */
@@ -201,14 +212,9 @@ export function renderReference(file: ReferenceFile): string {
     `  "names": {`,
     `    "species": ${JSON.stringify(names.species)},`,
     `    "moves": ${JSON.stringify(names.moves)},`,
-    `    "items": ${JSON.stringify(names.items)},`,
+    `    "items": ${perKey(names.items)},`,
     `    "abilities": ${JSON.stringify(names.abilities)},`,
-    `    "locations": {`,
-    ...LOCATION_KEYS.map(
-      (key, index) =>
-        `      ${JSON.stringify(key)}: ${JSON.stringify(names.locations[key])}${index < LOCATION_KEYS.length - 1 ? "," : ""}`,
-    ),
-    "    }",
+    `    "locations": ${perKey(names.locations)}`,
     "  },",
     `  "speciesData": ${rows(file.speciesData)},`,
     `  "moveData": ${rows(file.moveData)}`,

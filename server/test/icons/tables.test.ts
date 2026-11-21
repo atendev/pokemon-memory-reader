@@ -103,9 +103,14 @@ test("the generated item tables have the right shape", () => {
       expect(slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
     }
   }
-  // Ruby, Sapphire, Emerald, FireRed and LeafGreen share one generation-3 item index.
-  expect(ITEM_SLUGS["ruby-sapphire"]).toEqual(ITEM_SLUGS.emerald);
-  expect(ITEM_SLUGS["firered-leafgreen"]).toEqual(ITEM_SLUGS.emerald);
+  // The generation-3 games share one item index, but each lists only the IDs it names (the 101 ticket).
+  for (const version of ["ruby-sapphire", "firered-leafgreen"] as const)
+    for (const [id, slug] of Object.entries(ITEM_SLUGS[version]))
+      expect(ITEM_SLUGS.emerald[Number(id)]).toBe(slug);
+  expect(ITEM_SLUGS.emerald[376]).toBe("old-sea-map");
+  expect(ITEM_SLUGS["firered-leafgreen"][376]).toBeUndefined();
+  expect(ITEM_SLUGS["ruby-sapphire"][349]).toBeUndefined();
+  expect(ITEM_SLUGS["firered-leafgreen"][349]).toBe("parcel");
 });
 
 test("the coverage list is deterministic, unique and offline", () => {

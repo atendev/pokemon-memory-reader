@@ -31,7 +31,11 @@ export function gen3Context(
   return {
     profile,
     ...reference,
-    names: { ...reference.names, locations: reference.locations("emerald") },
+    names: {
+      ...reference.names,
+      items: reference.items("emerald"),
+      locations: reference.locations("emerald"),
+    },
   };
 }
 

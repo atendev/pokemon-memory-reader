@@ -25,7 +25,11 @@ if (!reference) throw new Error("Gen 3 English reference data missing");
 const ctx: DecodeContext<Profile<"gen3">> = {
   profile,
   ...reference,
-  names: { ...reference.names, locations: reference.locations("emerald") },
+  names: {
+    ...reference.names,
+    items: reference.items("emerald"),
+    locations: reference.locations("emerald"),
+  },
 };
 
 const TREECKO = 277;

@@ -44,7 +44,11 @@ const profileWith = (
 const ctxOf = (profile: Profile<"gen3">): DecodeContext<Profile<"gen3">> => ({
   profile,
   ...reference,
-  names: { ...reference.names, locations: reference.locations("emerald") },
+  names: {
+    ...reference.names,
+    items: reference.items("emerald"),
+    locations: reference.locations("emerald"),
+  },
 });
 
 /** One `struct Trainer`: class at +1, name at +4, items at +0x10. */
