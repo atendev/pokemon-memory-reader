@@ -1,8 +1,25 @@
 import { API_BASE_PATH } from "@pokemon-memory-reader/api/client";
 import type { ErrorBody, Topic } from "@pokemon-memory-reader/api/schemas";
-import { Hono } from "hono";
+import type { AboutBody } from "@pokemon-memory-reader/internal/about";
+import { type Handler, Hono } from "hono";
+import type { Config } from "../config";
+import { checkPatch, saveSettings } from "../config-save";
 import { type Log, silentLog } from "../log";
-import type { Resources, UnavailableCode } from "../loop/read-loop";
+import type {
+  RawReadResult,
+  Resources,
+  UnavailableCode,
+} from "../loop/read-loop";
+import { settingsBody } from "../settings-body";
+import {
+  debugGuard,
+  internalError,
+  isLoopbackPeer,
+  type Listening,
+  peerAddress,
+  writeGuard,
+} from "./guards";
+import { guardOf } from "./route-table";
 
 /** Fixed English text per code. It carries no stability promise, so clients branch on `code` (amendment 020 §1). */
 const MESSAGES: Readonly<Record<UnavailableCode, string>> = {
@@ -21,23 +38,45 @@ const SNAPSHOT_TOPICS: readonly Exclude<Topic, "status">[] = [
   "boxes",
 ];
 
+/** What `GET /about` and the notices route serve. */
+export interface AboutInfo extends Omit<AboutBody, "notices"> {
+  /** The generated notices text, or null in a dev build without it. */
+  readonly notices: string | null;
+}
+
 /**
- * The HTTP app (spec §7). Only the status, party, battle and boxes snapshots and the bridge
- * downloads are served. The SSE route, the remaining resources, `/openapi.json` and the settings routes join it
- * as their tickets land. The viewer is served by `Bun.serve` itself (see `startServer`).
+ * The HTTP app (spec §7). Only the status, party, battle and boxes snapshots, the bridge
+ * downloads and the internal routes below `/api/v2` are served. The SSE route, the remaining
+ * resources and `/openapi.json` join it as their tickets land. The viewer is served by `Bun.serve`
+ * itself (see `startServer`).
+ *
+ * The routes outside `/api/v2` register through `internalRoute`, which takes the guard class from
+ * the route table. A group registers only when its dependency is given: `/settings` with
+ * `config`, `/about` with `about`, and `/debug/read` with `rawRead`, which only `--debug` passes.
  */
 export function createApp(deps: {
   readonly resources: Resources;
   /** Bridge source by name, served at `/bridges/<name>.lua` (spec §4.11). Absent means no bridge routes. */
   readonly bridges?: Readonly<Record<string, string>>;
   readonly log?: Log;
+  readonly config?: Config;
+  readonly about?: AboutInfo;
+  readonly rawRead?: (
+    address: string,
+    length: number,
+  ) => Promise<RawReadResult>;
+  /** Where the server listens, for the Host checks. Defaults to the loopback host on port 7425. */
+  readonly listening?: () => Listening;
 }): Hono {
   const { resources } = deps;
   const log = deps.log ?? silentLog;
+  const listening =
+    deps.listening ?? (() => ({ host: "127.0.0.1", port: 7425 }));
   const app = new Hono();
 
   // Read-only, no auth, open to any origin, including hosted HTTPS overlays that reach localhost (spec §7.1).
-  app.use("*", async (c, next) => {
+  // Only `/api/v2` is cross-origin: no internal route sends this header or approves a preflight (amendment 021, item 3).
+  app.use(`${API_BASE_PATH}/*`, async (c, next) => {
     c.header("Access-Control-Allow-Origin", "*");
     if (c.req.method !== "OPTIONS") return next();
     c.header("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -81,10 +120,82 @@ export function createApp(deps: {
     return c.json(body, 503);
   });
 
+  /** Registers a route outside `/api/v2` under the guard class the route table gives it. */
+  const internalRoute = (
+    method: "GET" | "PUT" | "POST",
+    path: string,
+    handler: Handler,
+  ): void => {
+    const guard = guardOf(method, path);
+    const guards =
+      guard === "write"
+        ? [writeGuard(listening)]
+        : guard === "debug"
+          ? [debugGuard(listening)]
+          : [];
+    app.on(method, path, ...([...guards, handler] as [Handler]));
+  };
+
+  const { config } = deps;
+  if (config) {
+    internalRoute("GET", "/settings", async (c) =>
+      c.json(
+        await settingsBody(config, {
+          loopback: isLoopbackPeer(peerAddress(c)),
+        }),
+      ),
+    );
+    internalRoute("PUT", "/settings", async (c) => {
+      const raw: unknown = await c.req.json().catch(() => undefined);
+      const patch = checkPatch(raw);
+      if (!patch.ok) return internalError(c, "invalid_setting", patch.message);
+      const saved = await saveSettings(config, patch.patch);
+      if (!saved.ok) return internalError(c, saved.code, saved.message);
+      // A write guard passed, so the peer is loopback and may see the paths.
+      return c.json(await settingsBody(config, { loopback: true }));
+    });
+  }
+
+  const { about } = deps;
+  if (about) {
+    const { notices, ...info } = about;
+    internalRoute("GET", "/about", (c) =>
+      c.json({ ...info, notices: notices !== null } satisfies AboutBody),
+    );
+    internalRoute("GET", "/about/third-party-notices.txt", (c) =>
+      notices === null
+        ? c.text("Third-party notices ship with release builds.", 404)
+        : c.body(notices, 200, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "X-Content-Type-Options": "nosniff",
+          }),
+    );
+  }
+
+  const { rawRead } = deps;
+  if (rawRead) {
+    internalRoute("GET", "/debug/read", async (c) => {
+      const address = c.req.query("address");
+      const length = c.req.query("length");
+      if (address === undefined || address === "")
+        return internalError(c, "invalid_request", "address is required.");
+      if (length === undefined || !/^-?\d+$/.test(length))
+        return internalError(
+          c,
+          "invalid_request",
+          "length must be an integer.",
+        );
+      const result = await rawRead(address, Number(length));
+      return result.ok
+        ? c.json(result.value)
+        : internalError(c, result.code, result.message);
+    });
+  }
+
   // Looked up in the map and never joined to a path, so no request reaches the filesystem (spec §4.11).
   const bridges = new Map(Object.entries(deps.bridges ?? {}));
-  app.get("/bridges/:file", (c) => {
-    const file = c.req.param("file");
+  internalRoute("GET", "/bridges/:file", (c) => {
+    const file = c.req.param("file") ?? "";
     const source = file.endsWith(".lua")
       ? bridges.get(file.slice(0, -4))
       : undefined;

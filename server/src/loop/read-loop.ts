@@ -12,7 +12,16 @@ import {
   MAX_POLL_HZ,
   MIN_POLL_HZ,
 } from "@pokemon-memory-reader/internal/config";
-import type { Platform } from "@pokemon-memory-reader/internal/memory";
+import {
+  RAW_READ_MAX_LENGTH,
+  RAW_READ_MIN_LENGTH,
+  type RawReadBody,
+} from "@pokemon-memory-reader/internal/debug";
+import type { InternalErrorCode } from "@pokemon-memory-reader/internal/errors";
+import {
+  type Platform,
+  parseAddress,
+} from "@pokemon-memory-reader/internal/memory";
 import type { Adapter, ReadOutcome } from "../adapter/types";
 import type { Clock } from "../clock";
 import type { Bytes } from "../format/bytes";
@@ -81,6 +90,27 @@ export interface Resources {
   box(n: string): Promise<BoxSnapshot>;
 }
 
+/** The answer to a raw read (`GET /debug/read`, amendment 021 item 11). */
+export type RawReadResult =
+  | { readonly ok: true; readonly value: RawReadBody }
+  | {
+      readonly ok: false;
+      readonly code: Extract<
+        InternalErrorCode,
+        "invalid_request" | "not_connected" | "bad_read" | "read_busy"
+      >;
+      readonly message: string;
+    };
+
+/** Bus notation by platform (amendment 013), to tell an address that doesn't parse from one that isn't mapped. */
+const BUS_SYNTAX: Readonly<Record<Platform, RegExp>> = {
+  gba: /^0x[0-9a-fA-F]{1,8}$/,
+  gb: /^[0-9a-fA-F]{2}:[0-9a-fA-F]{4}$/,
+};
+
+const toHex = (bytes: Uint8Array): string =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
 export interface ReadLoopDeps {
   /**
    * The live adapter. The adapter selector (spec §3.3) slots in here and the loop reads
@@ -139,6 +169,11 @@ export type ReadLoop = Resources & {
   onChange(listener: (event: ChangeEvent) => void): () => void;
   /** A live `pollHz` change, clamped like the one at startup. */
   setPollHz(hz: number): void;
+  /**
+   * One raw read of live memory for `--debug`. It takes the loop's one request slot, so it runs
+   * after the tick's batch and before the next tick, and only one can be queued or running.
+   */
+  rawRead(address: string, length: number): Promise<RawReadResult>;
   close(): Promise<void>;
 };
 
@@ -689,6 +724,72 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     return found === undefined ? refuse("no_data") : { ok: true, value: found };
   }
 
+  let rawBusy = false;
+
+  async function rawRead(
+    address: string,
+    length: number,
+  ): Promise<RawReadResult> {
+    const fail = (
+      code: Extract<RawReadResult, { ok: false }>["code"],
+      message: string,
+    ): RawReadResult => ({ ok: false, code, message });
+    const game = adapter.state.game;
+    if (!session.usable || game === null || game.platform === "other")
+      return fail(
+        "not_connected",
+        "No emulator is connected with a game loaded.",
+      );
+    if (!BUS_SYNTAX[game.platform].test(address))
+      return fail(
+        "invalid_request",
+        game.platform === "gba"
+          ? "address must look like 0x02024284."
+          : "address must look like 01:D163.",
+      );
+    const parsed = parseAddress(game.platform, address);
+    if (!parsed.ok) return fail("bad_read", parsed.error);
+    if (
+      length < RAW_READ_MIN_LENGTH ||
+      length > RAW_READ_MAX_LENGTH ||
+      !Number.isInteger(length)
+    )
+      return fail(
+        "bad_read",
+        `length must be ${RAW_READ_MIN_LENGTH} to ${RAW_READ_MAX_LENGTH}.`,
+      );
+    if (rawBusy) return fail("read_busy", "Another raw read is still running.");
+    rawBusy = true;
+    const { domain, offset } = parsed.value;
+    try {
+      const outcome = await exclusive(() => read([{ domain, offset, length }]));
+      if (outcome.kind === "timeout")
+        return fail("not_connected", "The emulator didn't answer in time.");
+      if (outcome.kind === "failed")
+        return fail(
+          outcome.reason === "disconnected" || outcome.reason === "no_game"
+            ? "not_connected"
+            : "bad_read",
+          `The read failed (${outcome.reason}).`,
+        );
+      const bytes = outcome.slices[0];
+      if (bytes === null || bytes === undefined)
+        return fail(
+          "bad_read",
+          "That range is outside the memory the game exposes.",
+        );
+      return {
+        ok: true,
+        value: { address, domain, offset, length, hex: toHex(bytes) },
+      };
+    } catch (error) {
+      log.error("raw read failed", { error });
+      return fail("not_connected", "The read failed.");
+    } finally {
+      rawBusy = false;
+    }
+  }
+
   return {
     status,
     get,
@@ -697,6 +798,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    rawRead,
     /** Takes effect from the next tick (spec §9.4). */
     setPollHz(hz) {
       intervalMs = intervalFor(hz);

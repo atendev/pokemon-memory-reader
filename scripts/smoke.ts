@@ -111,7 +111,44 @@ async function checkServing(base: string, dataDir: string): Promise<void> {
       `${name}.lua is missing from the data folder`,
     );
   }
-  console.log("serving ok: status, viewer, bridges");
+
+  const about = await fetch(`${base}/about`);
+  check(about.status === 200, `GET /about returned ${about.status}`);
+  const info = (await about.json()) as {
+    version?: unknown;
+    lgpl?: { displayName?: unknown; copyright?: unknown }[];
+    notices?: unknown;
+  };
+  check(
+    info.version === expectedVersion,
+    `/about version was ${JSON.stringify(info.version)}, expected ${expectedVersion}`,
+  );
+  const lgpl = Array.isArray(info.lgpl) ? info.lgpl : [];
+  for (const name of ["JavaScriptCore", "tinycc"]) {
+    const found = lgpl.find(
+      (item) =>
+        typeof item.displayName === "string" &&
+        item.displayName.includes(name) &&
+        typeof item.copyright === "string" &&
+        item.copyright.length > 0,
+    );
+    check(found !== undefined, `/about has no ${name} copyright line`);
+  }
+  check(
+    info.notices === true,
+    "/about says notices are missing: run `bun run notices` before the compile",
+  );
+  const notices = await fetch(`${base}/about/third-party-notices.txt`);
+  check(
+    notices.status === 200,
+    `GET /about/third-party-notices.txt returned ${notices.status}`,
+  );
+  check(
+    notices.headers.get("content-type")?.startsWith("text/plain") === true,
+    "the notices file is not served as text/plain",
+  );
+  check((await notices.text()).length > 0, "the notices file came back empty");
+  console.log("serving ok: status, viewer, bridges, about, notices");
 }
 
 async function stop(

@@ -2,8 +2,9 @@ import { DEFAULT_HOST, DEFAULT_PORT } from "@pokemon-memory-reader/api/client";
 import { DEFAULT_POLL_HZ } from "@pokemon-memory-reader/internal/config";
 import type { HTMLBundle } from "bun";
 import type { Adapter } from "./adapter/types";
-import { createApp } from "./app/app";
+import { type AboutInfo, createApp } from "./app/app";
 import { type Clock, systemClock } from "./clock";
+import type { Config } from "./config";
 import { type Log, silentLog } from "./log";
 import { createReadLoop } from "./loop/read-loop";
 import type { ProfileRegistry } from "./profile/registry";
@@ -21,6 +22,12 @@ export interface ServerOptions {
   readonly bridges?: Readonly<Record<string, string>>;
   /** The viewer's HTML import. Served at `/`, with its scripts and styles. Without it `/` is a 404. */
   readonly viewer?: HTMLBundle;
+  /** The settings this run uses. Without it there are no `/settings` routes. */
+  readonly config?: Config;
+  /** Without it there are no `/about` routes. */
+  readonly about?: AboutInfo;
+  /** `--debug`: adds `/debug/read`. */
+  readonly debug?: boolean;
   readonly clock?: Clock;
   readonly log?: Log;
 }
@@ -43,7 +50,19 @@ export function startServer(options: ServerOptions): RunningServer {
     clock: options.clock ?? systemClock,
     log,
   });
-  const app = createApp({ resources: loop, bridges: options.bridges, log });
+  const app = createApp({
+    resources: loop,
+    bridges: options.bridges,
+    log,
+    config: options.config,
+    about: options.about,
+    ...(options.debug ? { rawRead: loop.rawRead } : {}),
+    // The Host checks read the address the server really listens on, which port 0 only picks once it is up.
+    listening: () => ({
+      host: server.hostname ?? options.host ?? DEFAULT_HOST,
+      port: server.port ?? options.port ?? DEFAULT_PORT,
+    }),
+  });
   const server = Bun.serve({
     hostname: options.host ?? DEFAULT_HOST,
     port: options.port ?? DEFAULT_PORT,
