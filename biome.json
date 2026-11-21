@@ -11,7 +11,8 @@
       "!.plan",
       "!.vscode",
       "!server/src/profile/builtin/index.ts",
-      "!server/src/profile/builtin/*.json"
+      "!server/src/profile/builtin/*.json",
+      "!docs/coverage.md"
     ]
   },
   "formatter": {
