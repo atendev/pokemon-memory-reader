@@ -18,6 +18,10 @@ import {
   type RawReadBody,
 } from "@pokemon-memory-reader/internal/debug";
 import type { InternalErrorCode } from "@pokemon-memory-reader/internal/errors";
+import type {
+  PickBody,
+  PickRequest,
+} from "@pokemon-memory-reader/internal/manual-picks-route";
 import {
   type Platform,
   parseAddress,
@@ -29,10 +33,17 @@ import { unreadableBoxes } from "../format/gen3/box";
 import type { Regions } from "../format/regions";
 import { type BoundGame, type BoundPart, bindGame } from "../format/registry";
 import type { BattleExtras, BattleProbe } from "../format/types";
-import { type Identification, identification } from "../identify/identify";
+import {
+  type AppliedPick,
+  type Identification,
+  identification,
+  type SessionPick,
+} from "../identify/identify";
+import { baseKey, type PickKey, romKeys } from "../identify/pick-keys";
+import { noPickStore, type PickStore } from "../identify/pick-store";
 import type { Log } from "../log";
 import type { ProfileRegistry } from "../profile/registry";
-import type { Profile } from "../profile/schema";
+import { type Profile, platformOf } from "../profile/schema";
 import {
   type BattleTick,
   type BattleTrackerState,
@@ -119,6 +130,33 @@ export type RawReadResult =
       readonly message: string;
     };
 
+/** The answer to a manual pick or forget (amendment 021, item 8). */
+export type PickResult =
+  | { readonly ok: true; readonly value: PickBody }
+  | {
+      readonly ok: false;
+      readonly code: Extract<
+        InternalErrorCode,
+        | "no_rom"
+        | "expansion_rom"
+        | "pick_not_allowed"
+        | "unknown_profile"
+        | "base_pick_not_allowed"
+      >;
+      readonly message: string;
+    };
+
+export type ForgetResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly code: Extract<
+        InternalErrorCode,
+        "no_rom" | "forget_not_allowed"
+      >;
+      readonly message: string;
+    };
+
 /** Bus notation by platform (amendment 013), to tell an address that doesn't parse from one that isn't mapped. */
 const BUS_SYNTAX: Readonly<Record<Platform, RegExp>> = {
   gba: /^0x[0-9a-fA-F]{1,8}$/,
@@ -140,6 +178,8 @@ export interface ReadLoopDeps {
   readonly log: Log;
   /** Turns the identified profile into decoders. Tests swap it for a game with pointer regions. */
   readonly bind?: (profile: Profile) => BoundGame;
+  /** The saved manual picks. Without it nothing is saved and a pick lasts for the session only. */
+  readonly picks?: PickStore;
 }
 
 type Decoded = Exclude<Topic, "status">;
@@ -190,6 +230,13 @@ export type ReadLoop = Resources &
      * after the tick's batch and before the next tick, and only one can be queued or running.
      */
     rawRead(address: string, length: number): Promise<RawReadResult>;
+    /**
+     * A manual pick for the ROM loaded now (amendment 021, item 8). The server derives the key. The
+     * pick and the re-identification it causes are one change, so no reader sees a half state.
+     */
+    pick(request: PickRequest): Promise<PickResult>;
+    /** Forgets the pick that applied to the ROM loaded now and re-identifies, as one change. */
+    forget(): Promise<ForgetResult>;
     close(): Promise<void>;
   };
 
@@ -215,6 +262,8 @@ const UNREADABLE = "unreadable";
 interface Session {
   readonly epoch: number;
   readonly usable: boolean;
+  /** A pick this ROM has for the session only, from a pick with no key or one the file didn't take. */
+  sessionPick: SessionPick | null;
   identification: Identification | null;
   identifying: Promise<void> | null;
   bound: BoundGame | null;
@@ -246,6 +295,7 @@ const sessionFor = (
 ): Session => ({
   epoch: adapter.state.gameEpoch,
   usable: isUsable(adapter.state),
+  sessionPick: null,
   identification: null,
   identifying: null,
   bound: null,
@@ -280,6 +330,7 @@ const sessionFor = (
 export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   const { adapter, registry, clock, log } = deps;
   const bind = deps.bind ?? bindGame;
+  const picks = deps.picks ?? noPickStore;
   const intervalFor = (hz: number) =>
     Math.max(1000 / normalizePollHz(hz, log), adapter.limits.minIntervalMs);
   let intervalMs = intervalFor(deps.pollHz);
@@ -359,21 +410,34 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     emit({ topic, value } as ChangeEvent);
   }
 
+  /** Runs identification for one session's game, with the saved picks and the session's own. */
+  function findIdentity(
+    current: Session,
+    game: NonNullable<Adapter["state"]["game"]>,
+    sessionPick: SessionPick | null = current.sessionPick,
+  ): Promise<Identification | null> {
+    return runJob(
+      identification(game, registry, {
+        store: picks,
+        session: sessionPick,
+        log,
+      }),
+      async (ranges) => {
+        const started = clock.now();
+        const outcome = await read(ranges);
+        note(current, started, outcome.kind);
+        return outcome;
+      },
+    );
+  }
+
   function identify(current: Session): Promise<void> {
     const game = adapter.state.game;
     if (current.identification !== null || !current.usable || game === null)
       return Promise.resolve();
     current.identifying ??= exclusive(async () => {
       if (current !== session) return;
-      const found = await runJob(
-        identification(game, registry),
-        async (ranges) => {
-          const started = clock.now();
-          const outcome = await read(ranges);
-          note(current, started, outcome.kind);
-          return outcome;
-        },
-      );
+      const found = await findIdentity(current, game);
       if (current !== session || found === null) return;
       current.identification = found;
       current.bound = found.kind === "identified" ? bind(found.profile) : null;
@@ -952,6 +1016,106 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     }
   }
 
+  /**
+   * Identifies again with `sessionPick` and replaces the session whole, so the pick and the
+   * re-identification are one change: a reader sees the old state, then the new one, and `status`
+   * is announced once. False when the game changed underneath.
+   */
+  async function reidentify(sessionPick: SessionPick | null): Promise<boolean> {
+    const old = session;
+    const game = adapter.state.game;
+    if (game === null || !old.usable) return false;
+    const found = await exclusive(async () =>
+      old === session ? findIdentity(old, game, sessionPick) : null,
+    );
+    if (old !== session || found === null) return false;
+    const fresh = newSession();
+    fresh.sessionPick = sessionPick;
+    fresh.identification = found;
+    fresh.bound = found.kind === "identified" ? bind(found.profile) : null;
+    session = fresh;
+    announceStatus();
+    return true;
+  }
+
+  /** The keys the ROM loaded now is saved under, from the signals the emulator and the header give. */
+  function keysOfLoaded(current: Session): readonly PickKey[] {
+    const game = adapter.state.game;
+    return game === null
+      ? []
+      : romKeys(game, current.identification?.header ?? null);
+  }
+
+  async function pick({ profileId, scope }: PickRequest): Promise<PickResult> {
+    const current = session;
+    const game = adapter.state.game;
+    const found = current.identification;
+    const fail = (
+      code: Extract<PickResult, { ok: false }>["code"],
+      message: string,
+    ): PickResult => ({ ok: false, code, message });
+    if (!current.usable || game === null || game.platform === "other")
+      return fail("no_rom", "No ROM is loaded.");
+    if (found === null)
+      return fail("pick_not_allowed", "The ROM is still being identified.");
+    const manualNow = found.kind === "identified" && found.match === "manual";
+    if (found.kind === "identified" && !manualNow)
+      return fail(
+        "pick_not_allowed",
+        "This ROM already matched a profile, and a pick can't override that.",
+      );
+    const profile = registry.get(profileId);
+    if (!profile || platformOf[profile.dataFormat] !== game.platform)
+      return fail("unknown_profile", "No loaded profile fits this ROM.");
+    if (scope === "base" && !(found.eligible ?? []).includes(profile))
+      return fail(
+        "base_pick_not_allowed",
+        "A base-game pick needs a hash, a matching header and a passing signature.",
+      );
+
+    // A changed pick replaces the one that applied, so the old entry can't win the lookup.
+    const applied: AppliedPick | undefined =
+      found.kind === "identified" ? found.pick : undefined;
+    if (applied) await picks.forget(applied.keys);
+    const keys =
+      scope === "base" ? [baseKey(profileId)] : keysOfLoaded(current);
+    const saved = keys.length > 0 && (await picks.save(keys, profileId));
+    const sessionPick = saved ? null : { profileId, scope };
+    if (!(await reidentify(sessionPick)))
+      return fail("no_rom", "The game changed before the pick applied.");
+    return {
+      ok: true,
+      value: {
+        key: keys[0] ?? null,
+        scope,
+        profileId,
+        saved,
+        reason: saved ? null : keys.length === 0 ? "no_key" : "write_failed",
+      },
+    };
+  }
+
+  async function forget(): Promise<ForgetResult> {
+    const current = session;
+    const found = current.identification;
+    if (!current.usable || adapter.state.game === null)
+      return { ok: false, code: "no_rom", message: "No ROM is loaded." };
+    if (found?.kind !== "identified" || found.match !== "manual")
+      return {
+        ok: false,
+        code: "forget_not_allowed",
+        message: "This ROM has no manual pick to forget.",
+      };
+    if (found.pick) await picks.forget(found.pick.keys);
+    if (!(await reidentify(null)))
+      return {
+        ok: false,
+        code: "no_rom",
+        message: "The game changed before the pick was forgotten.",
+      };
+    return { ok: true };
+  }
+
   return {
     status,
     get,
@@ -962,6 +1126,8 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     },
     retain,
     rawRead,
+    pick,
+    forget,
     /** Takes effect from the next tick (spec §9.4). */
     setPollHz(hz) {
       intervalMs = intervalFor(hz);

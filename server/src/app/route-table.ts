@@ -19,6 +19,8 @@ export const ROUTES: readonly RouteEntry[] = [
   { method: "GET", path: "/adapters", guard: "open" },
   { method: "POST", path: "/adapters/probe", guard: "write" },
   { method: "POST", path: "/adapters/switch", guard: "write" },
+  { method: "POST", path: "/manual-picks", guard: "write" },
+  { method: "POST", path: "/manual-picks/forget", guard: "write" },
   { method: "GET", path: "/about", guard: "open" },
   { method: "GET", path: "/about/third-party-notices.txt", guard: "open" },
   { method: "GET", path: "/debug/read", guard: "debug" },

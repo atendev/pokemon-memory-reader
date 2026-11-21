@@ -12,6 +12,7 @@ import { systemClock } from "./clock";
 import { logConfigIssues, readConfigFile, resolveConfig } from "./config";
 import { ensureDataFolder, installBridges, resolvePaths } from "./data-folder";
 import { createIconService } from "./icons/service";
+import { openPickStore } from "./identify/pick-store";
 import { consoleLog } from "./log";
 import { loadNotices } from "./notices";
 import { builtinProfiles } from "./profile/builtin";
@@ -136,6 +137,8 @@ async function run(
     log,
   });
 
+  const picks = await openPickStore(join(dataFolder, "manual-picks.json"), log);
+
   let server: ReturnType<typeof startServer>;
   try {
     server = startServer({
@@ -147,6 +150,7 @@ async function run(
       pollHz: settings.pollHz,
       bridges,
       icons,
+      picks,
       viewer,
       config,
       about: {
