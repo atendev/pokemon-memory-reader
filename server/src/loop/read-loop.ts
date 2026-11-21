@@ -1144,11 +1144,10 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     if (found.kind === "identified" && !manual) return body([]);
 
     const profiles = profilesFor(registry, game);
-    const run = (current.signatures ??= readSignatures(
-      profiles,
-      game,
-      (ranges) => exclusive(() => read(ranges)),
-    ));
+    const run =
+      current.signatures ??
+      readSignatures(profiles, game, (ranges) => exclusive(() => read(ranges)));
+    current.signatures = run;
     const signatures = await run.catch((error: unknown) => {
       if (current.signatures === run) current.signatures = null;
       throw error;
