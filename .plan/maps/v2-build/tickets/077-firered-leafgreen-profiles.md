@@ -17,3 +17,9 @@ Add the English pokefirered builds (FireRed and LeafGreen, 1.0 and 1.1) to `gene
 - The decoders for party, player, bag and boxes run on synthetic FireRed memory, and any build that can't be checked against a ROM is rated by the signature evidence ledger.
 - The generator holds back any revision whose chain is broken, as 037 does, without failing the run.
 - No ROM bytes are committed.
+
+Timing: wall 11m, active 11m, user 0s, wait 0s, blocked 0s | implement 8m, audit 2m (2 rounds) | tools 113 (4 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 157k | cost $3.59 sonnet-5-5 + $0.02 haiku-5-5
+
+## Resolution
+
+Four profiles (`firered-us-1.0`, `firered-us-1.1`, `leafgreen-us-1.0`, `leafgreen-us-1.1`) are generated from pokefirered symbols pinned at 3b401eaf and SHA-1 files at ce6406d8. All four pret SHA-1s have No-Intro entries, so none is held back. All are rated `unconfirmed`. `gTrainerBattleOpponent_B` is now optional, because pokefirered has no such symbol and bit 15 is `BATTLE_TYPE_GHOST` there. Tests cover the read loop on synthetic FireRed memory, the generator on real pokefirered excerpts, and the held-back path. The Claude council seat approved in round 2 (score 8). Details are in [the decision report](../assets/077-firered-leafgreen-profiles-report.md).
