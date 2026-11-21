@@ -9,9 +9,10 @@ import { type BoundGame, bindGame } from "../format/registry";
 import { type Identification, identification } from "../identify/identify";
 import type { Log } from "../log";
 import type { ProfileRegistry } from "../profile/registry";
+import type { Profile } from "../profile/schema";
 import { buildStatus, isUsable } from "../resource/status";
 import { runJob } from "./job";
-import { planBatch } from "./plan";
+import { PointerCache, readBatch } from "./plan";
 
 /** The 503 codes this server produces (spec §7.2, amendment 020). `not_found` is a 404 and belongs to boxes. */
 export type UnavailableCode =
@@ -46,6 +47,8 @@ export interface ReadLoopDeps {
   readonly pollHz: number;
   readonly clock: Clock;
   readonly log: Log;
+  /** Turns the identified profile into decoders. Tests swap it for a game with pointer regions. */
+  readonly bind?: (profile: Profile) => BoundGame;
 }
 
 type Decoded = Exclude<Topic, "status">;
@@ -79,6 +82,8 @@ interface Session {
   identification: Identification | null;
   identifying: Promise<void> | null;
   bound: BoundGame | null;
+  /** The pointer values the main batch last read (spec §8.5). Empty until the first cycle, so that cycle sends two requests. */
+  readonly pointers: PointerCache;
   values: { [T in Decoded]?: ResourceMap[T] };
   demandedAt: Map<Decoded, number>;
   cold: Map<Decoded, Promise<void>>;
@@ -90,6 +95,7 @@ const sessionFor = (adapter: Adapter): Session => ({
   identification: null,
   identifying: null,
   bound: null,
+  pointers: new PointerCache(),
   values: {},
   demandedAt: new Map(),
   cold: new Map(),
@@ -97,13 +103,14 @@ const sessionFor = (adapter: Adapter): Session => ({
 
 /**
  * Owns the one request slot (spec §4.5) and orders identification, the tick cycle and cold
- * reads through it. Change detection and `stalled` (spec §8.6), SSE demand (spec §8.2), box
- * requests (spec §8.3) and pointer-derived regions (spec §8.5) slot in here.
+ * reads through it. Change detection and `stalled` (spec §8.6), SSE demand (spec §8.2) and box
+ * requests (spec §8.3) slot in here.
  */
 export function createReadLoop(
   deps: ReadLoopDeps,
 ): Resources & { close(): Promise<void> } {
   const { adapter, registry, clock, log } = deps;
+  const bind = deps.bind ?? bindGame;
   const pollHz = normalizePollHz(deps.pollHz, log);
   const intervalMs = Math.max(1000 / pollHz, adapter.limits.minIntervalMs);
 
@@ -131,8 +138,7 @@ export function createReadLoop(
       const found = await runJob(identification(game, registry), read);
       if (current !== session || found === null) return;
       current.identification = found;
-      current.bound =
-        found.kind === "identified" ? bindGame(found.profile) : null;
+      current.bound = found.kind === "identified" ? bind(found.profile) : null;
       if (found.kind === "unidentified")
         log.info(`ROM not identified (${found.reason})`);
     })
@@ -153,18 +159,29 @@ export function createReadLoop(
         return part ? [{ topic, part }] : [];
       });
       if (parts.length === 0) return;
-      const plan = planBatch(
-        parts.map(({ part }) => part.regions),
-        adapter.limits.mergeGap,
+      const game = adapter.state.game;
+      if (game === null || game.platform === "other") return;
+      const result = await runJob(
+        readBatch(
+          parts.map(({ part }) => part.regions),
+          {
+            mergeGap: adapter.limits.mergeGap,
+            platform: game.platform,
+            pointers: current.pointers,
+          },
+        ),
+        read,
       );
-      const outcome = await read(plan.ranges);
       // A timeout or a failed read keeps the last value. `stalled` counts the timeouts here.
-      if (current !== session || outcome.kind !== "data") return;
+      if (current !== session || result.kind !== "sample") return;
       for (const { topic, part } of parts) {
-        const slices = plan.slices(part.regions, outcome.slices);
-        if (slices === null) continue;
+        const sliced = result.sample.slices(part.regions);
+        if (!sliced.ok) {
+          log.debug(`${topic} skipped this cycle: ${sliced.reason}`);
+          continue;
+        }
         try {
-          const decoded = part.decode(slices);
+          const decoded = part.decode(sliced.slices);
           if (decoded.ok) current.values[topic] = decoded.value as never;
           else log.debug(`${topic} did not decode: ${decoded.reason}`);
         } catch (error) {
