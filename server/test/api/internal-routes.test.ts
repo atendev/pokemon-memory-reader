@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { aboutBody } from "@pokemon-memory-reader/internal/about";
@@ -22,7 +29,7 @@ import { type AboutInfo, createApp } from "../../src/app/app";
 import { ROUTES } from "../../src/app/route-table";
 import { readConfigFile, resolveConfig } from "../../src/config";
 import { resolvePaths } from "../../src/data-folder";
-import { createIconService } from "../../src/icons/service";
+import { createIconService, type IconService } from "../../src/icons/service";
 import { silentLog } from "../../src/log";
 import type { RawReadResult, Resources } from "../../src/loop/read-loop";
 import { builtinProfiles } from "../../src/profile/builtin/index";
@@ -253,6 +260,7 @@ test("the route table gives each route the expected class", () => {
     ROUTES.find((r) => r.method === method && r.path === path)?.guard;
   expect(classOf("GET", "/settings")).toBe("open");
   expect(classOf("PUT", "/settings")).toBe("write");
+  expect(classOf("POST", "/settings/icon-cache/clear")).toBe("write");
   expect(classOf("GET", "/manual-picks")).toBe("open");
   expect(classOf("POST", "/manual-picks")).toBe("write");
   expect(classOf("POST", "/manual-picks/forget")).toBe("write");
@@ -930,6 +938,90 @@ test("with mode off the route is a 404 even when the pack has the file", async (
 test("without an icon service there is no icons route", async () => {
   const app = createApp({ resources: idle });
   expect((await app.request(ICON)).status).toBe(404);
+});
+
+const CLEAR = "/settings/icon-cache/clear";
+const clearPost = (headers: Record<string, string> = {}) => ({
+  ...put({}, headers),
+  method: "POST",
+});
+
+test("POST /settings/icon-cache/clear empties the cache and the next request fetches again", async () => {
+  let fetches = 0;
+  const p = paths();
+  const service = createIconService({
+    paths: { iconsFolder: p.iconsFolder, iconCacheFolder: p.iconCacheFolder },
+    registry: iconRegistry,
+    settings: () => ({ mode: "online", baseUrl: null }),
+    fetch: (() => {
+      fetches += 1;
+      return Promise.resolve(new Response(PNG));
+    }) as unknown as typeof fetch,
+  });
+  const app = createApp({
+    resources: idle,
+    icons: service,
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  expect((await app.request(ICON, {}, lan)).status).toBe(200);
+  expect((await app.request(ICON, {}, lan)).status).toBe(200);
+  expect(fetches).toBe(1);
+  expect(await readdir(p.iconCacheFolder)).not.toHaveLength(0);
+
+  const cleared = await app.request(CLEAR, clearPost(), loopback);
+  expect(cleared.status).toBe(200);
+  expect(await cleared.json()).toEqual({});
+  expect(await readdir(p.iconCacheFolder)).toHaveLength(0);
+
+  expect((await app.request(ICON, {}, lan)).status).toBe(200);
+  expect(fetches).toBe(2);
+});
+
+test("POST /settings/icon-cache/clear on an empty cache is a 200", async () => {
+  const app = await everything();
+  expect((await app.request(CLEAR, clearPost(), loopback)).status).toBe(200);
+});
+
+test("a LAN peer, a bad Host, a foreign Origin and a non-JSON body are all refused the way PUT /settings is", async () => {
+  const app = await everything();
+  const cases: [Parameters<typeof app.request>[2], RequestInit][] = [
+    [lan, clearPost()],
+    [loopback, clearPost({ Host: "evil.example:7425" })],
+    [loopback, clearPost({ Origin: "http://evil.example" })],
+    [loopback, clearPost({ "Content-Type": "text/plain" })],
+  ];
+  for (const [peer, init] of cases) {
+    const response = await app.request(CLEAR, init, peer);
+    expect(response.status).toBe(403);
+    expect(internalErrorBody.parse(await response.json()).error.code).toBe(
+      "write_forbidden",
+    );
+  }
+});
+
+test("a clear that fails on I/O is save_failed", async () => {
+  const failing: IconService = {
+    ...iconService("local"),
+    clearCache: () => Promise.reject(new Error("EACCES")),
+  };
+  const app = createApp({
+    resources: idle,
+    icons: failing,
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  const response = await app.request(CLEAR, clearPost(), loopback);
+  expect(response.status).toBe(500);
+  expect(internalErrorBody.parse(await response.json()).error.code).toBe(
+    "save_failed",
+  );
+});
+
+test("without an icon service there is no clear route", async () => {
+  const app = createApp({
+    resources: idle,
+    listening: () => ({ host: "127.0.0.1", port: PORT }),
+  });
+  expect((await app.request(CLEAR, clearPost(), loopback)).status).toBe(404);
 });
 
 test("GET /adapters answers the last known list, and a bad switch body is invalid_request", async () => {
