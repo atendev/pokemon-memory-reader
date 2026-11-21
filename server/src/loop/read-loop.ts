@@ -1144,12 +1144,18 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     if (found.kind === "identified" && !manual) return body([]);
 
     const profiles = profilesFor(registry, game);
-    current.signatures ??= readSignatures(profiles, game, (ranges) =>
-      exclusive(() => read(ranges)),
-    );
-    const signatures = await current.signatures;
+    const run = (current.signatures ??= readSignatures(
+      profiles,
+      game,
+      (ranges) => exclusive(() => read(ranges)),
+    ));
+    const signatures = await run.catch((error: unknown) => {
+      if (current.signatures === run) current.signatures = null;
+      throw error;
+    });
     // A read that gave nothing is tried again by the next call.
-    if (!signatures.complete) current.signatures = null;
+    if (!signatures.complete && current.signatures === run)
+      current.signatures = null;
     if (current !== session) return pickList();
     return body(
       candidateRows(profiles, game, found.header, registry, signatures.results),

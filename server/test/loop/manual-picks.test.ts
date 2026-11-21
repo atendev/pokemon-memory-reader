@@ -401,3 +401,18 @@ describe("the candidates list", () => {
     });
   });
 });
+
+describe("the candidates list after a failed read", () => {
+  test("a read that throws fails that call and the next one reads again", async () => {
+    const { loop, adapter } = await setup(game());
+    const real = adapter.read.bind(adapter);
+    let throwing = true;
+    adapter.read = (ranges) =>
+      throwing ? Promise.reject(new Error("boom")) : real(ranges);
+    await expect(loop.pickList()).rejects.toThrow("boom");
+    throwing = false;
+    expect((await loop.pickList()).candidates[0]).toMatchObject({
+      signature: "match",
+    });
+  });
+});
