@@ -12,6 +12,7 @@ import { ManualClock } from "../bridge/manual-clock";
 import { endBattle, writeBattle } from "../gen3/battle-encode";
 import { emeraldMemory, TREECKO } from "../support/emerald-memory";
 import { CONNECTED, ScriptedAdapter } from "../support/scripted-adapter";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
@@ -33,6 +34,7 @@ function setup(
   const adapter = new ScriptedAdapter();
   const clock = new ManualClock();
   const loop = createReadLoop({
+    supported: ALL_SUPPORTED,
     adapter,
     registry,
     pollHz: options.pollHz ?? 20,
@@ -322,7 +324,7 @@ describe("stalled", () => {
 
   test("box timeouts never count", async () => {
     const { adapter, clock, loop } = setup({
-      bind: (profile) => ({ boxes: bindGame(profile).boxes }),
+      bind: (profile) => ({ boxes: bindGame(profile, ALL_SUPPORTED).boxes }),
     });
     await flush();
     adapter.respond = () => TIMEOUT;

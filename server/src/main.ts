@@ -12,6 +12,7 @@ import { type Command, parseArgs, USAGE } from "./cli";
 import { systemClock } from "./clock";
 import { logConfigIssues, readConfigFile, resolveConfig } from "./config";
 import { ensureDataFolder, installBridges, resolvePaths } from "./data-folder";
+import { assumeSupported } from "./format/support";
 import { createIconService } from "./icons/service";
 import { openPickStore } from "./identify/pick-store";
 import { consoleLog } from "./log";
@@ -162,6 +163,15 @@ async function run(
     onNewer: (latest) =>
       console.log(`Update available: ${latest.version} ${latest.url}`),
   });
+  const support = assumeSupported(process.env.PMR_ASSUME_SUPPORTED);
+  if (support.unknown.length > 0)
+    log.warn(
+      `PMR_ASSUME_SUPPORTED names no data format: ${support.unknown.join(", ")}`,
+    );
+  if (support.assumed.length > 0)
+    log.warn(
+      `serving unsupported data formats (PMR_ASSUME_SUPPORTED): ${support.assumed.join(", ")}`,
+    );
   const picks = await openPickStore(join(dataFolder, "manual-picks.json"), log);
 
   let server: ReturnType<typeof startServer>;
@@ -176,6 +186,7 @@ async function run(
       bridges,
       icons,
       picks,
+      supported: support.flags,
       viewer,
       config,
       update,

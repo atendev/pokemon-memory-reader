@@ -6,6 +6,7 @@ import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
 import { emeraldMemory, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 import { FakeRetroArch, gbaDescriptors } from "./fake-retroarch";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
@@ -37,6 +38,7 @@ describe("party through the fake RetroArch", () => {
     closers.push(() => adapter.close());
     adapter.setMode("live");
     const loop = createReadLoop({
+      supported: ALL_SUPPORTED,
       adapter,
       registry,
       pollHz: 20,

@@ -30,6 +30,7 @@ import {
   storageBytes,
 } from "../gen3/encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const builds = [ruby10, ruby11, ruby12, sapphire10, sapphire11, sapphire12];
 const { registry, problems } = loadProfiles({ builtin: builds, user: [] });
@@ -177,6 +178,7 @@ afterEach(async () => {
 async function start(build: Build) {
   const clock = new ManualClock();
   const loop = createReadLoop({
+    supported: ALL_SUPPORTED,
     adapter: new RubyAdapter(build),
     registry,
     pollHz: 20,

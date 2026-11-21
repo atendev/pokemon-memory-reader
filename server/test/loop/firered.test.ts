@@ -28,6 +28,7 @@ import {
   storageBytes,
 } from "../gen3/encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const builds = [firered10, firered11, leafgreen10, leafgreen11];
 const { registry, problems } = loadProfiles({ builtin: builds, user: [] });
@@ -187,6 +188,7 @@ afterEach(async () => {
 async function start(build: Build) {
   const clock = new ManualClock();
   const loop = createReadLoop({
+    supported: ALL_SUPPORTED,
     adapter: new FireRedAdapter(build),
     registry,
     pollHz: 20,

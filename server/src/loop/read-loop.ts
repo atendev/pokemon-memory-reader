@@ -33,6 +33,7 @@ import type { Bytes } from "../format/bytes";
 import { unreadableBoxes } from "../format/gen3/box";
 import type { Regions } from "../format/regions";
 import { type BoundGame, type BoundPart, bindGame } from "../format/registry";
+import type { SupportFlags } from "../format/support";
 import type { BattleExtras, BattleProbe } from "../format/types";
 import {
   candidateRows,
@@ -185,6 +186,8 @@ export interface ReadLoopDeps {
   readonly log: Log;
   /** Turns the identified profile into decoders. Tests swap it for a game with pointer regions. */
   readonly bind?: (profile: Profile) => BoundGame;
+  /** The `supported` flag per data format (spec §6.1). Defaults to the committed flags. Ignored when `bind` is given. */
+  readonly supported?: SupportFlags;
   /** The saved manual picks. Without it nothing is saved and a pick lasts for the session only. */
   readonly picks?: PickStore;
 }
@@ -345,7 +348,8 @@ const sessionFor = (
  */
 export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
   const { adapter, registry, clock, log } = deps;
-  const bind = deps.bind ?? bindGame;
+  const bind =
+    deps.bind ?? ((profile: Profile) => bindGame(profile, deps.supported));
   const picks = deps.picks ?? noPickStore;
   const intervalFor = (hz: number) =>
     Math.max(1000 / normalizePollHz(hz, log), adapter.limits.minIntervalMs);
@@ -896,6 +900,7 @@ export function createReadLoop(deps: ReadLoopDeps): ReadLoop {
     if (adapter.state.game === null || current.identification === null)
       return "no_game";
     if (current.identification.kind === "unidentified") return "unidentified";
+    if (current.bound?.supported === false) return "unsupported";
     if (current.bound?.[topic] === undefined) return "unsupported";
     return null;
   }

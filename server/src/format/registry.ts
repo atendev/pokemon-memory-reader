@@ -11,6 +11,7 @@ import type { Bytes } from "./bytes";
 import { gen3Decoder } from "./gen3";
 import { STORAGE } from "./gen3/structs";
 import type { Regions, Slices } from "./regions";
+import { isSupported, SUPPORTED, type SupportFlags } from "./support";
 import type {
   BattleExtras,
   BattleProbe,
@@ -56,6 +57,12 @@ export interface BoundBoxes extends BoundPart<Boxes> {
 
 /** What the read loop reads and decodes for the loaded game. A part left out makes its resource 503 `unsupported` (spec §7.2). */
 export interface BoundGame {
+  /**
+   * Whether the profile's data format is `supported` (spec §6.1). False refuses every resource with
+   * 503 `unsupported`, even one the format has a decoder for. `bindGame` always sets it. A binding
+   * without it is judged by its parts alone.
+   */
+  readonly supported?: boolean;
   readonly party?: BoundPart<Party>;
   readonly player?: BoundPart<Player>;
   readonly bag?: BoundPart<Bag>;
@@ -142,12 +149,16 @@ export function declaredRegions(profile: Profile): {
 
 /**
  * Binds the profile's data format to its decoder and the reference data for its language.
- * A format with no decoder, or no reference data, binds no parts. The `supported` flag and its
- * coverage guard (spec §6.1, §12.8) join this lookup when the fixtures land.
+ * A format whose `supported` flag is false binds no parts. So does one with no decoder or no
+ * reference data. The coverage guard (spec §12.8) is what lets a flag turn true.
  */
-export function bindGame(profile: Profile): BoundGame {
+export function bindGame(
+  profile: Profile,
+  support: SupportFlags = SUPPORTED,
+): BoundGame {
+  if (!isSupported(support, profile.dataFormat)) return { supported: false };
   const reference = referenceData(profile.dataFormat, profile.language);
-  if (reference === null) return {};
+  if (reference === null) return { supported: true };
   switch (profile.dataFormat) {
     case "gen3": {
       const ctx: DecodeContext<Profile<"gen3">> = {
@@ -161,6 +172,7 @@ export function bindGame(profile: Profile): BoundGame {
       const { party, player, bag, battle, boxes } = gen3Decoder;
       const trainers = battle?.trainers;
       return {
+        supported: true,
         ...(party && { party: bind(party, profile, ctx) }),
         ...(player && { player: bind(player, profile, ctx) }),
         ...(bag && { bag: bind(bag, profile, ctx) }),
@@ -186,6 +198,6 @@ export function bindGame(profile: Profile): BoundGame {
       };
     }
     default:
-      return {};
+      return { supported: true };
   }
 }

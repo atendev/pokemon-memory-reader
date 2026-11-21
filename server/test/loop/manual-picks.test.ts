@@ -16,6 +16,7 @@ import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
@@ -87,6 +88,7 @@ async function setup(first: GameInfo | null, picks?: PickStore, revision = 0) {
   adapter.memory.rom[0xbc] = revision;
   const store = picks ?? (await openPickStore(file, silentLog));
   const loop = createReadLoop({
+    supported: ALL_SUPPORTED,
     adapter,
     registry,
     pollHz: 20,
