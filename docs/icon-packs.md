@@ -43,10 +43,16 @@ icons/
 - **Official profile:** the normal pack path, then the cache, then upstream.
 - **Hack profile:** `hack/{profileId}/...` first. For vanilla Gen 3 species IDs (1-251 and 277-411) and items the program maps, it then goes on to the normal pack path, the cache and upstream. Any other ID stops after the hack folder and never reaches upstream.
 
-Gen 1 and Gen 2 species have no dex table until their reference data ships, so they answer `404` and the pack is not consulted for them. Items answer `404` until the item ID tables ship, except through a hack profile's `hack/{profileId}/item/{itemId}.png`.
+A species or item ID the program has no table entry for answers `404`, and the pack is not consulted for it, except through a hack profile's own `hack/{profileId}/` folder. Gen 1 species IDs follow the cartridge's own order, so they go through a dex table. Items resolve only when PokeAPI has art for them.
 
 ## Cache and network
 
 Downloaded files live in `<data folder>/icon-cache/<sourceId>/`. They never expire. At startup the program deletes every cache folder except the one for the source in use. Set `icons.baseUrl` to point at a mirror of the PokeAPI/sprites tree.
 
 An upstream `404`, or any other `4xx` except `429`, is remembered for the run. A `429`, a `5xx` or a network error pauses that source for 60 seconds.
+
+## Maintaining the ID tables
+
+`server/src/icons/data/icon-maps.json` holds the Gen 1 species-to-dex table, the Gen 2 one and the item ID to PokeAPI slug table for each art version. It is generated and checked in. `bun run generate:icon-maps` rebuilds it from PokeAPI's CSV data at the commit pinned in `scripts/generate-icon-maps/main.ts`, and a rerun gives the same file. Items with no art at the pinned sprites SHA are left out.
+
+`bun run check-icon-map` sends a HEAD request for every upstream path the tables can reach and lists the ones that don't resolve. It uses the network and runs by hand, never in CI. Run it whenever the sprites SHA in `server/src/icons/source.ts` changes. It takes a few minutes. Pass a mirror URL as its argument to check a mirror.
