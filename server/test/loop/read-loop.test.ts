@@ -8,6 +8,7 @@ import type {
 } from "../../src/adapter/types";
 import { createApp } from "../../src/app/app";
 import type { BoundGame } from "../../src/format/registry";
+import { SUPPORTED, type SupportFlags } from "../../src/format/support";
 import { ok } from "../../src/format/types";
 import { silentLog } from "../../src/log";
 import { createReadLoop, normalizePollHz } from "../../src/loop/read-loop";
@@ -23,6 +24,7 @@ import {
 import { encodeText } from "../gen3/encode";
 import { writePlayer } from "../gen3/player-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
@@ -104,10 +106,12 @@ function setup(
   pollHz = 20,
   bind?: (profile: unknown) => BoundGame,
   profiles = registry,
+  supported: SupportFlags = ALL_SUPPORTED,
 ) {
   const adapter = new MemoryAdapter();
   const clock = new ManualClock();
   const loop = createReadLoop({
+    supported,
     adapter,
     registry: profiles,
     pollHz,
@@ -695,6 +699,7 @@ describe("pollHz", () => {
     const warnings: string[] = [];
     const adapter = new MemoryAdapter();
     const loop = createReadLoop({
+      supported: ALL_SUPPORTED,
       adapter,
       registry,
       pollHz: 500,
@@ -878,5 +883,57 @@ describe("the bag resource in the loop", () => {
     );
     expect(response.status).toBe(200);
     expect(Bag.parse(await response.json()).pockets).toHaveLength(5);
+  });
+});
+
+describe("the support gate", () => {
+  test("an unsupported data format loads, then every resource answers 503 unsupported with the game still reported", async () => {
+    const { loop } = setup(20, undefined, registry, {
+      ...ALL_SUPPORTED,
+      gen3: false,
+    });
+    await flush();
+    const status = loop.status();
+    expect(status.state).toBe("game");
+    expect(status.game?.dataFormat).toBe("gen3");
+    for (const topic of ["party", "player", "bag", "boxes", "battle"] as const)
+      expect(await loop.get(topic)).toMatchObject({
+        ok: false,
+        code: "unsupported",
+      });
+    const response = await createApp({ resources: loop }).request(
+      "/api/v2/party",
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      error: { code: "unsupported" },
+      status: { state: "game", game: { dataFormat: "gen3" } },
+    });
+  });
+
+  test("the committed flags ship every data format unsupported", async () => {
+    expect(Object.values(SUPPORTED)).toEqual([false, false, false, false]);
+    const { adapter, loop } = setup(20, undefined, registry, SUPPORTED);
+    await flush();
+    expect(adapter.partyReads).toBe(0);
+    expect(await loop.get("party")).toMatchObject({
+      ok: false,
+      code: "unsupported",
+    });
+  });
+
+  test("a supported format serves what its decoders cover and refuses what they don't", async () => {
+    const noBoxes = loadProfiles({
+      builtin: [{ ...emerald, features: { boxes: false } }],
+      user: [],
+    }).registry;
+    const { loop } = setup(20, undefined, noBoxes);
+    await flush();
+    const party = await loop.get("party");
+    expect(party.ok && party.value.pokemon).toHaveLength(1);
+    expect(await loop.get("boxes")).toMatchObject({
+      ok: false,
+      code: "unsupported",
+    });
   });
 });

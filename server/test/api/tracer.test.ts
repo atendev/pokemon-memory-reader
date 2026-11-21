@@ -15,6 +15,7 @@ import { referenceData } from "../../src/reference";
 import { type RunningServer, startServer } from "../../src/server";
 import { FakeBridge, GBA_GAME } from "../bridge/fake-bridge";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
@@ -57,6 +58,7 @@ function setup(): {
   );
   adapter.setMode("live");
   const server = startServer({
+    supported: ALL_SUPPORTED,
     adapter,
     registry,
     port: 0,

@@ -7,6 +7,7 @@ import { type AboutInfo, createApp } from "./app/app";
 import { createStreamHub } from "./app/stream";
 import { type Clock, systemClock } from "./clock";
 import type { Config } from "./config";
+import type { SupportFlags } from "./format/support";
 import type { IconService } from "./icons/service";
 import type { PickStore } from "./identify/pick-store";
 import { type Log, silentLog } from "./log";
@@ -40,6 +41,8 @@ export interface ServerOptions {
   readonly icons?: IconService;
   /** The saved manual picks. Without it picks last for the session only. */
   readonly picks?: PickStore;
+  /** The `supported` flag per data format. Defaults to the committed flags (spec §6.1). */
+  readonly supported?: SupportFlags;
   /** `--debug`: adds `/debug/read`. */
   readonly debug?: boolean;
   readonly clock?: Clock;
@@ -64,6 +67,7 @@ export function startServer(options: ServerOptions): RunningServer {
     clock: options.clock ?? systemClock,
     log,
     picks: options.picks,
+    supported: options.supported,
   });
   const stream = createStreamHub({
     source: loop,

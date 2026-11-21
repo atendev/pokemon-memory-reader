@@ -4,6 +4,7 @@ import { bindGame } from "../../src/format/registry";
 import emerald from "../../src/profile/builtin/emerald-us-1.0.json";
 import { loadProfiles } from "../../src/profile/registry";
 import { referenceData } from "../../src/reference";
+import { ALL_SUPPORTED } from "../support/supported";
 import { encodeMon, partyBytes } from "./encode";
 
 const loaded = loadProfiles({ builtin: [emerald], user: [] });
@@ -17,7 +18,7 @@ const PETALBURG_CITY = 7;
 const PALLET_TOWN = 88;
 
 const metLocationName = (artVersion: typeof profile.artVersion, id: number) => {
-  const part = bindGame({ ...profile, artVersion }).party;
+  const part = bindGame({ ...profile, artVersion }, ALL_SUPPORTED).party;
   if (!part) throw new Error("no party decoder bound");
   const result = part.decode({
     count: new Bytes(Uint8Array.of(1)),

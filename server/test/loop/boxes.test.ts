@@ -15,6 +15,7 @@ import { loadProfiles } from "../../src/profile/registry";
 import { ManualClock } from "../bridge/manual-clock";
 import { encodeMon, type MonSpec, storageBytes } from "../gen3/encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
+import { ALL_SUPPORTED } from "../support/supported";
 
 const { registry } = loadProfiles({ builtin: [emerald], user: [] });
 
@@ -137,6 +138,7 @@ function setup(log?: Log) {
   );
   const clock = new ManualClock();
   const loop = createReadLoop({
+    supported: ALL_SUPPORTED,
     adapter,
     registry,
     pollHz: 20,

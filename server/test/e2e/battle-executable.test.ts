@@ -142,7 +142,12 @@ suite("the compiled executable on the fake bridge", () => {
         "--data-dir",
         dataDir,
       ],
-      { stdout: "ignore", stderr: "ignore" },
+      {
+        stdout: "ignore",
+        stderr: "ignore",
+        // The Gen 3 `supported` flag is false until the fixtures land (spec §12.8).
+        env: { ...process.env, PMR_ASSUME_SUPPORTED: "gen3" },
+      },
     );
   });
 
