@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { Bag, Player, Pocket } from "@pokemon-memory-reader/api/schemas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Screen } from "./App";
+import { IconsProvider } from "./Art";
+import { IconFailures, type IconSettings } from "./icons";
 import { TrainerScreen } from "./TrainerScreen";
 import { status } from "./testing";
 import type { Loaded } from "./useResource";
@@ -223,6 +225,58 @@ describe("loading and failure", () => {
 
   test("a bag with no pockets says so", () => {
     expect(render(ready(player()), ready(bag()))).toContain("no bag pockets");
+  });
+});
+
+describe("item icons", () => {
+  const emerald: IconSettings = {
+    profileId: "emerald-us-1.0",
+    generation: 3,
+    mode: "online",
+  };
+  const withIcons = (failures = new IconFailures()) =>
+    renderToStaticMarkup(
+      <IconsProvider settings={emerald} failures={failures}>
+        <TrainerScreen
+          player={LOADING}
+          bag={ready(
+            bag(
+              pocket("items", 30, [
+                { item: { id: 13, name: "Potion" }, quantity: 5 },
+                { item: { id: 999, name: null }, quantity: 1 },
+              ]),
+            ),
+          )}
+        />
+      </IconsProvider>,
+    );
+
+  test("an item shows its icon beside its name, with the name still text", () => {
+    expect(withIcons()).toMatch(/<img[^>]*item\/13[^>]*\/>Potion/);
+  });
+
+  test("an item whose icon is missing falls back to the plain row", () => {
+    const failures = new IconFailures();
+    failures.fail("/icons/emerald-us-1.0/item/13");
+    const html = withIcons(failures);
+    expect(html).not.toContain("item/13");
+    expect(html).toContain("Potion");
+    expect(html).toContain("×5");
+  });
+
+  test("an unknown item shows #<id> and asks for its icon like any other", () => {
+    expect(withIcons()).toMatch(/<img[^>]*item\/999[^>]*\/>#999/);
+    const failures = new IconFailures();
+    failures.fail("/icons/emerald-us-1.0/item/999");
+    const html = withIcons(failures);
+    expect(html).toContain("#999");
+    expect(html).not.toContain("item/999");
+  });
+
+  test("without icon settings no image is requested", () => {
+    expect(
+      render(LOADING, ready(bag(pocket("items", 30, stacks(2))))),
+    ).not.toContain("<img");
   });
 });
 
