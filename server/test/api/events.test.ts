@@ -186,5 +186,23 @@ describe("GET /api/v2/events against a running server", () => {
     expect(released).toHaveLength(0);
     clock.advance(1);
     expect(released).toEqual([["bag"]]);
+
+    // Once the client reads again, the response ends with the chunked terminator: a normal end of stream.
+    let tail = "";
+    const ended = new Promise<void>((resolve) => {
+      socket.on("data", (chunk) => {
+        tail = (tail + chunk.toString("latin1")).slice(-16);
+        if (tail.endsWith("0\r\n\r\n")) resolve();
+      });
+      socket.on("end", resolve);
+    });
+    socket.resume();
+    await Promise.race([
+      ended,
+      new Promise((_, fail) =>
+        setTimeout(() => fail(new Error("the stream never ended")), 5000),
+      ),
+    ]);
+    expect(tail.endsWith("0\r\n\r\n")).toBe(true);
   });
 });
