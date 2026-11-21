@@ -5,6 +5,7 @@ import type { Selector } from "./adapter/selector";
 import type { Adapter } from "./adapter/types";
 import { type AboutInfo, createApp } from "./app/app";
 import { createStreamHub } from "./app/stream";
+import type { BridgeSources } from "./bridges";
 import { type Clock, systemClock } from "./clock";
 import type { Config } from "./config";
 import type { SupportFlags } from "./format/support";
@@ -28,7 +29,7 @@ export interface ServerOptions {
   /** Default 20, from the config's `pollHz`. */
   readonly pollHz?: number;
   /** Bridge source by name, served at `/bridges/<name>.lua`. */
-  readonly bridges?: Readonly<Record<string, string>>;
+  readonly bridges?: BridgeSources;
   /** The viewer's HTML import. Served at `/`, with its scripts and styles. Without it `/` is a 404. */
   readonly viewer?: HTMLBundle;
   /** The settings this run uses. Without it there are no `/settings` routes. */

@@ -5,6 +5,11 @@ import { APP_VERSION } from "./version";
 export const BRIDGE_NAMES = ["mgba"] as const;
 export type BridgeName = (typeof BRIDGE_NAMES)[number];
 
+/** Bridge source by name, or a function that reads the current sources. */
+export type BridgeSources =
+  | Readonly<Record<string, string>>
+  | (() => Readonly<Record<string, string>>);
+
 export interface BridgeEndpoint {
   readonly host: string;
   readonly port: number;

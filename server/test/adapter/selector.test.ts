@@ -264,7 +264,10 @@ test("a live adapter that drops with no problem reads disconnected with no probl
 });
 
 /** Builds a fresh adapter on every create, so a rebuild shows as a second instance. */
-function buildLive(pin: AdapterId | "auto" = "auto") {
+function buildLive(
+  pin: AdapterId | "auto" = "auto",
+  scripted: readonly AdapterId[] = [],
+) {
   const clock = new ManualClock();
   const endpoints = {
     mgba: { host: "127.0.0.1", port: 5000 },
@@ -282,6 +285,7 @@ function buildLive(pin: AdapterId | "auto" = "auto") {
       return adapter;
     },
     endpoint: (id) => endpoints[id],
+    scripted,
     pin,
     clock,
     log: silentLog,
@@ -356,3 +360,78 @@ test("an unchanged endpoint touches nothing", () => {
 function latest(made: Scripted[]) {
   return made.find((a) => a.id === "mgba") as Scripted;
 }
+
+const stale = (selector: ReturnType<typeof buildLive>["selector"]) =>
+  Object.fromEntries(
+    selector.list().adapters.map((a) => [a.id, a.scriptStale]),
+  );
+
+test("a changed endpoint marks the scripted adapter's script stale until a script answers on the new one", () => {
+  const { endpoints, selector, latest } = buildLive("auto", ["mgba"]);
+  latest("mgba").answer();
+  expect(stale(selector)).toEqual({ mgba: false, retroarch: false });
+  endpoints.mgba = { host: "127.0.0.1", port: 6000 };
+  selector.refreshEndpoints();
+  expect(stale(selector)).toEqual({ mgba: true, retroarch: false });
+  // A second refresh with nothing new keeps the flag.
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(true);
+  // The rebuilt adapter connecting with no hello yet does not clear it.
+  latest("mgba").push({ connection: "connecting" });
+  expect(stale(selector).mgba).toBe(true);
+  latest("mgba").answer();
+  expect(stale(selector).mgba).toBe(false);
+});
+
+test("an unchanged endpoint never marks a script stale", () => {
+  const { endpoints, selector, latest } = buildLive("auto", ["mgba"]);
+  latest("mgba").answer();
+  endpoints.mgba = { ...endpoints.mgba };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(false);
+});
+
+test("a changed endpoint marks the script stale even while the pin keeps mGBA detached", () => {
+  const { endpoints, selector } = buildLive("retroarch", ["mgba"]);
+  endpoints.mgba = { host: "127.0.0.1", port: 6000 };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(true);
+});
+
+test("an adapter with no script is never stale", () => {
+  const { endpoints, selector } = buildLive("auto", ["mgba"]);
+  endpoints.retroarch = { host: "127.0.0.1", port: 55400 };
+  selector.refreshEndpoints();
+  expect(stale(selector).retroarch).toBe(false);
+});
+
+test("a change that goes back to the endpoint the script was made for is not stale", () => {
+  const { endpoints, selector, latest } = buildLive("auto", ["mgba"]);
+  latest("mgba").answer();
+  endpoints.mgba = { host: "127.0.0.1", port: 6000 };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(true);
+  endpoints.mgba = { host: "127.0.0.1", port: 5000 };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(false);
+});
+
+test("a script that connects on the new endpoint becomes the baseline", () => {
+  const { endpoints, selector, latest } = buildLive("auto", ["mgba"]);
+  latest("mgba").answer();
+  endpoints.mgba = { host: "127.0.0.1", port: 6000 };
+  selector.refreshEndpoints();
+  latest("mgba").answer();
+  expect(stale(selector).mgba).toBe(false);
+  endpoints.mgba = { host: "127.0.0.1", port: 5000 };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(true);
+});
+
+test("a changed host alone marks the script stale", () => {
+  const { endpoints, selector, latest } = buildLive("auto", ["mgba"]);
+  latest("mgba").answer();
+  endpoints.mgba = { host: "::1", port: 5000 };
+  selector.refreshEndpoints();
+  expect(stale(selector).mgba).toBe(true);
+});

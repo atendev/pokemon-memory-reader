@@ -57,6 +57,8 @@ export interface SelectorDeps {
   /** Builds the long-lived adapter for an id. Ids the build doesn't ship return null. */
   readonly create: (id: AdapterId) => ManagedAdapter | null;
   readonly endpoint: (id: AdapterId) => Endpoint;
+  /** The adapters that talk to an installed script with their endpoint written into it. */
+  readonly scripted?: readonly AdapterId[];
   /** The `adapter` setting at startup. */
   readonly pin: AdapterId | "auto";
   readonly clock: Clock;
@@ -98,6 +100,16 @@ export function createSelector(deps: SelectorDeps): Selector {
   const unsubscribe = new Map<AdapterId, () => void>();
   /** The endpoint each attached adapter was built with. */
   const built = new Map<AdapterId, Endpoint>();
+  /** The endpoint the script that last connected, or the startup install, was made for. Only a hello moves it. */
+  const scriptFor = new Map<AdapterId, Endpoint>(
+    (deps.scripted ?? []).map((id) => [id, { ...deps.endpoint(id) }]),
+  );
+  const scriptStale = (id: AdapterId): boolean => {
+    const was = scriptFor.get(id);
+    if (was === undefined) return false;
+    const now = deps.endpoint(id);
+    return now.host !== was.host || now.port !== was.port;
+  };
   const listeners = new Set<(state: AdapterState) => void>();
   let pin: AdapterId | "auto" = deps.pin;
   let live: ManagedAdapter | null = null;
@@ -269,6 +281,10 @@ export function createSelector(deps: SelectorDeps): Selector {
       rec.checkedAt = clock.now();
     }
     if (a.lastMiss !== undefined && connected(a)) rec.usableAt = clock.now();
+    // A hello can only come from a script that holds the endpoint this adapter listens on.
+    const listensOn = built.get(id);
+    if (state.bridge !== null && scriptFor.has(id) && listensOn !== undefined)
+      scriptFor.set(id, { ...listensOn });
     if (a === live && pin === "auto" && state.connection === "disconnected") {
       // It stopped answering. Auto probing resumes in priority order (spec §3.3).
       log.warn("the live adapter disconnected", { adapter: id });
@@ -493,6 +509,7 @@ export function createSelector(deps: SelectorDeps): Selector {
         id,
         endpoint: { ...deps.endpoint(id) },
         live: live?.id === id,
+        scriptStale: scriptStale(id),
         probe: probeOf(id),
       })),
     };

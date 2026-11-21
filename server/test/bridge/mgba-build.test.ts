@@ -49,6 +49,20 @@ describe("build settings", () => {
   });
 });
 
+describe("generateBridges", () => {
+  test("carries the host and the port of the endpoint it is given", async () => {
+    const { generateBridges } = await import("../../src/bridges");
+    const first = await generateBridges({
+      mgba: { host: "127.0.0.1", port: 7426 },
+    });
+    const next = await generateBridges({ mgba: { host: "::1", port: 7500 } });
+    expect(first.mgba).toContain('local HOST = "127.0.0.1"');
+    expect(next.mgba).toContain('local HOST = "::1"');
+    expect(next.mgba).toContain("local PORT = 7500");
+    expect(next.mgba).not.toBe(first.mgba);
+  });
+});
+
 describe("the generated mgba.lua", () => {
   test("holds the settings and the whole core, and nothing is left to fill", async () => {
     const source = await buildBridge("mgba", { ...SETTINGS, port: 7500 });
