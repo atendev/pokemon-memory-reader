@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AdaptersBody } from "@pokemon-memory-reader/internal/adapters-route";
+import type { ManualPicksBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import type { SettingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ManualPicksBody } from "./internal-api";
 import { ManualPickSection } from "./ManualPick";
 import {
   AdapterList,
@@ -278,7 +278,7 @@ describe("the manual pick control", () => {
       {
         id: "emerald-us-1.0",
         name: "Emerald (US)",
-        kind: "vanilla",
+        kind: "official",
         dataFormat: "gen3",
         headerMatch: true,
         signature: "match",
@@ -287,7 +287,7 @@ describe("the manual pick control", () => {
       {
         id: "firered-us-1.0",
         name: "FireRed (US)",
-        kind: "vanilla",
+        kind: "official",
         dataFormat: "gen3",
         headerMatch: false,
         signature: null,
@@ -362,25 +362,17 @@ describe("the manual pick control", () => {
     expect(html).toContain("Forget this pick");
   });
 
-  test("a 404 says the program can't list candidates yet, other failures show their message", () => {
-    expect(
-      section(unidentified, {
-        kind: "unavailable",
-        code: null,
-        status: 404,
-        message: "Not found.",
-      }),
-    ).toContain("This program can&#x27;t list candidate profiles yet.");
-    const other = section(unidentified, {
+  test("a failed read shows its message, and a pending one says it is reading", () => {
+    const failed = section(unidentified, {
       kind: "unavailable",
       code: null,
       status: 500,
       message: "Boom.",
     });
-    expect(other).toContain(
+    expect(failed).toContain(
       "The candidate profiles can&#x27;t be read right now.",
     );
-    expect(other).toContain("Boom.");
+    expect(failed).toContain("Boom.");
     expect(section(unidentified, { kind: "loading" })).toContain(
       "Reading the candidate profiles.",
     );

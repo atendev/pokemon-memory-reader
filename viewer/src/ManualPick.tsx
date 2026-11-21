@@ -1,6 +1,6 @@
 import type { StatusResource } from "@pokemon-memory-reader/api/schemas";
+import type { ManualPicksBody } from "@pokemon-memory-reader/internal/manual-picks-route";
 import { useState } from "react";
-import type { ManualPicksBody } from "./internal-api";
 import type { Polled } from "./useInternal";
 
 type Candidate = ManualPicksBody["candidates"][number];
@@ -152,9 +152,7 @@ export function ManualPickSection({
         <p className="body muted">Reading the candidate profiles.</p>
       ) : picks.kind === "unavailable" ? (
         <p className="body muted" role="alert">
-          {picks.status === 404
-            ? "This program can't list candidate profiles yet."
-            : `The candidate profiles can't be read right now. ${picks.message}`}
+          The candidate profiles can't be read right now. {picks.message}
         </p>
       ) : (
         <Candidates body={picks.value} busy={busy} onPick={onPick} />
