@@ -20,20 +20,10 @@ Emerald stores money (and, in the bag ticket, item quantities) XORed with the sa
 - The Emerald profile gains its `player` block from the generator, and the profile is regenerated with a stable second run.
 - Type, schema and sync tests are in place. No ROM bytes are committed.
 
-## Handoff
+## Answer
 
-Branch `t3/gen3-player-decoder`. Audit round so far: 0 (no council run yet). Nothing typechecked or tested yet. Run `bun install --frozen-lockfile` first.
+Built the Gen 3 `player` resource for Emerald. `gen3Player` reads the name, trainer and secret IDs, play time, position, money and eight badge flags from the two save blocks through pointer regions, so a moved `gSaveBlock1Ptr` is followed and a null pointer gives a 503 `no_data`. Money is XORed with the key at save block 2 offset 0xAC and stays unsigned. The section is `gMapHeader.regionMapSectionId` with its name from the location table, and a play time with minutes, seconds or frames above 59 fails the resource. Badge names are a hand-kept list by art version, `null` for hack profiles. The profile gains a typed `player` block (badge flags 0x867 to 0x86E, money 0x490, flags 0x1270, key 0xAC) and a `gMapHeader` address from `generate:profiles`, which is stable on a second run. `GET /api/v2/player` and the `player` topic are wired, and the API types, schemas and sync pairs are in place.
 
-**Done (in the `wip:` commit):**
-- `api/`: `Badge`, `MapLocation`, `PlayTime`, `Player` types, schemas and sync pairs, `player` in `TOPIC_NAMES`, `ResourceMap`, `resourceSchemas`. Still to do: run biome (import order in `sync.test.ts`), update `api/src/__snapshots__/schemas.test.ts.snap` and any open-enum test.
-- `server/src/format/gen3/profile.ts`: `gMapHeader` address and `gen3Player` block `{ badgeFlags[8], moneyOffset, flagsOffset, encryptionKeyOffset? }`. `profile/schema.ts` has a file-level `player` block, full schema gen3 typed and other formats untyped, and `registry.ts` merges `player`.
+Report: [decision report](../assets/063-gen3-player-decoder-report.md). The Claude seat approved in round 1 (8). The Gemini and GPT seats were skipped (out of quota).
 
-**Left, in order:**
-1. Generator: `definitions.ts` gains `gMapHeader` and a hand-written `player` block, with `definition.ts` and `build.ts` writing it. Emerald values: `badgeFlags` 0x867 to 0x86E, `moneyOffset` 0x490, `flagsOffset` 0x1270, `encryptionKeyOffset` 0xAC. Run `bun run generate:profiles` twice (network works) and check it is stable.
-2. `server/src/reference/badges.ts`: hand-kept names by art version (Emerald: Stone, Knuckle, Dynamo, Heat, Balance, Feather, Mind, Rain) with a length test. Hack profiles give `name: null`.
-3. `server/src/format/gen3/player.ts`. Save block 2: name 0x00 (7 chars), trainerId u16 0x0A, secretId u16 0x0C, hours u16 0x0E, minutes 0x10, seconds 0x11, frames 0x12, key u32 at the profile offset (one region 0 to key+4). Save block 1: x, y s16 at 0x00 and 0x02 (no border offset, confirmed in pret `overworld.c`), mapGroup u8 0x04, mapNumber u8 0x05, money u32 XOR key, flag bytes. `gMapHeader+0x14` is `regionMapSectionId`, with the name from `names.locations`. Fail on minutes, seconds or frames above 59.
-4. Wire `Decoder.player`, `gen3Decoder`, `bindGame` and `declaredRegions` (update `registry.test.ts:232`), `read-loop.ts` (`bound[topic]` for party and player, `DECODED`) and `app.ts` `SNAPSHOT_TOPICS`.
-5. Tests: decoder (moved `gSaveBlock1Ptr`, null pointer giving 503 `no_data`, money decrypted, eight badges), a `GET /api/v2/player` test in `read-loop.test.ts` style with a `test/gen3/player-encode.ts` helper, a generator stable-run test, and a caps test.
-6. `bun run typecheck`, biome and `bun test` (ignore the Lua 5.5 failure in `bridge/core.test.ts`). Then council audit (Claude seat only), report to `assets/063-gen3-player-decoder-report.md`, unslop, close timing, commit, push, return DONE.
-
-Pret facts (confirmed from pokeemerald master): flag IDs are `SYSTEM_FLAGS (0x860) + 7..0xE`, `FLAGS_COUNT` 300 bytes, `gMapHeader` is at 0x02037318.
+Timing: wall 11m, active 11m, user 0s, wait 0s, blocked 0s | implement 9m, audit 1m (1 round) | tools 110 (2 subagent) | limits 0, compactions 0, handoffs 1 | ctx peak 157k | cost $3.91 sonnet-5-5 + $0.01 haiku-5-5
