@@ -309,7 +309,6 @@ describe("the battle resource in the loop", () => {
       partyIndexes: [0, 0, 1, 1],
       enemyParty: [FOE_MON, { ...FOE_MON, species: 263 }],
     });
-    adapter.memory.ewram[0x244e9] = 2;
     await tick(clock);
     const value = Battle.parse(await battle(loop));
     if (!value.active) throw new Error("expected an active battle");

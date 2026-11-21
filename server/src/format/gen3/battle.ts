@@ -72,7 +72,7 @@ const STAGE = {
 } as const;
 const NEUTRAL_STAGE = 6;
 
-/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`). */
+/** `gBattleTypeFlags` bits (pokeemerald `include/constants/battle.h`: DOUBLE 0, TRAINER 3, MULTI 6, TWO_OPPONENTS 15, INGAME_PARTNER 22). A two-opponent battle is a double even without bit 0. */
 const TYPE = {
   double: 1 << 0,
   trainer: 1 << 3,
@@ -81,7 +81,7 @@ const TYPE = {
   inGamePartner: 1 << 22,
 } as const;
 
-/** `gSideStatuses` bits. */
+/** `gSideStatuses` bits (pokeemerald `SIDE_STATUS_*` in `include/constants/battle.h`). */
 const SIDE = {
   reflect: 0x1,
   lightScreen: 0x2,
@@ -92,7 +92,7 @@ const SIDE = {
 /** `gSideTimers` holds one 12-byte `struct SideTimer` per side, with `spikesAmount` at +10. */
 const SIDE_TIMER = { size: 12, spikesAmount: 10 } as const;
 
-/** `gBattleWeather` bits: temporary, downpour and permanent rain, sandstorm, sun, hail. */
+/** `gBattleWeather` bits (pokeemerald `B_WEATHER_*`): temporary, downpour and permanent rain, sandstorm, sun, hail. */
 const WEATHER = {
   rain: 0x07,
   sandstorm: 0x18,

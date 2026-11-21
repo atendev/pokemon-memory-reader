@@ -127,6 +127,21 @@ describe("gen3Outcome", () => {
     expect(gen3Outcome(raw)).toBe("unknown");
   });
 
+  test("every raw byte maps through the 0x7f mask", () => {
+    const named: Record<number, string> = {
+      1: "won",
+      2: "lost",
+      3: "drew",
+      4: "ran",
+      5: "ran",
+      7: "caught",
+      9: "forfeited",
+    };
+    for (let raw = 0; raw < 256; raw++) {
+      expect(gen3Outcome(raw)).toBe(named[raw & 0x7f] ?? "unknown");
+    }
+  });
+
   test("the mask drops the high bit", () => {
     expect(gen3Outcome(0x80 | 7)).toBe("caught");
     expect(gen3Outcome(0x80)).toBe("unknown");
