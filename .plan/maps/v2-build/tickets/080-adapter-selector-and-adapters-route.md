@@ -17,25 +17,8 @@ Spec §3.3 and [the 021 amendment](../assets/021-viewer-control-routes.md). The 
 - A switch changes the live adapter, the old session's resources are dropped, and a restart returns to the configured default.
 - The route-table test covers `/adapters`.
 
-## Handoff
+Timing: wall 23m, active 11m, user 0s, wait 3m, blocked 8m | implement 5m, audit 16m (3 rounds), fix 53s | tools 75 (6 subagent) | limits 1 (5-hour limit), compactions 0, handoffs 1 | ctx peak 135k | cost $2.66 sonnet-5-5 + $0.03 haiku-5-5
 
-Branch `t3/adapter-selector-discovery`, work committed as `wip:` (last code sha bc62c6e). Audit round count so far: 0. No council dispatched yet.
+## Answer
 
-**Done**
-- `server/src/adapter/selector.ts`: `createSelector` with a facade `Adapter` for the read loop, `list`, `probeNow`, `switchTo`, `setPin`, `close`. Pin closes the other adapters. A live adapter that disconnects drops and probing resumes. A usable lower-priority adapter is held while a higher one is unsettled (1.5 s).
-- `internal/src/adapters-route.ts`: Zod schemas for `/adapters` and the switch body.
-- `ManagedAdapter.lastMiss` (optional) added in `adapter/types.ts` and set by the RetroArch adapter, so `refused` and `no_reply` can be told apart.
-- `/adapters`, `/adapters/probe`, `/adapters/switch` in `app/app.ts` and `route-table.ts`. `server.ts` takes `selector`. `main.ts` builds mgba and retroarch (bizhawk returns null) and applies a live `adapter` change through `setPin`.
-- Tests: `server/test/adapter/selector.test.ts` (10), a `/adapters` route test, and the route-table test now registers the selector. Full `bun test`: 1165 pass, 1 known Lua 5.5 failure. Typecheck and `biome ci` clean.
-
-**Left, in order**
-1. Run `council-audit`, Claude seat only, on the diff `git diff wayfinder/v2-build-master...HEAD`. Gemini and GPT are `n/a`. Up to 5 rounds.
-2. Write `.plan/maps/v2-build/assets/080-adapter-selector-and-adapters-route-report.md`, run unslop, commit.
-3. Run the Timing close (`wf-time.py close --slug v2-build --ticket 080 ...`), add `## Answer` to the ticket, delete this Handoff section, commit, push (no force), open a PR against `wayfinder/v2-build-master` and link it.
-4. Return DONE with the Decisions line and Surfaced tickets.
-
-**Likely audit probes**: probe-now uses `hold` to force an immediate connect and waits up to 3 s per bridge and 1 s for RetroArch. A switch passes on `connected` with no problem, since a null game message can't be observed. `status.adapter` while nothing is live follows the first problem adapter (spec §4.7).
-
-**Surface as tickets**: apply live `adapters` endpoint changes (adapters are built once with the startup endpoint); BizHawk adapter wiring into the selector's `create`.
-
-Files to read first: `server/src/adapter/selector.ts`, `server/test/adapter/selector.test.ts`, `server/src/main.ts`.
+The selector in `server/src/adapter/selector.ts` fills the read loop's adapter slot. It probes the mGBA bridge and RetroArch, holds a usable lower-priority adapter while a higher one settles (1.5 s), and `/adapters`, `/adapters/probe` and `/adapters/switch` serve the list, a probe-now and a switch for this run only behind the write guard. A pin closes the other adapters, a switch bumps the epoch and returns the old adapter to probing, and a fresh selector returns to the configured default. A switch passes on the adapter's `connected` state, since the bridge adapter sets it only after its strict hello check and a null game is valid. A live adapter that drops with a fault keeps that problem in `status.adapter`. A clean drop reads disconnected with no problem (spec §4.7), and silence on an open socket is `stalled`, so the ticket's "shown as a problem" is met by those signals and no new problem code. [Report](../assets/080-adapter-selector-and-adapters-route-report.md).

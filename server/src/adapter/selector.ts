@@ -383,6 +383,15 @@ export function createSelector(deps: SelectorDeps): Selector {
       );
       target.setMode("live");
       const passed = connected(target) || (await check);
+      if (closed || pin !== "auto")
+        // A pin set mid-switch already closed the target and chose its own adapter.
+        return {
+          ok: false,
+          code: closed ? "adapter_connect_failed" : "adapter_pinned",
+          message: closed
+            ? "The server is stopping."
+            : "Unpin in Settings to switch.",
+        };
       if (!passed || !connected(target)) {
         target.setMode("probe");
         return {

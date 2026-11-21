@@ -216,3 +216,49 @@ test("the live adapter disconnecting drops it and resumes probing", () => {
   made.mgba.push({ connection: "connected" });
   expect(selector.list().live).toBe("mgba");
 });
+
+test("a live adapter that reports a problem keeps it in the facade state after it drops", () => {
+  const { made, selector } = build();
+  made.mgba.answer();
+  made.mgba.push({ connection: "disconnected", problem: "bridge_error" });
+  expect(selector.list().live).toBeNull();
+  expect(selector.adapter.state.problem).toBe("bridge_error");
+  expect(selector.adapter.state.connection).toBe("disconnected");
+});
+
+test("a pin set during a switch wins and the switch reports adapter_pinned", async () => {
+  const { made, selector } = build();
+  made.mgba.answer();
+  made.retroarch.push({ connection: "connected" });
+  made.retroarch.push({ connection: "disconnected" });
+  made.retroarch.lastMiss = null;
+  const pending = selector.switchTo("retroarch");
+  selector.setPin("mgba");
+  made.retroarch.push({ connection: "connected" });
+  expect(await pending).toMatchObject({ ok: false, code: "adapter_pinned" });
+  expect(selector.list()).toMatchObject({ mode: "pinned", live: "mgba" });
+});
+
+test("a switch is not remembered by a fresh selector", async () => {
+  const { made, selector } = build();
+  made.mgba.answer();
+  made.retroarch.push({ connection: "connected" });
+  made.retroarch.push({ connection: "disconnected" });
+  made.retroarch.lastMiss = null;
+  const pending = selector.switchTo("retroarch");
+  made.retroarch.push({ connection: "connected" });
+  await pending;
+  expect(selector.list().live).toBe("retroarch");
+  expect(build().selector.list()).toMatchObject({ mode: "auto", live: null });
+});
+
+test("a live adapter that drops with no problem reads disconnected with no problem", () => {
+  const { made, selector } = build();
+  made.mgba.answer();
+  made.mgba.push({ connection: "disconnected" });
+  expect(selector.adapter.state).toMatchObject({
+    connection: "disconnected",
+    problem: null,
+  });
+  expect(selector.list().live).toBeNull();
+});

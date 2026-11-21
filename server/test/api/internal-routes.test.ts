@@ -777,3 +777,13 @@ test("GET /adapters answers the last known list, and a bad switch body is invali
     "adapter_not_usable",
   );
 });
+
+test("POST /adapters/probe returns the list body and needs the write guard", async () => {
+  const app = await everything();
+  const post = { ...put({}), method: "POST" };
+  const ok = await app.request("/adapters/probe", post, loopback);
+  expect(ok.status).toBe(200);
+  expect(adaptersBody.parse(await ok.json()).mode).toBe("auto");
+  const lanPeer = await app.request("/adapters/probe", post, lan);
+  expect(lanPeer.status).toBe(403);
+});
