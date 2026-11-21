@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   buildBody,
   changelogSection,
@@ -177,5 +179,52 @@ describe("release body", () => {
     expect(() => buildBody({ ...base, changelog })).toThrow(
       "isn't pinned to the tag",
     );
+  });
+});
+
+describe("the committed changelog and notes", () => {
+  const root = join(import.meta.dir, "..");
+  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+
+  test("CHANGELOG.md has a section for the beta that the body step finds", () => {
+    expect(changelogSection(changelog, "2.0.0-beta.1")).not.toBeNull();
+    const body = buildBody({
+      tag: "v2.0.0-beta.1",
+      kind: "app",
+      repo: "atendev/pokemon-memory-reader",
+      changelog,
+      notes: readFileSync(join(root, "scripts/release-notes.md"), "utf8"),
+      dryRun: false,
+    });
+    expect(body).toContain("Not released yet");
+    expect(body).not.toContain("{{");
+  });
+
+  test("every README link in the body points at a real README heading", () => {
+    const readme = readFileSync(join(root, "README.md"), "utf8");
+    const slug = (heading: string) =>
+      heading
+        .trim()
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s-]/gu, "")
+        .replace(/\s+/g, "-");
+    const anchors = new Set(
+      [...readme.matchAll(/^#{1,6}\s+(.+)$/gm)].map((m) => slug(m[1] ?? "")),
+    );
+    const body = buildBody({
+      tag: "v2.0.0-beta.1",
+      kind: "app",
+      repo: "atendev/pokemon-memory-reader",
+      changelog,
+      notes: readFileSync(join(root, "scripts/release-notes.md"), "utf8"),
+      dryRun: false,
+    });
+    const links = [
+      ...body.matchAll(
+        /https:\/\/github\.com\/atendev\/pokemon-memory-reader\/blob\/v2\.0\.0-beta\.1\/README\.md#([\w-]+)/g,
+      ),
+    ].map((m) => m[1] as string);
+    expect(links).toContain("windows-smartscreen");
+    for (const anchor of links) expect(anchors.has(anchor)).toBe(true);
   });
 });
