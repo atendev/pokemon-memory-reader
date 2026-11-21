@@ -172,3 +172,27 @@ export function settingsBody(
     ...overrides,
   };
 }
+
+type Game = NonNullable<StatusResource["game"]>;
+
+/** An exact-match official Gen 3 game with every table readable. A test overrides only what it checks. */
+export function game(overrides: Partial<Game> = {}): Game {
+  return {
+    profileId: "emerald-us-1.0",
+    name: "Pokémon Emerald (US)",
+    generation: 3,
+    language: "en",
+    dataFormat: "gen3",
+    match: "exact",
+    signature: "match",
+    features: { boxes: true },
+    names: {
+      species: "builtin",
+      moves: "builtin",
+      items: "builtin",
+      abilities: "builtin",
+    },
+    speciesData: { info: "builtin", dex: "builtin", exp: "builtin" },
+    ...overrides,
+  };
+}

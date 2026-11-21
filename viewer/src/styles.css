@@ -874,6 +874,11 @@ body {
 .warning {
   color: var(--orange);
 }
+.id-notes {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
 .endpoint {
   min-width: 0;
   margin: 0;
