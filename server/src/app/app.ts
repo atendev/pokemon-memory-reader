@@ -325,6 +325,19 @@ export function createApp(deps: {
       "X-Content-Type-Options": "nosniff",
       "Cache-Control": "no-cache",
     };
+    internalRoute("POST", "/settings/icon-cache/clear", async (c) => {
+      try {
+        await icons.clearCache();
+      } catch (error) {
+        log.error("could not clear the icon cache", { error });
+        return internalError(
+          c,
+          "save_failed",
+          "The icon cache could not be cleared.",
+        );
+      }
+      return c.json({});
+    });
     internalRoute("GET", "/icons/*", async (c) => {
       const key = parseIconPath(c.req.path);
       const found = key ? await icons.get(key) : null;

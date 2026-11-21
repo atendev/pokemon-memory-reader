@@ -16,6 +16,7 @@ export interface RouteEntry {
 export const ROUTES: readonly RouteEntry[] = [
   { method: "GET", path: "/settings", guard: "open" },
   { method: "PUT", path: "/settings", guard: "write" },
+  { method: "POST", path: "/settings/icon-cache/clear", guard: "write" },
   { method: "GET", path: "/adapters", guard: "open" },
   { method: "POST", path: "/adapters/probe", guard: "write" },
   { method: "POST", path: "/adapters/switch", guard: "write" },
