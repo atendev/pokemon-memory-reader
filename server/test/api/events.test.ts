@@ -64,7 +64,7 @@ function serveApp(source: StreamSource, clock: ManualClock, resources: never) {
 
 /** Reads frames off a response body until `done` accepts what has arrived, or fails after 5 s. */
 async function readUntil(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
+  reader: { read(): Promise<{ done: boolean; value?: Uint8Array }> },
   done: (text: string) => boolean,
 ): Promise<string> {
   const decoder = new TextDecoder();
@@ -148,7 +148,8 @@ describe("GET /api/v2/events against a running server", () => {
     const listeners = new Set<(event: ChangeEvent) => void>();
     const released: Topic[][] = [];
     const source: StreamSource = {
-      status: () => ({ state: "game", adapter: null, rom: null, game: null }) as never,
+      status: () =>
+        ({ state: "game", adapter: null, rom: null, game: null }) as never,
       get: async () => ({ ok: false, code: "no_data" }) as never,
       onChange: (listener) => {
         listeners.add(listener);
@@ -173,7 +174,10 @@ describe("GET /api/v2/events against a running server", () => {
     const blob = "x".repeat(512 * 1024);
     for (let i = 0; i < 400 && released.length === 0; i++) {
       for (const listener of listeners)
-        listener({ topic: "bag", value: { blob, i } } as ChangeEvent);
+        listener({
+          topic: "bag",
+          value: { blob, i },
+        } as unknown as ChangeEvent);
       await new Promise((r) => setTimeout(r, 2));
     }
     expect(released).toHaveLength(0);

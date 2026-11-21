@@ -23,6 +23,7 @@ afterEach(async () => {
 const AT = 0x5000;
 const bound = (): BoundGame => ({
   boxes: {
+    count: 1,
     regions: {
       body: {
         kind: "static",
