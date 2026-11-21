@@ -12,9 +12,11 @@ import gen3En from "./data/gen3-en.json";
 /** Shipped tables for one data format and language: charmap, names, species data and move data. */
 export interface ReferenceData {
   readonly charmap: Charmap;
-  readonly names: Omit<Names, "locations">;
+  readonly names: Omit<Names, "locations" | "items">;
   /** Location names for the profile's `artVersion`. Every ID is null when that art version has no table. */
   locations(artVersion: ArtVersion): Names["locations"];
+  /** Item names for the profile's `artVersion`. Every ID is null when that art version has no table. */
+  items(artVersion: ArtVersion): Names["items"];
   readonly speciesData: SpeciesDataLookup;
   readonly moveData: MoveDataLookup;
 }
@@ -52,15 +54,18 @@ function gen3English(): ReferenceData {
   const locationTables: Readonly<
     Record<string, ReadonlyArray<string | null> | undefined>
   > = data.names.locations;
+  const itemTables: Readonly<
+    Record<string, ReadonlyArray<string | null> | undefined>
+  > = data.names.items;
   return {
     charmap: createCharmap(data.charmap),
     names: {
       species: table(data.names.species),
       moves: table(data.names.moves),
-      items: table(data.names.items),
       abilities: table(data.names.abilities),
     },
     locations: (artVersion) => table(locationTables[artVersion] ?? []),
+    items: (artVersion) => table(itemTables[artVersion] ?? []),
     speciesData: {
       info(species) {
         const row = data.speciesData[species];

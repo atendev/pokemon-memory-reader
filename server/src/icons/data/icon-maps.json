@@ -1703,35 +1703,7 @@
       "343": "hm05",
       "344": "hm06",
       "345": "hm07",
-      "346": "hm08",
-      "349": "parcel",
-      "350": "poke-flute",
-      "351": "secret-key",
-      "352": "bike-voucher",
-      "353": "gold-teeth",
-      "354": "old-amber",
-      "355": "card-key",
-      "356": "lift-key",
-      "357": "helix-fossil",
-      "358": "dome-fossil",
-      "359": "silph-scope",
-      "360": "bicycle",
-      "361": "town-map",
-      "362": "vs-seeker",
-      "363": "fame-checker",
-      "364": "tm-case",
-      "365": "berry-pouch",
-      "366": "teachy-tv",
-      "367": "tri-pass",
-      "368": "rainbow-pass",
-      "369": "tea",
-      "370": "mysticticket",
-      "371": "auroraticket",
-      "372": "powder-jar",
-      "373": "ruby",
-      "374": "sapphire",
-      "375": "magma-emblem",
-      "376": "old-sea-map"
+      "346": "hm08"
     },
     "emerald": {
       "1": "master-ball",
@@ -2349,9 +2321,7 @@
       "371": "auroraticket",
       "372": "powder-jar",
       "373": "ruby",
-      "374": "sapphire",
-      "375": "magma-emblem",
-      "376": "old-sea-map"
+      "374": "sapphire"
     }
   }
 }

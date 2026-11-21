@@ -1,5 +1,16 @@
 import type { ArtVersion } from "../../server/src/profile/schema";
 
+/** The art versions that carry Gen 3 item names. */
+export type Gen3ArtVersion = Extract<
+  ArtVersion,
+  "ruby-sapphire" | "emerald" | "firered-leafgreen"
+>;
+
+const isGen3 = (artVersion: ArtVersion): artVersion is Gen3ArtVersion =>
+  artVersion === "ruby-sapphire" ||
+  artVersion === "emerald" ||
+  artVersion === "firered-leafgreen";
+
 /** The PokeAPI `item_game_indices` generation each art version's item IDs follow. */
 export const ITEM_GENERATION: Readonly<Record<ArtVersion, number>> = {
   "red-blue": 1,
@@ -37,8 +48,10 @@ export interface PokeApiData {
 
 export interface IconMapsInput {
   readonly pokeapi: PokeApiData;
-  /** English item names of Gen 3, by item ID, from the checked-in reference data. */
-  readonly gen3ItemNames: ReadonlyArray<string | null>;
+  /** English item names of Gen 3 by item ID, one table per art version, from the checked-in reference data. */
+  readonly gen3ItemNames: Readonly<
+    Record<Gen3ArtVersion, ReadonlyArray<string | null>>
+  >;
   readonly spritesSha: string;
   readonly pokeapiCommit: string;
 }
@@ -182,7 +195,7 @@ export function buildIconMaps(input: IconMapsInput): IconMapsFile {
         itemTable(
           pokeapi,
           generation,
-          generation === 3 ? input.gen3ItemNames : null,
+          isGen3(artVersion) ? input.gen3ItemNames[artVersion] : null,
           nameIndex,
         ),
       ],

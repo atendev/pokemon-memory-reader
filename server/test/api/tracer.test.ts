@@ -167,6 +167,7 @@ describe("tracer API against the fake bridge", () => {
         ...reference,
         names: {
           ...reference.names,
+          items: reference.items(profile.artVersion),
           locations: reference.locations(profile.artVersion),
         },
       },

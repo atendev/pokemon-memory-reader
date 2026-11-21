@@ -19,7 +19,11 @@ if (!reference) throw new Error("Gen 3 English reference data missing");
 const ctxFor = (p: Profile<"gen3">): DecodeContext<Profile<"gen3">> => ({
   profile: p,
   ...reference,
-  names: { ...reference.names, locations: reference.locations("emerald") },
+  names: {
+    ...reference.names,
+    items: reference.items("emerald"),
+    locations: reference.locations("emerald"),
+  },
 });
 
 interface Fields {

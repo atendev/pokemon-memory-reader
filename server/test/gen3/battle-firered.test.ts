@@ -32,7 +32,11 @@ const noSecond: Profile<"gen3"> = { ...stock, addresses: withoutB };
 const ctxOf = (profile: Profile<"gen3">): DecodeContext<Profile<"gen3">> => ({
   profile,
   ...reference,
-  names: { ...reference.names, locations: reference.locations("emerald") },
+  names: {
+    ...reference.names,
+    items: reference.items("emerald"),
+    locations: reference.locations("emerald"),
+  },
 });
 
 function slicesOf<R extends Regions>(

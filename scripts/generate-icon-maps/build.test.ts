@@ -21,9 +21,15 @@ const files = {
     "pokemon_id,version_id,game_index\n1,1,153\n1,2,153\n1,3,153\n25,1,84\n25,2,84\n25,3,84\n1,4,1\n1,5,1\n1,6,1\n2,4,2\n2,5,2\n2,6,2\n1025,4,3\n1025,5,3\n1025,6,3",
 };
 const sprites = new Set(["master-ball", "potion", "dowsing-machine", "tm01"]);
+/** The same names for every Gen 3 art version. */
+const allGen3 = (names: (string | null)[]) => ({
+  "ruby-sapphire": names,
+  emerald: names,
+  "firered-leafgreen": names,
+});
 const input = (over: Partial<IconMapsInput> = {}): IconMapsInput => ({
   pokeapi: readPokeApi(files, sprites),
-  gen3ItemNames: [
+  gen3ItemNames: allGen3([
     null,
     "MASTER BALL",
     null,
@@ -40,7 +46,7 @@ const input = (over: Partial<IconMapsInput> = {}): IconMapsInput => ({
     "POTION",
     ...Array(247).fill(null),
     "ITEMFINDER",
-  ],
+  ]),
   spritesSha: "sprites",
   pokeapiCommit: "pokeapi",
   ...over,
@@ -94,6 +100,23 @@ test("a rerun gives the same text", () => {
 test("a game name with no game_index falls back to the one item that carries it", () => {
   const gen3ItemNames = Array(20).fill(null);
   gen3ItemNames[15] = "TM01";
-  const { items } = buildIconMaps(input({ gen3ItemNames }));
+  const { items } = buildIconMaps(
+    input({ gen3ItemNames: allGen3(gen3ItemNames) }),
+  );
   expect(items.emerald).toEqual({ 15: "tm01" });
+});
+
+test("a Gen 3 item name in one game gets no icon for another", () => {
+  const names = Array(20).fill(null);
+  names[15] = "TM01";
+  const { items } = buildIconMaps(
+    input({
+      gen3ItemNames: {
+        ...allGen3(names),
+        "firered-leafgreen": Array(20).fill(null),
+      },
+    }),
+  );
+  expect(items.emerald).toEqual({ 15: "tm01" });
+  expect(items["firered-leafgreen"]).toEqual({});
 });

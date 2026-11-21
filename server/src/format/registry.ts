@@ -166,6 +166,7 @@ export function bindGame(
         ...reference,
         names: {
           ...reference.names,
+          items: reference.items(profile.artVersion),
           locations: reference.locations(profile.artVersion),
         },
       };

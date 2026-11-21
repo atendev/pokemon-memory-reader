@@ -17,7 +17,11 @@ if (!reference) throw new Error("Gen 3 English reference data missing");
 const ctxFor = (p: Profile<"gen3">): DecodeContext<Profile<"gen3">> => ({
   profile: p,
   ...reference,
-  names: { ...reference.names, locations: reference.locations("emerald") },
+  names: {
+    ...reference.names,
+    items: reference.items("emerald"),
+    locations: reference.locations("emerald"),
+  },
 });
 
 const POTION = 13;
@@ -86,9 +90,9 @@ describe("the bag decoder", () => {
     );
     expect(balls?.items[0]?.item).toEqual({
       id: POKE_BALL,
-      name: reference.names.items(POKE_BALL),
+      name: reference.items("emerald")(POKE_BALL),
     });
-    expect(reference.names.items(POKE_BALL)).toBeString();
+    expect(reference.items("emerald")(POKE_BALL)).toBeString();
   });
 
   test("an unknown item ID keeps its number with a null name", () => {
