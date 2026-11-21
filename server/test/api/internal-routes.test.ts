@@ -10,7 +10,11 @@ import {
   INTERNAL_ERROR_STATUS,
   internalErrorBody,
 } from "@pokemon-memory-reader/internal/errors";
-import { pickBody } from "@pokemon-memory-reader/internal/manual-picks-route";
+import {
+  type ManualPicksBody,
+  manualPicksBody,
+  pickBody,
+} from "@pokemon-memory-reader/internal/manual-picks-route";
 import { settingsBody } from "@pokemon-memory-reader/internal/settings-route";
 import { updateBody } from "@pokemon-memory-reader/internal/update";
 import { createSelector } from "../../src/adapter/selector";
@@ -136,7 +140,24 @@ const PICKED = {
   reason: null,
 } as const;
 
+const LISTED: ManualPicksBody = {
+  romKey: "sha1:abc",
+  current: null,
+  candidates: [
+    {
+      id: "emerald-us-1.0",
+      name: "Pokémon Emerald (US) 1.0",
+      kind: "official",
+      dataFormat: "gen3",
+      headerMatch: true,
+      signature: "match",
+      baseEligible: true,
+    },
+  ],
+};
+
 const picksStub = {
+  pickList: () => Promise.resolve(LISTED),
   pick: () => Promise.resolve({ ok: true, value: PICKED } as const),
   forget: () => Promise.resolve({ ok: true } as const),
 };
@@ -232,6 +253,7 @@ test("the route table gives each route the expected class", () => {
     ROUTES.find((r) => r.method === method && r.path === path)?.guard;
   expect(classOf("GET", "/settings")).toBe("open");
   expect(classOf("PUT", "/settings")).toBe("write");
+  expect(classOf("GET", "/manual-picks")).toBe("open");
   expect(classOf("POST", "/manual-picks")).toBe("write");
   expect(classOf("POST", "/manual-picks/forget")).toBe("write");
   expect(classOf("GET", "/about")).toBe("open");
@@ -1055,6 +1077,17 @@ test("POST /manual-picks answers the server's pick body, and a bad body is inval
   }
 });
 
+test("GET /manual-picks is an open read that answers the candidates body to a LAN peer", async () => {
+  const app = await everything();
+  const response = await app.request(
+    "/manual-picks",
+    { headers: { Host: "192.168.1.5:7425" } },
+    lan,
+  );
+  expect(response.status).toBe(200);
+  expect(manualPicksBody.parse(await response.json())).toEqual(LISTED);
+});
+
 test("POST /manual-picks/forget answers an empty body, and a loop refusal keeps its code", async () => {
   const app = await everything();
   const ok = await app.request("/manual-picks/forget", postJson({}), loopback);
@@ -1096,6 +1129,7 @@ test.each([
       resources: idle,
       config: await loadConfig(),
       picks: {
+        pickList: picksStub.pickList,
         pick: () => {
           calls += 1;
           return picksStub.pick();

@@ -259,3 +259,160 @@ describe("manual picks through the loop", () => {
     });
   });
 });
+
+describe("the candidates list", () => {
+  const EMERALD = {
+    id: "emerald-us-1.0",
+    name: "Pokémon Emerald (US 1.0)",
+    kind: "official" as const,
+    dataFormat: "gen3",
+  };
+
+  test("an unidentified ROM lists the profile that fits with its signature result", async () => {
+    const { loop } = await setup(game());
+    expect(await loop.pickList()).toEqual({
+      romKey: "crc32:deadbeef",
+      current: null,
+      candidates: [
+        {
+          ...EMERALD,
+          headerMatch: true,
+          signature: "match",
+          baseEligible: true,
+        },
+      ],
+    });
+  });
+
+  test("a changed signature word shows as mismatch and rules out a base pick", async () => {
+    const { loop, adapter } = await setup(game());
+    adapter.memory.rom[0x1bc] = 0;
+    const { candidates } = await loop.pickList();
+    expect(candidates[0]).toMatchObject({
+      headerMatch: true,
+      signature: "mismatch",
+      baseEligible: false,
+    });
+  });
+
+  test("a ROM with no hash can't take a base pick", async () => {
+    const { loop } = await setup(game({ crc32: null }), undefined, 7);
+    const { romKey, candidates } = await loop.pickList();
+    expect(romKey).toStartWith("header:");
+    expect(candidates[0]).toMatchObject({ baseEligible: false });
+  });
+
+  test("an adapter that reads no ROM lists every profile unchecked with no header match", async () => {
+    const { loop } = await setup(game({ domains: {} }));
+    const { candidates } = await loop.pickList();
+    expect(candidates).toEqual([
+      {
+        ...EMERALD,
+        headerMatch: false,
+        signature: "unchecked",
+        baseEligible: false,
+      },
+    ]);
+  });
+
+  test("a manual pick shows as current and the list stays open for a change", async () => {
+    const { loop } = await setup(game());
+    await loop.pick(pickEmerald);
+    const body = await loop.pickList();
+    expect(body.current).toEqual({
+      key: "crc32:deadbeef",
+      scope: "rom",
+      profileId: "emerald-us-1.0",
+    });
+    expect(body.candidates).toHaveLength(1);
+  });
+
+  test("a base pick is current under its base key", async () => {
+    const { loop } = await setup(game());
+    await loop.pick({ profileId: "emerald-us-1.0", scope: "base" });
+    expect((await loop.pickList()).current).toEqual({
+      key: "base:emerald-us-1.0",
+      scope: "base",
+      profileId: "emerald-us-1.0",
+    });
+  });
+
+  test("a session-only pick has no saved entry, so current is null", async () => {
+    const { loop } = await setup(game({ crc32: null, domains: {} }));
+    await loop.pick(pickEmerald);
+    expect(loop.status().game).toMatchObject({ match: "manual" });
+    expect((await loop.pickList()).current).toBeNull();
+  });
+
+  test("an automatic match, no ROM and another platform give an empty list", async () => {
+    const matched = await setup(game({ crc32: "1f1c08fb" }));
+    expect((await matched.loop.pickList()).candidates).toEqual([]);
+    const none = await setup(null);
+    expect(await none.loop.pickList()).toEqual({
+      romKey: null,
+      current: null,
+      candidates: [],
+    });
+    const other = await setup(game({ platform: "other" }));
+    expect((await other.loop.pickList()).candidates).toEqual([]);
+  });
+
+  test("a GB ROM gets no GBA profile", async () => {
+    const { loop } = await setup(game({ platform: "gb" }));
+    expect((await loop.pickList()).candidates).toEqual([]);
+  });
+
+  test("the reads go one at a time through the request slot and concurrent calls share them", async () => {
+    const { loop, adapter } = await setup(game());
+    const real = adapter.read.bind(adapter);
+    let inFlight = 0;
+    let widest = 0;
+    let reads = 0;
+    adapter.read = async (ranges) => {
+      reads += 1;
+      inFlight += 1;
+      widest = Math.max(widest, inFlight);
+      await new Promise((r) => setTimeout(r, 1));
+      inFlight -= 1;
+      return real(ranges);
+    };
+    const [a, b] = await Promise.all([loop.pickList(), loop.pickList()]);
+    expect(a).toEqual(b);
+    expect(reads).toBe(1);
+    expect(widest).toBe(1);
+    await loop.pickList();
+    expect(reads).toBe(1);
+  });
+
+  test("a read that gives nothing shows unchecked and is tried again by the next call", async () => {
+    const { loop, adapter } = await setup(game());
+    const real = adapter.read.bind(adapter);
+    let failing = true;
+    adapter.read = (ranges) =>
+      failing ? Promise.resolve({ kind: "timeout" }) : real(ranges);
+    expect((await loop.pickList()).candidates[0]).toMatchObject({
+      signature: "unchecked",
+      baseEligible: false,
+    });
+    failing = false;
+    expect((await loop.pickList()).candidates[0]).toMatchObject({
+      signature: "match",
+      baseEligible: true,
+    });
+  });
+});
+
+describe("the candidates list after a failed read", () => {
+  test("a read that throws fails that call and the next one reads again", async () => {
+    const { loop, adapter } = await setup(game());
+    const real = adapter.read.bind(adapter);
+    let throwing = true;
+    adapter.read = (ranges) =>
+      throwing ? Promise.reject(new Error("boom")) : real(ranges);
+    await expect(loop.pickList()).rejects.toThrow("boom");
+    throwing = false;
+    expect((await loop.pickList()).candidates[0]).toMatchObject({
+      signature: "match",
+    });
+  });
+});

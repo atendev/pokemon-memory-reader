@@ -2,7 +2,10 @@ import { API_BASE_PATH } from "@pokemon-memory-reader/api/client";
 import type { ErrorBody, Topic } from "@pokemon-memory-reader/api/schemas";
 import type { AboutBody } from "@pokemon-memory-reader/internal/about";
 import { switchRequest } from "@pokemon-memory-reader/internal/adapters-route";
-import { pickRequest } from "@pokemon-memory-reader/internal/manual-picks-route";
+import {
+  type ManualPicksBody,
+  pickRequest,
+} from "@pokemon-memory-reader/internal/manual-picks-route";
 import { type Handler, Hono } from "hono";
 import type { Selector } from "../adapter/selector";
 import type { Config } from "../config";
@@ -83,6 +86,7 @@ export function createApp(deps: {
   ) => Promise<RawReadResult>;
   /** Without it there are no `/manual-picks` routes. */
   readonly picks?: {
+    pickList(): Promise<ManualPicksBody>;
     pick(request: ReturnType<typeof pickRequest.parse>): Promise<PickResult>;
     forget(): Promise<ForgetResult>;
   };
@@ -238,6 +242,9 @@ export function createApp(deps: {
 
   const { picks } = deps;
   if (picks) {
+    internalRoute("GET", "/manual-picks", async (c) =>
+      c.json(await picks.pickList()),
+    );
     internalRoute("POST", "/manual-picks", async (c) => {
       const raw: unknown = await c.req.json().catch(() => undefined);
       const request = pickRequest.safeParse(raw);
