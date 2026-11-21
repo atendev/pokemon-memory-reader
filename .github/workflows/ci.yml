@@ -86,6 +86,8 @@ jobs:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - run: test ! -e api/dist
+      # The release build embeds the generated notices file, so the executable can serve it at /about.
+      - run: bun run notices
       - run: >-
           bun build --compile --target=bun-linux-x64-baseline
           --define 'PMR_TARGET="linux-x64-baseline"'
@@ -107,6 +109,7 @@ jobs:
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
+      - run: bun run notices
       # Compiles onto a copy of the official bun kept apart from the one running the build. This shows the app can be
       # re-hosted onto a given bun, not that relinking works (docs/lgpl-relinking.md, amendment 042 §7).
       - run: |

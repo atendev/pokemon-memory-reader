@@ -111,7 +111,44 @@ async function checkServing(base: string, dataDir: string): Promise<void> {
       `${name}.lua is missing from the data folder`,
     );
   }
-  console.log("serving ok: status, viewer, bridges");
+
+  const about = await fetch(`${base}/about`);
+  check(about.status === 200, `GET /about returned ${about.status}`);
+  const info = (await about.json()) as {
+    version?: unknown;
+    lgpl?: { displayName?: unknown; copyright?: unknown }[];
+    notices?: unknown;
+  };
+  check(
+    info.version === expectedVersion,
+    `/about version was ${JSON.stringify(info.version)}, expected ${expectedVersion}`,
+  );
+  check(
+    Array.isArray(info.lgpl) &&
+      info.lgpl.length > 0 &&
+      info.lgpl.every(
+        (item) =>
+          typeof item.displayName === "string" &&
+          typeof item.copyright === "string" &&
+          item.copyright.length > 0,
+      ),
+    "/about names no LGPL component with a copyright line",
+  );
+  check(
+    info.notices === true,
+    "/about says notices are missing: run `bun run notices` before the compile",
+  );
+  const notices = await fetch(`${base}/about/third-party-notices.txt`);
+  check(
+    notices.status === 200,
+    `GET /about/third-party-notices.txt returned ${notices.status}`,
+  );
+  check(
+    notices.headers.get("content-type")?.startsWith("text/plain") === true,
+    "the notices file is not served as text/plain",
+  );
+  check((await notices.text()).length > 0, "the notices file came back empty");
+  console.log("serving ok: status, viewer, bridges, about, notices");
 }
 
 async function stop(

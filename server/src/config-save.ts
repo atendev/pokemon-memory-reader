@@ -32,9 +32,9 @@ export const settingsPatchSchema = z.strictObject({
   adapter: shape.adapter.optional(),
   adapters: z
     .strictObject({
-      mgba: endpoint.partial().optional(),
-      retroarch: endpoint.partial().optional(),
-      bizhawk: endpoint.partial().optional(),
+      mgba: endpoint.partial().strict().optional(),
+      retroarch: endpoint.partial().strict().optional(),
+      bizhawk: endpoint.partial().strict().optional(),
     })
     .optional(),
   pollHz: z.number().int().min(MIN_POLL_HZ).max(MAX_POLL_HZ).optional(),
