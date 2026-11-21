@@ -1,3 +1,4 @@
+import { STORAGE } from "../../src/format/gen3/structs";
 import gen3En from "../../src/reference/data/gen3-en.json";
 
 /** Order of the four substructures per `personality % 24`, as (growth, attacks, EVs, misc) positions. Written from pokeemerald `sSubstructOrders`. */
@@ -215,5 +216,34 @@ export function encodeMon(spec: MonSpec): Uint8Array {
 export function partyBytes(mons: readonly Uint8Array[]): Uint8Array {
   const out = new Uint8Array(600);
   for (const [i, mon] of mons.entries()) out.set(mon, i * 100);
+  return out;
+}
+
+export interface StorageSpec {
+  currentBox?: number;
+  /** Mons by box, then slot. A slot not listed stays zeroed, which is how the game stores an empty one. */
+  slots?: Readonly<Record<number, Readonly<Record<number, Uint8Array>>>>;
+  names?: Readonly<Record<number, string>>;
+  wallpapers?: Readonly<Record<number, number>>;
+}
+
+/** The bytes of one `PokemonStorage`: `currentBox`, 14 boxes of 30 boxed mons, then names and wallpapers. */
+export function storageBytes(spec: StorageSpec = {}): Uint8Array {
+  const out = new Uint8Array(STORAGE.size);
+  out[STORAGE.currentBox] = spec.currentBox ?? 0;
+  for (const [box, slots] of Object.entries(spec.slots ?? {})) {
+    for (const [slot, mon] of Object.entries(slots)) {
+      const offset =
+        STORAGE.boxes + (Number(box) * STORAGE.slotCount + Number(slot)) * 80;
+      out.set(mon.subarray(0, 80), offset);
+    }
+  }
+  for (let box = 0; box < STORAGE.boxCount; box++) {
+    out.set(
+      encodeText(spec.names?.[box] ?? `BOX${box + 1}`, STORAGE.nameStride),
+      STORAGE.names + box * STORAGE.nameStride,
+    );
+    out[STORAGE.wallpapers + box] = spec.wallpapers?.[box] ?? box % 16;
+  }
   return out;
 }

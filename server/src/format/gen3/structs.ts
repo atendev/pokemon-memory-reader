@@ -25,6 +25,27 @@ export const PARTY_MON = {
   spd: 0x62,
 } as const;
 
+/**
+ * A boxed Pokémon is the first 80 bytes of a party Pokémon (`struct BoxPokemon`). The party block
+ * after it holds the status, level and stats the box doesn't store.
+ */
+export const BOX_MON_SIZE = 80;
+
+/** Layout of `struct PokemonStorage` (pokeemerald), one contiguous block with `currentBox` first. */
+export const STORAGE = {
+  boxCount: 14,
+  slotCount: 30,
+  currentBox: 0x00,
+  /** `BoxPokemon` is 4-byte aligned, so the boxes start at 4. */
+  boxes: 0x04,
+  nameLength: 8,
+  /** Names are 8 characters and a terminator. */
+  nameStride: 9,
+  names: 0x04 + 14 * 30 * BOX_MON_SIZE,
+  wallpapers: 0x04 + 14 * 30 * BOX_MON_SIZE + 14 * 9,
+  size: 0x04 + 14 * 30 * BOX_MON_SIZE + 14 * 9 + 14,
+} as const;
+
 /** Bits of the flags byte at +0x13. */
 export const FLAG = { badEgg: 0, hasSpecies: 1 } as const;
 

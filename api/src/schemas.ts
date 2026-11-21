@@ -9,6 +9,8 @@ import type {
   BattleMove as BattleMoveType,
   Battler as BattlerType,
   Battle as BattleType,
+  Boxes as BoxesType,
+  Box as BoxType,
   BridgeId,
   DataFormat,
   ErrorBody as ErrorBodyType,
@@ -196,6 +198,28 @@ export type Pokemon = PokemonType;
 /** The player's party, in slot order. */
 export const Party = z.looseObject({ pokemon: z.array(Pokemon) });
 export type Party = PartyType;
+
+/** What a boxed Pokémon doesn't store is null, and the description says which fields (spec §7.9). */
+const BOX_SLOTS_DESCRIPTION =
+  "Box Pokémon use the Pokemon shape with the fields a box doesn't store set to null: hp, maxHp, stats and status in Gen 2 and Gen 3, and stats and maxHp in Gen 1. No stats are computed. In Gen 3 level is computed from experience and the growth rate, and the same holds for a boxed egg. Empty slots are null so indices hold.";
+
+/** One PC box. A corrupt Gen 3 slot is `null` and listed in `corruptSlots`. */
+export const Box = z.looseObject({
+  index: z.int(),
+  name: z.string().nullable(),
+  wallpaper: z.int().nullable(),
+  readable: z.boolean(),
+  corruptSlots: z.array(z.int()),
+  slots: z.array(Pokemon.nullable()).describe(BOX_SLOTS_DESCRIPTION),
+});
+export type Box = BoxType;
+
+/** The `boxes` resource. `currentBox` is 0-based, and null when the storage block couldn't be read. */
+export const Boxes = z.looseObject({
+  currentBox: z.int().nullable(),
+  boxes: z.array(Box),
+});
+export type Boxes = BoxesType;
 
 const Hash = z.string().nullable();
 
