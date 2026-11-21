@@ -822,3 +822,165 @@ body {
 .box-mon > .art {
   align-self: flex-start;
 }
+
+/* Settings, About and the update banner (spec §11.7). */
+.settings-form {
+  display: grid;
+  gap: 16px;
+}
+.stack > * + * {
+  margin-top: 16px;
+}
+.setting {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.setting-label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.setting .footnote {
+  margin: 4px 0 0;
+}
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--separator);
+  background: var(--surface-2);
+  color: var(--label);
+  font: inherit;
+}
+.input:focus-visible,
+.toggle input:focus-visible {
+  outline: 2px solid #409cff;
+  outline-offset: 2px;
+}
+.input:disabled {
+  opacity: 0.5;
+}
+.input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+.field-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--red);
+}
+.warning {
+  color: var(--orange);
+}
+.endpoint {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--separator);
+}
+.endpoint legend {
+  padding: 0 8px 0 0;
+}
+.setting + .setting,
+.headline + .setting,
+.setting + .endpoint,
+.endpoint + .endpoint {
+  margin-top: 16px;
+}
+.advanced summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.button {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.button-quiet {
+  background: var(--surface-2);
+  color: var(--label);
+}
+.notice {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--separator);
+}
+.notice-ok {
+  border-color: var(--green);
+}
+.notice-error {
+  border-color: var(--red);
+}
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 16px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--blue);
+}
+.banner-text {
+  margin: 0;
+}
+.adapter-list {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.adapter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--separator);
+}
+.adapter-row:first-child {
+  border-top: 0;
+}
+.adapter-row p {
+  margin: 0;
+}
+.pick-form {
+  display: grid;
+  gap: 16px;
+}
+.pick-current {
+  margin-bottom: 16px;
+}
+.paths {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.paths dt {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+.paths dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -5,6 +5,8 @@ import type {
   Player,
   StatusResource,
 } from "@pokemon-memory-reader/api/schemas";
+import type { AboutBody } from "@pokemon-memory-reader/internal/about";
+import type { UpdateBody } from "@pokemon-memory-reader/internal/update";
 import { useMemo } from "react";
 import { About } from "./About";
 import { IconsProvider } from "./Art";
@@ -16,8 +18,11 @@ import { IconFailures } from "./icons";
 import { PartyScreen } from "./PartyScreen";
 import { Placeholder } from "./Placeholder";
 import { type Route, routeFromHash, SCREENS } from "./routes";
+import { SettingsScreen } from "./SettingsScreen";
 import { Sidebar } from "./Sidebar";
 import { TrainerScreen } from "./TrainerScreen";
+import { UpdateBanner } from "./UpdateBanner";
+import { type Polled, useAbout, useUpdate } from "./useInternal";
 import {
   type Loaded,
   useBag,
@@ -49,6 +54,8 @@ export function Screen({
   boxes = LOADING,
   player = LOADING,
   bag = LOADING,
+  about = LOADING,
+  update = LOADING,
 }: {
   route: Route;
   status: StatusResource | null;
@@ -57,8 +64,11 @@ export function Screen({
   boxes?: Loaded<Boxes>;
   player?: Loaded<Player>;
   bag?: Loaded<Bag>;
+  about?: Polled<AboutBody>;
+  update?: Polled<UpdateBody>;
 }) {
-  if (route === "about") return <About />;
+  if (route === "about") return <About about={about} update={update} />;
+  if (route === "settings") return <SettingsScreen status={status} />;
   if (route === "not_found") return <Placeholder title="Page not found" />;
   if (GAME_SCREENS.includes(route) && status?.state !== "game") {
     return <ConnectionScreen status={status} />;
@@ -98,6 +108,8 @@ export function App() {
     }),
     [inGame, known?.game?.profileId, known?.game?.generation, iconMode],
   );
+  const about = useAbout(route === "about");
+  const update = useUpdate();
   const [collapsed, toggle] = useSidebarCollapsed();
   return (
     <div className={collapsed ? "shell shell-collapsed" : "shell"}>
@@ -109,6 +121,7 @@ export function App() {
         battleLive={battleLive}
       />
       <main className="content">
+        <UpdateBanner update={update} />
         {status.kind === "loading" ? null : (
           <IconsProvider settings={iconSettings} failures={iconFailures}>
             <Screen
@@ -119,6 +132,8 @@ export function App() {
               boxes={boxes}
               player={player}
               bag={bag}
+              about={about.state}
+              update={update}
             />
           </IconsProvider>
         )}
