@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [108]
+claimed_by: wfm-v2-build-master-1795265782
+claimed_at: 2026-11-21T14:40:00Z
 ---
 
 # Swap the local `ManualPicksBody` mirror for the type `internal/` exports

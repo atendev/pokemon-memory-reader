@@ -1,6 +1,8 @@
 ---
 type: task
 blocked_by: [072]
+claimed_by: wfm-v2-build-master-1795265782
+claimed_at: 2026-11-21T14:40:00Z
 ---
 
 # Viewer identification and missing-field notes
