@@ -74,6 +74,7 @@ const ABOUT: AboutInfo = {
   target: "linux-x64",
   commit: "dev",
   versionLine: "pokemon-memory-reader 2.0.0 (dev, linux-x64)",
+  protocol: 1,
   lgpl: [{ displayName: "JavaScriptCore", copyright: "Copyright Apple Inc." }],
   notices: "NOTICES TEXT",
 };
@@ -712,6 +713,7 @@ test("GET /about serves the version, the LGPL lines and whether notices exist", 
     target: "linux-x64",
     commit: "dev",
     versionLine: ABOUT.versionLine,
+    protocol: 1,
     lgpl: ABOUT.lgpl,
     notices: true,
   });
