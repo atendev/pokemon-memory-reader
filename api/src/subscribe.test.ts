@@ -177,6 +177,45 @@ describe("subscribe", () => {
     expect(seen).toEqual([]);
   });
 
+  test("with validate, a throwing handler escapes uncaught and the next event is still checked", async () => {
+    const seen: string[] = [];
+    const uncaught: unknown[] = [];
+    // The runner fails a test on a real uncaught error, so catch the rethrow where it is scheduled.
+    const original = globalThis.queueMicrotask;
+    globalThis.queueMicrotask = (callback) =>
+      original(() => {
+        try {
+          callback();
+        } catch (error) {
+          uncaught.push(error);
+        }
+      });
+    try {
+      const { source, errors } = setup(
+        ["party"],
+        {
+          party: (data) => {
+            seen.push(`party:${data.pokemon.length}`);
+            if (data.pokemon.length === 0) throw new Error("handler broke");
+          },
+        },
+        true,
+      );
+      source.send("party", { pokemon: [] });
+      source.send("party", { pokemon: "none" });
+      source.send("party", { pokemon: [] });
+      await Bun.sleep(30);
+      expect(seen).toEqual(["party:0", "party:0"]);
+      expect(uncaught.map((e) => (e as Error).message)).toEqual([
+        "handler broke",
+        "handler broke",
+      ]);
+      expect(errors.map((e) => e.kind)).toEqual(["invalid"]);
+    } finally {
+      globalThis.queueMicrotask = original;
+    }
+  });
+
   test("with validate, an unknown topic still reaches onUnknown unchecked", () => {
     const { source, unknown } = setup(["later"], {}, true);
     source.send("later", { any: 1 });

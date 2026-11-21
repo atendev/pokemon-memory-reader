@@ -261,17 +261,25 @@ export function subscribe(
       deliver();
       return;
     }
-    // Validation waits on a dynamic import, so a queue keeps events in arrival order.
-    queue = queue
-      .then(() => validateResource(topic, data, null))
-      .then(
-        () => {
-          if (connection !== "closed") deliver();
-        },
-        (error: PmrApiError) => {
-          if (connection !== "closed") options.onError?.(error);
-        },
-      );
+    // Validation waits on a dynamic import, so a queue keeps events in arrival order. A throwing
+    // handler is rethrown outside the queue, as it would escape the listener without `validate`,
+    // so it never stalls or mislabels the events behind it.
+    queue = queue.then(async () => {
+      try {
+        await validateResource(topic, data, null);
+      } catch (error) {
+        if (connection !== "closed") options.onError?.(error as PmrApiError);
+        return;
+      }
+      if (connection === "closed") return;
+      try {
+        deliver();
+      } catch (error) {
+        queueMicrotask(() => {
+          throw error;
+        });
+      }
+    });
   };
   for (const topic of names)
     source.addEventListener(topic, (event) => handle(topic, event.data));
