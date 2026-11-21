@@ -336,6 +336,99 @@ describe("a double trainer battle", () => {
   });
 });
 
+describe("the opponent trainers", () => {
+  const OPPONENT_A_AT = 0x38bca;
+  const OPPONENT_B_AT = 0x38bcc;
+  const TWO_OPPONENTS = 1 << 15;
+  const ally: BattleMonSpec = { ...player, species: 280 };
+  const second: BattleMonSpec = { ...wild, species: ZIGZAGOON };
+  const foes = (levels: number[]) =>
+    levels.map((level) => ({ ...wildMon, level }));
+
+  const build = (
+    typeFlags: number,
+    ids: readonly [number, number],
+    enemyParty: ReturnType<typeof foes>,
+    after?: (memory: ReturnType<typeof emeraldMemory>) => void,
+  ) => {
+    const memory = emeraldMemory([TREECKO, TREECKO]);
+    writeBattle(memory, {
+      typeFlags,
+      battlers: [player, wild, ally, second],
+      partyIndexes: [0, 0, 1, 1],
+      enemyParty,
+    });
+    const view = new DataView(memory.ewram.buffer);
+    view.setUint16(OPPONENT_A_AT, ids[0], true);
+    view.setUint16(OPPONENT_B_AT, ids[1], true);
+    after?.(memory);
+    return setFrame(frameOf(memory));
+  };
+
+  test("a single trainer battle lists trainer A with every table field null", () => {
+    const frame = build(TRAINER, [0x1a2, 0x99], foes([5, 6, 7]));
+    expect(frame.opponent.trainers).toEqual([
+      {
+        id: 0x1a2,
+        classId: null,
+        className: null,
+        name: null,
+        prizeMoney: null,
+        items: null,
+      },
+    ]);
+    expect(frame.opponent.party.map((mon) => mon.trainer)).toEqual([0, 0, 0]);
+    expect(frame.tableDerived).toBeUndefined();
+  });
+
+  test("a wild battle lists no trainer and no mon belongs to one", () => {
+    const frame = setFrame(frameOf(inBattle()));
+    expect(frame.opponent.trainers).toEqual([]);
+    expect(frame.opponent.party.map((mon) => mon.trainer)).toEqual([null]);
+  });
+
+  test("a two-opponent battle lists A and B, and splits the party at slot 3", () => {
+    // Trainer A has 2 mons in slots 0 and 1, slot 2 stays empty, and B fills 3 to 5.
+    const frame = build(
+      DOUBLE | TWO_OPPONENTS | TRAINER,
+      [0x10, 0x20],
+      foes([10, 12, 0, 20, 22, 25]),
+      ({ ewram }) => {
+        ewram.fill(0, 0x24744 + 2 * 100, 0x24744 + 3 * 100);
+        ewram[0x244ea] = 5;
+      },
+    );
+    expect(frame.format).toBe("double");
+    expect(frame.opponent.trainers.map((t) => t.id)).toEqual([0x10, 0x20]);
+    expect(frame.opponent.party.map((m) => [m.partySlot, m.trainer])).toEqual([
+      [0, 0],
+      [1, 0],
+      [3, 1],
+      [4, 1],
+      [5, 1],
+    ]);
+  });
+
+  test.each([
+    ["link", 1],
+    ["Battle Tower", 8],
+    ["e-Reader", 11],
+    ["Battle Dome", 16],
+    ["Battle Palace", 17],
+    ["Battle Arena", 18],
+    ["Battle Factory", 19],
+    ["Battle Pike", 20],
+    ["Battle Pyramid", 21],
+    ["Tower link multi", 23],
+    ["recorded link", 25],
+    ["Trainer Hill", 26],
+    ["secret base", 27],
+  ])("%s marks the frame as having no table-derived fields", (_name, bit) => {
+    const frame = build(TRAINER | (1 << bit), [5, 0], foes([5]));
+    expect(frame.tableDerived).toBe(false);
+  });
+});
+
 describe("the field", () => {
   const field = (overrides: Partial<BattleScene>) =>
     setFrame(frameOf(inBattle(overrides))).field;

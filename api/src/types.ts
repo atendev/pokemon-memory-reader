@@ -438,7 +438,8 @@ export type Battler = {
 /**
  * A trainer in the battle. The table-derived fields are null when the profile's ROM table is missing
  * and in link, Tower and Frontier battles. `prizeMoney` is the expected payout on a win, without Pay
- * Day money. `items` is the remaining list in Gen 2, the starting list in Gen 3 and null in Gen 1.
+ * Day money. In Gen 3 it is doubled for a double battle against one trainer, and a two-opponent
+ * battle pays each trainer its own amount undoubled, as the game does. `items` is the remaining list in Gen 2, the starting list in Gen 3 and null in Gen 1.
  */
 export type Trainer = {
   id: number;

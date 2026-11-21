@@ -20,6 +20,7 @@ import {
   endBattle,
   writeBattle,
 } from "../gen3/battle-encode";
+import { encodeText } from "../gen3/encode";
 import { writePlayer } from "../gen3/player-encode";
 import { emeraldMemory, serve, TREECKO } from "../support/emerald-memory";
 
@@ -99,12 +100,16 @@ afterEach(async () => {
   for (const loop of open.splice(0)) await loop.close();
 });
 
-function setup(pollHz = 20, bind?: (profile: unknown) => BoundGame) {
+function setup(
+  pollHz = 20,
+  bind?: (profile: unknown) => BoundGame,
+  profiles = registry,
+) {
   const adapter = new MemoryAdapter();
   const clock = new ManualClock();
   const loop = createReadLoop({
     adapter,
-    registry,
+    registry: profiles,
     pollHz,
     clock,
     log: silentLog,
@@ -338,6 +343,101 @@ describe("the battle resource in the loop", () => {
     expect(requests).toHaveLength(3);
     expect(requests[2]?.length).toBeGreaterThan(requests[0]?.length ?? 0);
     expect((await battle(loop)).active).toBe(true);
+  });
+
+  describe("with trainer tables in the ROM", () => {
+    // The fixture ROM is 0x400 bytes, so a test profile places the three tables inside it.
+    const TRAINERS_AT = 0x200;
+    const CLASSES_AT = 0x2c0;
+    const MONEY_AT = 0x300;
+    const withTables = loadProfiles({
+      builtin: [
+        {
+          ...emerald,
+          trainerTables: {
+            trainers: { base: "0x08000200", count: 4 },
+            classNames: { base: "0x080002c0", count: 3 },
+            money: { base: "0x08000300", count: 3 },
+          },
+        },
+      ],
+      user: [],
+    }).registry;
+
+    /** Trainer 1: class 1 "LEADER", name "ROXANNE". Class 1 pays 25. gBattleStruct is at 0x02030000 with a multiplier of 2. */
+    const seedTables = (memory: ReturnType<typeof emeraldMemory>) => {
+      const entry = new Uint8Array(40);
+      entry[1] = 1;
+      entry.set(encodeText("ROXANNE", 12), 4);
+      memory.rom.set(entry, TRAINERS_AT + 40);
+      memory.rom.set(encodeText("LEADER", 13), CLASSES_AT + 13);
+      memory.rom.set([0, 4, 1, 25, 0xff, 5], MONEY_AT);
+      new DataView(memory.ewram.buffer).setUint32(0x2449c, 0x02030000, true);
+      memory.ewram[0x30000 + 0x4a] = 2;
+      new DataView(memory.ewram.buffer).setUint16(0x38bca, 1, true);
+    };
+
+    const romReads = (adapter: MemoryAdapter) =>
+      adapter.reads.filter((request) =>
+        request.some(
+          (range) => range.domain === "rom" && range.offset >= 0x200,
+        ),
+      ).length;
+
+    test("fills the trainer from the tables, and reads them once", async () => {
+      const { adapter, clock, loop } = setup(20, undefined, withTables);
+      await flush();
+      writeBattle(adapter.memory, {
+        typeFlags: TRAINER,
+        battlers: [MON, FOE],
+        partyIndexes: [0, 0],
+        enemyParty: [FOE_MON],
+      });
+      seedTables(adapter.memory);
+      await tick(clock);
+      const value = Battle.parse(await battle(loop));
+      if (!value.active) throw new Error("expected an active battle");
+      expect(value.opponent.trainers).toEqual([
+        {
+          id: 1,
+          classId: 1,
+          className: "LEADER",
+          name: "ROXANNE",
+          // 4 × the level-3 last mon × multiplier 2 × value 25.
+          prizeMoney: 4 * 3 * 2 * 25,
+          items: [],
+        },
+      ]);
+      const first = romReads(adapter);
+      expect(first).toBeGreaterThan(0);
+      await tick(clock, 3);
+      expect(romReads(adapter)).toBe(first);
+    });
+
+    test("a table the ROM can't serve leaves those fields null and keeps the frame", async () => {
+      const { adapter, clock, loop } = setup(20);
+      await flush();
+      writeBattle(adapter.memory, {
+        typeFlags: TRAINER,
+        battlers: [MON, FOE],
+        partyIndexes: [0, 0],
+        enemyParty: [FOE_MON],
+      });
+      new DataView(adapter.memory.ewram.buffer).setUint16(0x38bca, 1, true);
+      await tick(clock);
+      const value = Battle.parse(await battle(loop));
+      if (!value.active) throw new Error("expected an active battle");
+      expect(value.opponent.trainers).toEqual([
+        {
+          id: 1,
+          classId: null,
+          className: null,
+          name: null,
+          prizeMoney: null,
+          items: null,
+        },
+      ]);
+    });
   });
 
   test("the battle is read with no subscriber, so lastBattle is complete when first asked", async () => {
